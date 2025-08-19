@@ -35,7 +35,7 @@ function Sales() {
           *,
           visits (
             visit_date,
-            doctors (name, specialization, hospital)
+            doctors (id, name, specialization, hospital)
           ),
           products (name, category)
         `)
