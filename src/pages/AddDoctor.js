@@ -2,11 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
 
 function AddDoctor() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -33,8 +31,7 @@ function AddDoctor() {
       const { error } = await supabase
         .from('doctors')
         .insert([{
-          ...formData,
-          id: user.id
+          ...formData
         }]);
 
       if (error) throw error;
