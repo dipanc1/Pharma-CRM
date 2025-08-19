@@ -34,7 +34,7 @@ function AddDoctor() {
         .from('doctors')
         .insert([{
           ...formData,
-          user_id: user.id
+          id: user.id
         }]);
 
       if (error) throw error;
