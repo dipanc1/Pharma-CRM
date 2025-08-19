@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { 
-  HomeIcon, 
-  UserGroupIcon, 
-  CalendarIcon, 
-  CubeIcon, 
+import { useAuth } from '../contexts/AuthContext';
+import {
+  HomeIcon,
+  UserGroupIcon,
+  CalendarIcon,
+  CubeIcon,
   ChartBarIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -21,6 +23,7 @@ const navigation = [
 function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -101,11 +104,18 @@ function Layout() {
           </button>
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex flex-1"></div>
-            <div className="flex items-center gap-x-4 lg:gap-x-6">
-              <div className="text-sm font-medium text-gray-900">
-                Welcome, Sales Rep
-              </div>
-            </div>
+                               <div className="flex items-center gap-x-4 lg:gap-x-6">
+                     <div className="text-sm font-medium text-gray-900">
+                       Welcome, {user?.email}
+                     </div>
+                     <button
+                       onClick={signOut}
+                       className="text-gray-600 hover:text-gray-900 flex items-center"
+                       title="Sign Out"
+                     >
+                       <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                     </button>
+                   </div>
           </div>
         </div>
 
