@@ -51,8 +51,7 @@ function AddDoctor() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <BackTitleAndButton title="Add New Product" backButtonPath="/products" />
-
+      <BackTitleAndButton title="Add New Doctor" backButtonPath="/doctors" />
 
       {/* Form */}
       <div className="card max-w-2xl">

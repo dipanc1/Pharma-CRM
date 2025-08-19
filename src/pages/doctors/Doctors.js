@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
-import { Header } from '../../components';
+import { AddButton, Header } from '../../components';
+import NoRecordsAddButtonLayout from '../common/NoRecordsAddButtonLayout';
 
 function Doctors() {
   const [doctors, setDoctors] = useState([]);
@@ -274,10 +275,9 @@ function Doctors() {
               {searchTerm || classFilter || typeFilter ? 'No doctors found matching your filters.' : 'No doctors added yet.'}
             </div>
             {!searchTerm && !classFilter && !typeFilter && (
-              <Link to="/doctors/add" className="btn-primary mt-4 inline-flex">
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Add First Doctor
-              </Link>
+              <NoRecordsAddButtonLayout>
+                <AddButton title="Add First Doctor" link="/doctors/add" icon={<PlusIcon className="h-4 w-4 mr-2" />} />
+              </NoRecordsAddButtonLayout>
             )}
           </div>
         )}

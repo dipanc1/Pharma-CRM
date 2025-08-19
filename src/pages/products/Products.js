@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
-import { Header } from '../../components';
+import { AddButton, Header } from '../../components';
+import NoRecordsAddButtonLayout from '../common/NoRecordsAddButtonLayout';
 
 function Products() {
   const [products, setProducts] = useState([]);
@@ -151,10 +152,11 @@ function Products() {
               {searchTerm ? 'No products found matching your search.' : 'No products added yet.'}
             </div>
             {!searchTerm && (
-              <Link to="/products/add" className="btn-primary mt-4 inline-flex">
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Add First Product
-              </Link>
+              <>
+                <NoRecordsAddButtonLayout>
+                  <AddButton title="Add First Product" link="/products/add" icon={<PlusIcon className="h-4 w-4 mr-2" />} />
+                </NoRecordsAddButtonLayout>
+              </>
             )}
           </div>
         )}

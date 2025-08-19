@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeftIcon, PencilIcon, TrashIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
+import { AddButton } from '../../components';
 
 function DoctorDetail() {
   const { id } = useParams();
@@ -150,8 +151,8 @@ function DoctorDetail() {
             <p className="mt-1 text-sm text-gray-900">
               {doctor.doctor_class ? (
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${doctor.doctor_class === 'A' ? 'bg-green-100 text-green-800' :
-                    doctor.doctor_class === 'B' ? 'bg-blue-100 text-blue-800' :
-                      'bg-yellow-100 text-yellow-800'
+                  doctor.doctor_class === 'B' ? 'bg-blue-100 text-blue-800' :
+                    'bg-yellow-100 text-yellow-800'
                   }`}>
                   Class {doctor.doctor_class}
                 </span>
@@ -165,7 +166,7 @@ function DoctorDetail() {
             <p className="mt-1 text-sm text-gray-900">
               {doctor.doctor_type ? (
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${doctor.doctor_type === 'prescriber' ? 'bg-purple-100 text-purple-800' :
-                    'bg-orange-100 text-orange-800'
+                  'bg-orange-100 text-orange-800'
                   }`}>
                   {doctor.doctor_type.charAt(0).toUpperCase() + doctor.doctor_type.slice(1)}
                 </span>
@@ -218,8 +219,8 @@ function DoctorDetail() {
                     </td>
                     <td className="table-cell">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${visit.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
                         }`}>
                         {visit.status}
                       </span>
@@ -249,10 +250,9 @@ function DoctorDetail() {
         ) : (
           <div className="text-center py-8">
             <div className="text-gray-500">No visits recorded yet</div>
-            <Link to="/visits/add" className="btn-primary mt-4 inline-flex">
-              <CalendarIcon className="h-4 w-4 mr-2" />
-              Add First Visit
-            </Link>
+            <div className="inline-flex mt-4">
+              <AddButton title="Add First Visit" link="/visits/add" icon={<CalendarIcon className="h-4 w-4 mr-2" />} />
+            </div>
           </div>
         )}
       </div>

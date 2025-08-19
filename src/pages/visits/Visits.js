@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
-import { Header } from '../../components';
+import { AddButton, Header } from '../../components';
+import NoRecordsAddButtonLayout from '../common/NoRecordsAddButtonLayout';
 
 function Visits() {
   const [visits, setVisits] = useState([]);
@@ -358,8 +359,8 @@ function Visits() {
                   </td>
                   <td className="table-cell">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${visit.status === 'completed'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-yellow-100 text-yellow-800'
                       }`}>
                       {visit.status}
                     </span>
@@ -418,10 +419,9 @@ function Visits() {
               {searchTerm || startDate || endDate ? 'No visits found matching your filters.' : 'No visits recorded yet.'}
             </div>
             {!searchTerm && !startDate && !endDate && (
-              <Link to="/visits/add" className="btn-primary mt-4 inline-flex">
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Add First Visit
-              </Link>
+              <NoRecordsAddButtonLayout>
+                <AddButton title="Add First Visit" link="/visits/add" icon={<PlusIcon className="h-4 w-4 mr-2" />} />
+              </NoRecordsAddButtonLayout>
             )}
           </div>
         )}
