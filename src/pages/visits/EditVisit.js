@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 function EditVisit() {
   const { id } = useParams();

@@ -9,7 +9,7 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 
 function Dashboard() {

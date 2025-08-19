@@ -1,22 +1,34 @@
-import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+
 import Layout from './components/Layout';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Doctors from './pages/Doctors';
-import Visits from './pages/Visits';
-import Products from './pages/Products';
-import Sales from './pages/Sales';
-import AddDoctor from './pages/AddDoctor';
-import AddVisit from './pages/AddVisit';
-import AddProduct from './pages/AddProduct';
-import DoctorDetail from './pages/DoctorDetail';
-import EditDoctor from './pages/EditDoctor';
-import EditProduct from './pages/EditProduct';
-import VisitDetail from './pages/VisitDetail';
-import EditVisit from './pages/EditVisit';
+
+// auth
+import Login from './pages/auth/Login';
+
+// dashboard
+import Dashboard from './pages/dashboard/Dashboard';
+
+// sales
+import Sales from './pages/sales/Sales';
+
+// products
+import Products from './pages/products/Products';
+import AddProduct from './pages/products/AddProduct';
+import EditProduct from './pages/products/EditProduct';
+
+// doctors
+import Doctors from './pages/doctors/Doctors';
+import AddDoctor from './pages/doctors/AddDoctor';
+import DoctorDetail from './pages/doctors/DoctorDetail';
+import EditDoctor from './pages/doctors/EditDoctor';
+
+// visits
+import Visits from './pages/visits/Visits';
+import AddVisit from './pages/visits/AddVisit';
+import VisitDetail from './pages/visits/VisitDetail';
+import EditVisit from './pages/visits/EditVisit';
 
 function App() {
   return (

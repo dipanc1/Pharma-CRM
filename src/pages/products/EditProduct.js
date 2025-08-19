@@ -1,17 +1,50 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
-function AddProduct() {
+function EditProduct() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     category: ''
   });
+
+  useEffect(() => {
+    fetchProduct();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const fetchProduct = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      
+      setFormData({
+        name: data.name || '',
+        description: data.description || '',
+        price: data.price ? data.price.toString() : '',
+        category: data.category || ''
+      });
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      alert('Error loading product details');
+      navigate('/products');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,27 +56,36 @@ function AddProduct() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
 
     try {
       const { error } = await supabase
         .from('products')
-        .insert([{
+        .update({
           ...formData,
           price: parseFloat(formData.price) || 0
-        }]);
+        })
+        .eq('id', id);
 
       if (error) throw error;
 
-      alert('Product added successfully!');
+      alert('Product updated successfully!');
       navigate('/products');
     } catch (error) {
-      console.error('Error adding product:', error);
-      alert('Error adding product. Please try again.');
+      console.error('Error updating product:', error);
+      alert('Error updating product. Please try again.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -55,7 +97,7 @@ function AddProduct() {
         >
           <ArrowLeftIcon className="h-6 w-6" />
         </button>
-        <h1 className="text-2xl font-bold text-gray-900">Add New Product</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Edit Product</h1>
       </div>
 
       {/* Form */}
@@ -149,10 +191,10 @@ function AddProduct() {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={saving}
               className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Adding...' : 'Add Product'}
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
@@ -161,4 +203,4 @@ function AddProduct() {
   );
 }
 
-export default AddProduct;
+export default EditProduct;

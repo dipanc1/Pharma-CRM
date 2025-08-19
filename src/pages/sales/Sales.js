@@ -11,7 +11,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 
 function Sales() {
