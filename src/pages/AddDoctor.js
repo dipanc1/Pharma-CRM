@@ -12,7 +12,9 @@ function AddDoctor() {
     hospital: '',
     contact_number: '',
     email: '',
-    address: ''
+    address: '',
+    doctor_class: '',
+    doctor_type: ''
   });
 
   const handleChange = (e) => {
@@ -110,6 +112,43 @@ function AddDoctor() {
                 value={formData.hospital}
                 onChange={handleChange}
               />
+            </div>
+
+            {/* Doctor Class */}
+            <div>
+              <label htmlFor="doctor_class" className="block text-sm font-medium text-gray-700 mb-2">
+                Doctor Class
+              </label>
+              <select
+                id="doctor_class"
+                name="doctor_class"
+                className="input-field"
+                value={formData.doctor_class}
+                onChange={handleChange}
+              >
+                <option value="">Select Class</option>
+                <option value="A">Class A</option>
+                <option value="B">Class B</option>
+                <option value="C">Class C</option>
+              </select>
+            </div>
+
+            {/* Doctor Type */}
+            <div>
+              <label htmlFor="doctor_type" className="block text-sm font-medium text-gray-700 mb-2">
+                Doctor Type
+              </label>
+              <select
+                id="doctor_type"
+                name="doctor_type"
+                className="input-field"
+                value={formData.doctor_type}
+                onChange={handleChange}
+              >
+                <option value="">Select Type</option>
+                <option value="dispenser">Dispenser</option>
+                <option value="prescriber">Prescriber</option>
+              </select>
             </div>
 
             {/* Contact Number */}

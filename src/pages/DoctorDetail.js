@@ -146,6 +146,37 @@ function DoctorDetail() {
             <p className="mt-1 text-sm text-gray-900">{doctor.hospital || 'N/A'}</p>
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-500">Doctor Class</label>
+            <p className="mt-1 text-sm text-gray-900">
+              {doctor.doctor_class ? (
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  doctor.doctor_class === 'A' ? 'bg-green-100 text-green-800' :
+                  doctor.doctor_class === 'B' ? 'bg-blue-100 text-blue-800' :
+                  'bg-yellow-100 text-yellow-800'
+                }`}>
+                  Class {doctor.doctor_class}
+                </span>
+              ) : (
+                'N/A'
+              )}
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500">Doctor Type</label>
+            <p className="mt-1 text-sm text-gray-900">
+              {doctor.doctor_type ? (
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  doctor.doctor_type === 'prescriber' ? 'bg-purple-100 text-purple-800' :
+                  'bg-orange-100 text-orange-800'
+                }`}>
+                  {doctor.doctor_type.charAt(0).toUpperCase() + doctor.doctor_type.slice(1)}
+                </span>
+              ) : (
+                'N/A'
+              )}
+            </p>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-gray-500">Contact Number</label>
             <p className="mt-1 text-sm text-gray-900">{doctor.contact_number || 'N/A'}</p>
           </div>

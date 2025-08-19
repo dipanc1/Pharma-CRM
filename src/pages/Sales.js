@@ -17,32 +17,74 @@ import { format } from 'date-fns';
 function Sales() {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [doctorFilter, setDoctorFilter] = useState('');
   const [doctors, setDoctors] = useState([]);
+  const [productFilter, setProductFilter] = useState('');
+  const [products, setProducts] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     fetchSales();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate, doctorFilter, productFilter, page, pageSize]);
+
+  // Reset to first page when any filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [startDate, endDate, doctorFilter, productFilter]);
+
+  useEffect(() => {
     fetchDoctors();
+    fetchProducts();
   }, []);
 
   const fetchSales = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+
+      // Compute date flags
+      const invalidRange = !!(startDate && endDate && endDate < startDate);
+      const applyDateRange = !!(startDate && endDate && !invalidRange);
+
+      let query = supabase
         .from('sales')
         .select(`
           *,
-          visits (
+          visits!inner (
             visit_date,
             doctors (id, name, specialization, hospital)
           ),
           products (name, category)
-        `)
+        `, { count: 'exact' })
         .order('created_at', { ascending: false });
+
+      // Apply date filters only when both dates are selected and valid
+      if (applyDateRange) {
+        query = query
+          .gte('visits.visit_date', startDate)
+          .lte('visits.visit_date', endDate);
+      }
+      // If only one date is selected or range invalid, no date filter is applied
+
+      if (doctorFilter) {
+        query = query.eq('visits.doctor_id', doctorFilter);
+      }
+      if (productFilter) {
+        query = query.eq('product_id', productFilter);
+      }
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query.range(from, to);
 
       if (error) throw error;
       setSales(data || []);
+      setTotalCount(count || 0);
     } catch (error) {
       console.error('Error fetching sales:', error);
     } finally {
@@ -64,11 +106,21 @@ function Sales() {
     }
   };
 
-  const filteredSales = sales.filter(sale => {
-    const matchesDate = !dateFilter || sale.visits?.visit_date === dateFilter;
-    const matchesDoctor = !doctorFilter || sale.visits?.doctors?.id === doctorFilter;
-    return matchesDate && matchesDoctor;
-  });
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
+  const filteredSales = sales;
 
   const totalRevenue = filteredSales.reduce((total, sale) => total + parseFloat(sale.total_amount), 0);
   const totalItems = filteredSales.reduce((total, sale) => total + sale.quantity, 0);
@@ -138,18 +190,43 @@ function Sales() {
 
       {/* Filters */}
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label htmlFor="dateFilter" className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Date
+            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
+              Start Date
             </label>
             <input
               type="date"
-              id="dateFilter"
+              id="startDate"
               className="input-field"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
+              value={startDate}
+              max={endDate || undefined}
+              onChange={(e) => setStartDate(e.target.value)}
             />
+            {/* Hint when only end date is selected */}
+            {endDate && !startDate && (
+              <p className="mt-1 text-xs text-gray-500">Select start date to filter by date.</p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-2">
+              End Date
+            </label>
+            <input
+              type="date"
+              id="endDate"
+              className="input-field"
+              value={endDate}
+              min={startDate || undefined}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+            {/* Inline validation/help text */}
+            {startDate && endDate && endDate < startDate && (
+              <p className="mt-1 text-xs text-red-600">End date cannot be earlier than start date.</p>
+            )}
+            {startDate && !endDate && (
+              <p className="mt-1 text-xs text-gray-500">Select end date to filter by date.</p>
+            )}
           </div>
           <div>
             <label htmlFor="doctorFilter" className="block text-sm font-medium text-gray-700 mb-2">
@@ -165,6 +242,24 @@ function Sales() {
               {doctors.map(doctor => (
                 <option key={doctor.id} value={doctor.id}>
                   {doctor.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="productFilter" className="block text-sm font-medium text-gray-700 mb-2">
+              Filter by Product
+            </label>
+            <select
+              id="productFilter"
+              className="input-field"
+              value={productFilter}
+              onChange={(e) => setProductFilter(e.target.value)}
+            >
+              <option value="">All Products</option>
+              {products.map(product => (
+                <option key={product.id} value={product.id}>
+                  {product.name}
                 </option>
               ))}
             </select>
@@ -219,7 +314,29 @@ function Sales() {
 
       {/* Sales Details Table */}
       <div className="card">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Sales Details</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Sales Details</h3>
+          <div className="flex items-center space-x-2">
+            <button
+              className="btn-secondary px-3 py-1"
+              onClick={() => setPage(prev => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              Prev
+            </button>
+            <span className="text-sm text-gray-700">Page {page}</span>
+            <button
+              className="btn-secondary px-3 py-1"
+              onClick={() => {
+                const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
+                setPage(prev => Math.min(maxPage, prev + 1));
+              }}
+              disabled={page >= Math.ceil(totalCount / pageSize)}
+            >
+              Next
+            </button>
+          </div>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -259,7 +376,7 @@ function Sales() {
         {filteredSales.length === 0 && (
           <div className="text-center py-12">
             <div className="text-gray-500">
-              {dateFilter || doctorFilter ? 'No sales found matching your filters.' : 'No sales recorded yet.'}
+              {startDate || endDate || doctorFilter || productFilter ? 'No sales found matching your filters.' : 'No sales recorded yet.'}
             </div>
           </div>
         )}
