@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ShieldCheckIcon, QrCodeIcon, DevicePhoneMobileIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 
 function MFASetup() {
-  const { user, enrollMFA, listFactors, unenrollMFA } = useAuth();
+  const { enrollMFA, listFactors, unenrollMFA } = useAuth();
   const [factors, setFactors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
@@ -12,6 +12,7 @@ function MFASetup() {
 
   useEffect(() => {
     loadFactors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadFactors = async () => {

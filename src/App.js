@@ -17,7 +17,6 @@ import EditDoctor from './pages/EditDoctor';
 import EditProduct from './pages/EditProduct';
 import VisitDetail from './pages/VisitDetail';
 import EditVisit from './pages/EditVisit';
-import MFASetup from './components/MFASetup';
 
 function App() {
   return (
