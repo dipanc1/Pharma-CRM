@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
@@ -119,7 +119,7 @@ function Sales() {
         <div className="card">
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500">Total Revenue</p>
-                         <p className="text-3xl font-bold text-gray-900">₹{totalRevenue.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-gray-900">₹{totalRevenue.toFixed(2)}</p>
           </div>
         </div>
         <div className="card">
