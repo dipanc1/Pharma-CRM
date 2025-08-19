@@ -33,7 +33,7 @@ function EditVisit() {
   const fetchVisitData = async () => {
     try {
       setLoading(true);
-      
+
       const { data, error } = await supabase
         .from('visits')
         .select(`
@@ -51,7 +51,7 @@ function EditVisit() {
         .single();
 
       if (error) throw error;
-      
+
       setFormData({
         doctor_id: data.doctor_id,
         visit_date: data.visit_date,
@@ -68,7 +68,7 @@ function EditVisit() {
         total_amount: sale.total_amount,
         product_name: sale.products?.name
       })) || [];
-      
+
       setSales(existingSales);
 
     } catch (error) {
@@ -312,7 +312,7 @@ function EditVisit() {
         {/* Sales Section */}
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Sales Items</h3>
-          
+
           {/* Add Sale Form */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div>
@@ -329,7 +329,7 @@ function EditVisit() {
                 <option value="">Select product</option>
                 {products.map(product => (
                   <option key={product.id} value={product.id}>
-                                         {product.name} - ₹{product.price}
+                    {product.name} - ₹{product.price}
                   </option>
                 ))}
               </select>
@@ -397,8 +397,8 @@ function EditVisit() {
                       <tr key={sale.id}>
                         <td className="table-cell">{sale.product_name}</td>
                         <td className="table-cell">{sale.quantity}</td>
-                                                 <td className="table-cell">₹{sale.unit_price.toFixed(2)}</td>
-                         <td className="table-cell font-medium">₹{sale.total_amount.toFixed(2)}</td>
+                        <td className="table-cell">₹{sale.unit_price.toFixed(2)}</td>
+                        <td className="table-cell font-medium">₹{sale.total_amount.toFixed(2)}</td>
                         <td className="table-cell">
                           <button
                             type="button"
@@ -416,7 +416,7 @@ function EditVisit() {
 
               <div className="text-right">
                 <div className="text-lg font-semibold text-gray-900">
-                                     Total Sales: ₹{totalSalesAmount.toFixed(2)}
+                  Total Sales: ₹{totalSalesAmount.toFixed(2)}
                 </div>
               </div>
             </div>

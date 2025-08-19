@@ -290,8 +290,8 @@ function Visits() {
                 !searchTerm
                   ? true
                   : (d.doctor?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    (d.doctor?.specialization || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    (d.doctor?.hospital || '').toLowerCase().includes(searchTerm.toLowerCase())
+                  (d.doctor?.specialization || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (d.doctor?.hospital || '').toLowerCase().includes(searchTerm.toLowerCase())
               )
               .map(d => (
                 <span
@@ -360,11 +360,10 @@ function Visits() {
                     {format(new Date(visit.visit_date), 'MMM dd, yyyy')}
                   </td>
                   <td className="table-cell">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      visit.status === 'completed' 
-                        ? 'bg-green-100 text-green-800' 
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${visit.status === 'completed'
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-yellow-100 text-yellow-800'
-                    }`}>
+                      }`}>
                       {visit.status}
                     </span>
                   </td>

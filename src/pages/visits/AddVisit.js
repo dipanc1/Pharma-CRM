@@ -240,7 +240,7 @@ function AddVisit() {
         {/* Sales Section */}
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Sales Items</h3>
-          
+
           {/* Add Sale Form */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div>
@@ -257,7 +257,7 @@ function AddVisit() {
                 <option value="">Select product</option>
                 {products.map(product => (
                   <option key={product.id} value={product.id}>
-                                         {product.name} - ₹{product.price}
+                    {product.name} - ₹{product.price}
                   </option>
                 ))}
               </select>
@@ -325,8 +325,8 @@ function AddVisit() {
                       <tr key={sale.id}>
                         <td className="table-cell">{sale.product_name}</td>
                         <td className="table-cell">{sale.quantity}</td>
-                                                 <td className="table-cell">₹{sale.unit_price.toFixed(2)}</td>
-                         <td className="table-cell font-medium">₹{sale.total_amount.toFixed(2)}</td>
+                        <td className="table-cell">₹{sale.unit_price.toFixed(2)}</td>
+                        <td className="table-cell font-medium">₹{sale.total_amount.toFixed(2)}</td>
                         <td className="table-cell">
                           <button
                             type="button"
@@ -344,7 +344,7 @@ function AddVisit() {
 
               <div className="text-right">
                 <div className="text-lg font-semibold text-gray-900">
-                                     Total Sales: ₹{totalSalesAmount.toFixed(2)}
+                  Total Sales: ₹{totalSalesAmount.toFixed(2)}
                 </div>
               </div>
             </div>

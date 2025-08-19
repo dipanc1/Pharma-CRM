@@ -2,29 +2,29 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
-import Layout from './components/Layout';
+import Layout from './components/layout/Layout';
 
-// auth
+// Auth pages
 import Login from './pages/auth/Login';
 
-// dashboard
+// Dashboard pages
 import Dashboard from './pages/dashboard/Dashboard';
 
-// sales
+// Sales pages
 import Sales from './pages/sales/Sales';
 
-// products
+// Products pages
 import Products from './pages/products/Products';
 import AddProduct from './pages/products/AddProduct';
 import EditProduct from './pages/products/EditProduct';
 
-// doctors
+// Doctors pages
 import Doctors from './pages/doctors/Doctors';
 import AddDoctor from './pages/doctors/AddDoctor';
 import DoctorDetail from './pages/doctors/DoctorDetail';
 import EditDoctor from './pages/doctors/EditDoctor';
 
-// visits
+// Visits pages
 import Visits from './pages/visits/Visits';
 import AddVisit from './pages/visits/AddVisit';
 import VisitDetail from './pages/visits/VisitDetail';
@@ -42,17 +42,25 @@ function App() {
             </ProtectedRoute>
           }>
             <Route index element={<Dashboard />} />
+
+            {/* Doctors Routes */}
             <Route path="doctors" element={<Doctors />} />
             <Route path="doctors/add" element={<AddDoctor />} />
             <Route path="doctors/:id" element={<DoctorDetail />} />
             <Route path="doctors/:id/edit" element={<EditDoctor />} />
+
+            {/* Visits Routes */}
             <Route path="visits" element={<Visits />} />
             <Route path="visits/add" element={<AddVisit />} />
             <Route path="visits/:id" element={<VisitDetail />} />
             <Route path="visits/:id/edit" element={<EditVisit />} />
+
+            {/* Products Routes */}
             <Route path="products" element={<Products />} />
             <Route path="products/add" element={<AddProduct />} />
             <Route path="products/:id/edit" element={<EditProduct />} />
+
+            {/* Sales Routes */}
             <Route path="sales" element={<Sales />} />
           </Route>
         </Routes>

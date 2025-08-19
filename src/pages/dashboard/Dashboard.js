@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  UserGroupIcon, 
-  CalendarIcon, 
-  CurrencyRupeeIcon, 
+import {
+  UserGroupIcon,
+  CalendarIcon,
+  CurrencyRupeeIcon,
   CubeIcon,
   PlusIcon,
   EyeIcon
@@ -243,11 +243,10 @@ function Dashboard() {
                   <td className="table-cell font-medium">{visit.doctors?.name}</td>
                   <td className="table-cell">{format(new Date(visit.visit_date), 'MMM dd, yyyy')}</td>
                   <td className="table-cell">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      visit.status === 'completed' 
-                        ? 'bg-green-100 text-green-800' 
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${visit.status === 'completed'
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-yellow-100 text-yellow-800'
-                    }`}>
+                      }`}>
                       {visit.status}
                     </span>
                   </td>
@@ -255,7 +254,7 @@ function Dashboard() {
                     {visit.notes ? visit.notes.substring(0, 50) + '...' : 'No notes'}
                   </td>
                   <td className="table-cell">
-                    <Link 
+                    <Link
                       to={`/visits/${visit.id}`}
                       className="text-primary-600 hover:text-primary-700"
                     >

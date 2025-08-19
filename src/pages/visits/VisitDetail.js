@@ -18,7 +18,7 @@ function VisitDetail() {
   const fetchVisitData = async () => {
     try {
       setLoading(true);
-      
+
       const { data, error } = await supabase
         .from('visits')
         .select(`
@@ -134,17 +134,16 @@ function VisitDetail() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500">Status</label>
-            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 ${
-              visit.status === 'completed' 
-                ? 'bg-green-100 text-green-800' 
+            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 ${visit.status === 'completed'
+                ? 'bg-green-100 text-green-800'
                 : 'bg-yellow-100 text-yellow-800'
-            }`}>
+              }`}>
               {visit.status}
             </span>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500">Total Sales</label>
-                         <p className="mt-1 text-lg font-semibold text-gray-900">₹{calculateTotalSales(visit.sales).toFixed(2)}</p>
+            <p className="mt-1 text-lg font-semibold text-gray-900">₹{calculateTotalSales(visit.sales).toFixed(2)}</p>
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-500">Notes</label>
@@ -158,7 +157,7 @@ function VisitDetail() {
       {/* Sales Items */}
       <div className="card">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Sales Items</h2>
-        
+
         {visit.sales && visit.sales.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -177,8 +176,8 @@ function VisitDetail() {
                     <td className="table-cell font-medium">{sale.products?.name}</td>
                     <td className="table-cell text-gray-500">{sale.products?.category || 'N/A'}</td>
                     <td className="table-cell">{sale.quantity}</td>
-                                         <td className="table-cell">₹{parseFloat(sale.unit_price).toFixed(2)}</td>
-                     <td className="table-cell font-medium">₹{parseFloat(sale.total_amount).toFixed(2)}</td>
+                    <td className="table-cell">₹{parseFloat(sale.unit_price).toFixed(2)}</td>
+                    <td className="table-cell font-medium">₹{parseFloat(sale.total_amount).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>

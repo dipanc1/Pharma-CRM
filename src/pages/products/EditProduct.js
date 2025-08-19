@@ -30,7 +30,7 @@ function EditProduct() {
         .single();
 
       if (error) throw error;
-      
+
       setFormData({
         name: data.name || '',
         description: data.description || '',

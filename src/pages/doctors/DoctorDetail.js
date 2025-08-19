@@ -19,7 +19,7 @@ function DoctorDetail() {
   const fetchDoctorData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch doctor details
       const { data: doctorData, error: doctorError } = await supabase
         .from('doctors')
@@ -149,11 +149,10 @@ function DoctorDetail() {
             <label className="block text-sm font-medium text-gray-500">Doctor Class</label>
             <p className="mt-1 text-sm text-gray-900">
               {doctor.doctor_class ? (
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                  doctor.doctor_class === 'A' ? 'bg-green-100 text-green-800' :
-                  doctor.doctor_class === 'B' ? 'bg-blue-100 text-blue-800' :
-                  'bg-yellow-100 text-yellow-800'
-                }`}>
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${doctor.doctor_class === 'A' ? 'bg-green-100 text-green-800' :
+                    doctor.doctor_class === 'B' ? 'bg-blue-100 text-blue-800' :
+                      'bg-yellow-100 text-yellow-800'
+                  }`}>
                   Class {doctor.doctor_class}
                 </span>
               ) : (
@@ -165,10 +164,9 @@ function DoctorDetail() {
             <label className="block text-sm font-medium text-gray-500">Doctor Type</label>
             <p className="mt-1 text-sm text-gray-900">
               {doctor.doctor_type ? (
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                  doctor.doctor_type === 'prescriber' ? 'bg-purple-100 text-purple-800' :
-                  'bg-orange-100 text-orange-800'
-                }`}>
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${doctor.doctor_type === 'prescriber' ? 'bg-purple-100 text-purple-800' :
+                    'bg-orange-100 text-orange-800'
+                  }`}>
                   {doctor.doctor_type.charAt(0).toUpperCase() + doctor.doctor_type.slice(1)}
                 </span>
               ) : (
@@ -200,7 +198,7 @@ function DoctorDetail() {
             Add Visit
           </Link>
         </div>
-        
+
         {visits.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -219,17 +217,16 @@ function DoctorDetail() {
                       {format(new Date(visit.visit_date), 'MMM dd, yyyy')}
                     </td>
                     <td className="table-cell">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        visit.status === 'completed' 
-                          ? 'bg-green-100 text-green-800' 
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${visit.status === 'completed'
+                          ? 'bg-green-100 text-green-800'
                           : 'bg-yellow-100 text-yellow-800'
-                      }`}>
+                        }`}>
                         {visit.status}
                       </span>
                     </td>
                     <td className="table-cell">
                       <div className="font-medium text-gray-900">
-                                                 ₹{calculateTotalSales(visit.sales).toFixed(2)}
+                        ₹{calculateTotalSales(visit.sales).toFixed(2)}
                       </div>
                       <div className="text-sm text-gray-500">
                         {visit.sales?.length || 0} items

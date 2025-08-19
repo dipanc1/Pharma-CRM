@@ -34,7 +34,7 @@ function EditDoctor() {
         .single();
 
       if (error) throw error;
-      
+
       setFormData({
         name: data.name || '',
         specialization: data.specialization || '',

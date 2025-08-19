@@ -32,7 +32,7 @@ function MFASetup() {
       setEnrolling(true);
       const { data, error } = await enrollMFA('totp');
       if (error) throw error;
-      
+
       setQrCode(data.totp.qr_code);
       setTotpSecret(data.totp.secret);
     } catch (error) {
@@ -45,7 +45,7 @@ function MFASetup() {
 
   const handleUnenroll = async (factorId) => {
     if (!window.confirm('Are you sure you want to remove this MFA method?')) return;
-    
+
     try {
       const { error } = await unenrollMFA(factorId);
       if (error) throw error;
@@ -71,9 +71,9 @@ function MFASetup() {
           <ShieldCheckIcon className="h-6 w-6 text-primary-600" />
           <h2 className="text-lg font-medium text-gray-900">Multi-Factor Authentication</h2>
         </div>
-        
+
         <p className="text-sm text-gray-600 mb-6">
-          Enhance your account security by enabling multi-factor authentication. 
+          Enhance your account security by enabling multi-factor authentication.
           This adds an extra layer of protection to your account.
         </p>
 
@@ -111,7 +111,7 @@ function MFASetup() {
         {/* Add New MFA Methods */}
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Add MFA Method</h3>
-          
+
           {/* TOTP Setup */}
           {!factors.find(f => f.factor_type === 'totp') && (
             <div className="border border-gray-200 rounded-lg p-4 mb-4">
@@ -122,7 +122,7 @@ function MFASetup() {
                   <p className="text-xs text-gray-500">Use apps like Google Authenticator or Authy</p>
                 </div>
               </div>
-              
+
               {!qrCode ? (
                 <button
                   onClick={handleEnrollTOTP}

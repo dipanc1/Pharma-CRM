@@ -20,7 +20,7 @@ export const DB_SCHEMA = {
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
   `,
-  
+
   visits: `
     CREATE TABLE visits (
       id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -32,7 +32,7 @@ export const DB_SCHEMA = {
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
   `,
-  
+
   products: `
     CREATE TABLE products (
       id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -44,7 +44,7 @@ export const DB_SCHEMA = {
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
   `,
-  
+
   sales: `
     CREATE TABLE sales (
       id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

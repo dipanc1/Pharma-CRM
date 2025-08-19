@@ -56,7 +56,7 @@ function Doctors() {
           .eq('id', id);
 
         if (error) throw error;
-        
+
         const newTotal = totalCount - 1;
         const maxPage = Math.max(1, Math.ceil(newTotal / pageSize));
         if (page > maxPage) {
@@ -72,14 +72,14 @@ function Doctors() {
   };
 
   const filteredDoctors = doctors.filter(doctor => {
-    const matchesSearch = 
+    const matchesSearch =
       doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doctor.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doctor.hospital?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesClass = !classFilter || doctor.doctor_class === classFilter;
     const matchesType = !typeFilter || doctor.doctor_type === typeFilter;
-    
+
     return matchesSearch && matchesClass && matchesType;
   });
 
@@ -213,11 +213,10 @@ function Doctors() {
                   </td>
                   <td className="table-cell">
                     {doctor.doctor_class ? (
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        doctor.doctor_class === 'A' ? 'bg-green-100 text-green-800' :
-                        doctor.doctor_class === 'B' ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${doctor.doctor_class === 'A' ? 'bg-green-100 text-green-800' :
+                          doctor.doctor_class === 'B' ? 'bg-blue-100 text-blue-800' :
+                            'bg-yellow-100 text-yellow-800'
+                        }`}>
                         Class {doctor.doctor_class}
                       </span>
                     ) : (
@@ -226,10 +225,9 @@ function Doctors() {
                   </td>
                   <td className="table-cell">
                     {doctor.doctor_type ? (
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        doctor.doctor_type === 'prescriber' ? 'bg-purple-100 text-purple-800' :
-                        'bg-orange-100 text-orange-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${doctor.doctor_type === 'prescriber' ? 'bg-purple-100 text-purple-800' :
+                          'bg-orange-100 text-orange-800'
+                        }`}>
                         {doctor.doctor_type.charAt(0).toUpperCase() + doctor.doctor_type.slice(1)}
                       </span>
                     ) : (
