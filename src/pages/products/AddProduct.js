@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
+import { BackTitleAndButton } from '../../components';
 
 function AddProduct() {
   const navigate = useNavigate();
@@ -48,15 +48,7 @@ function AddProduct() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center space-x-4">
-        <button
-          onClick={() => navigate('/products')}
-          className="text-gray-600 hover:text-gray-900"
-        >
-          <ArrowLeftIcon className="h-6 w-6" />
-        </button>
-        <h1 className="text-2xl font-bold text-gray-900">Add New Product</h1>
-      </div>
+      <BackTitleAndButton title="Add New Product" backButtonPath="/products" />
 
       {/* Form */}
       <div className="card max-w-2xl">

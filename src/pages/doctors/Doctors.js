@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
+import { Header } from '../../components';
 
 function Doctors() {
   const [doctors, setDoctors] = useState([]);
@@ -94,13 +95,9 @@ function Doctors() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Doctors</h1>
-        <Link to="/doctors/add" className="btn-primary flex items-center">
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Add Doctor
-        </Link>
-      </div>
+      <Header title="Doctors" buttons={[
+        { to: "/doctors/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Doctor" }
+      ]} />
 
       {/* Search and Filters */}
       <div className="card">
@@ -214,8 +211,8 @@ function Doctors() {
                   <td className="table-cell">
                     {doctor.doctor_class ? (
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${doctor.doctor_class === 'A' ? 'bg-green-100 text-green-800' :
-                          doctor.doctor_class === 'B' ? 'bg-blue-100 text-blue-800' :
-                            'bg-yellow-100 text-yellow-800'
+                        doctor.doctor_class === 'B' ? 'bg-blue-100 text-blue-800' :
+                          'bg-yellow-100 text-yellow-800'
                         }`}>
                         Class {doctor.doctor_class}
                       </span>
@@ -226,7 +223,7 @@ function Doctors() {
                   <td className="table-cell">
                     {doctor.doctor_type ? (
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${doctor.doctor_type === 'prescriber' ? 'bg-purple-100 text-purple-800' :
-                          'bg-orange-100 text-orange-800'
+                        'bg-orange-100 text-orange-800'
                         }`}>
                         {doctor.doctor_type.charAt(0).toUpperCase() + doctor.doctor_type.slice(1)}
                       </span>

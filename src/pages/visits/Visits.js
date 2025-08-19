@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
+import { Header } from '../../components';
 
 function Visits() {
   const [visits, setVisits] = useState([]);
@@ -191,13 +192,9 @@ function Visits() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Doctor Visits</h1>
-        <Link to="/visits/add" className="btn-primary flex items-center">
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Add Visit
-        </Link>
-      </div>
+      <Header title="Doctor Visits" buttons={[
+        { to: "/visits/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Visit" }
+      ]} />
 
       {/* Filters */}
       <div className="card">

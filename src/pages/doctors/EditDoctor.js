@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
+import { BackEditTitleAndButton } from '../../components';
 
 function EditDoctor() {
   const { id } = useParams();
@@ -95,15 +96,7 @@ function EditDoctor() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center space-x-4">
-        <button
-          onClick={() => navigate(`/doctors/${id}`)}
-          className="text-gray-600 hover:text-gray-900"
-        >
-          <ArrowLeftIcon className="h-6 w-6" />
-        </button>
-        <h1 className="text-2xl font-bold text-gray-900">Edit Doctor</h1>
-      </div>
+      <BackEditTitleAndButton title="Edit Doctor" backButtonPath={`/doctors/${id}`} />
 
       {/* Form */}
       <div className="card max-w-2xl">

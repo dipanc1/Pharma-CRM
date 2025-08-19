@@ -8,7 +8,7 @@ import Layout from './components/layout/Layout';
 import Login from './pages/auth/Login';
 
 // Dashboard pages
-import Dashboard from './pages/dashboard/Dashboard';
+import Dashboard from './pages/dashboard';
 
 // Sales pages
 import Sales from './pages/sales/Sales';

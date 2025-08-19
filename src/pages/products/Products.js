@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
+import { Header } from '../../components';
 
 function Products() {
   const [products, setProducts] = useState([]);
@@ -63,13 +64,9 @@ function Products() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-        <Link to="/products/add" className="btn-primary flex items-center">
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Add Product
-        </Link>
-      </div>
+      <Header title="Products" buttons={[
+        { to: "/products/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Product" }
+      ]} />
 
       {/* Search */}
       <div className="card">

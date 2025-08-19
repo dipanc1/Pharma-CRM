@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
+import { Header } from '../../components';
 
 function Sales() {
   const [sales, setSales] = useState([]);
@@ -162,9 +163,7 @@ function Sales() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Sales Analytics</h1>
-      </div>
+      <Header title="Sales Analytics" buttons={[]} />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
