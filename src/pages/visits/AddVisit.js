@@ -9,6 +9,8 @@ function AddVisit() {
   const [loading, setLoading] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [products, setProducts] = useState([]);
+  const [doctorSearch, setDoctorSearch] = useState('');
+  const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
   const [formData, setFormData] = useState({
     doctor_id: '',
     visit_date: new Date().toISOString().split('T')[0],
@@ -31,7 +33,7 @@ function AddVisit() {
     try {
       const { data, error } = await supabase
         .from('doctors')
-        .select('id, name, specialization, hospital')
+        .select('id, name, specialization, doctor_type, doctor_class')
         .order('name');
 
       if (error) throw error;
@@ -146,6 +148,27 @@ function AddVisit() {
 
   const totalSalesAmount = sales.reduce((total, sale) => total + sale.total_amount, 0);
 
+  const filteredDoctors = doctors.filter(doctor => 
+    doctor.name.toLowerCase().includes(doctorSearch.toLowerCase()) ||
+    doctor.specialization?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
+    doctor.doctor_type?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
+    doctor.doctor_class?.toLowerCase().includes(doctorSearch.toLowerCase())
+  );
+
+  const handleDoctorSelect = (doctor) => {
+    setFormData(prev => ({ ...prev, doctor_id: doctor.id }));
+    setDoctorSearch(`${doctor.name} - ${doctor.specialization} (${doctor.doctor_type} - ${doctor.doctor_class})`);
+    setShowDoctorDropdown(false);
+  };
+
+  const handleDoctorSearchChange = (e) => {
+    setDoctorSearch(e.target.value);
+    setShowDoctorDropdown(true);
+    if (!e.target.value) {
+      setFormData(prev => ({ ...prev, doctor_id: '' }));
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -157,25 +180,47 @@ function AddVisit() {
           <h3 className="text-lg font-medium text-gray-900 mb-4">Visit Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Doctor */}
-            <div className="md:col-span-2">
-              <label htmlFor="doctor_id" className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="md:col-span-2 relative">
+              <label htmlFor="doctor_search" className="block text-sm font-medium text-gray-700 mb-2">
                 Doctor *
               </label>
-              <select
-                id="doctor_id"
-                name="doctor_id"
-                required
+              <input
+                type="text"
+                id="doctor_search"
                 className="input-field"
-                value={formData.doctor_id}
-                onChange={handleFormChange}
-              >
-                <option value="">Select a doctor</option>
-                {doctors.map(doctor => (
-                  <option key={doctor.id} value={doctor.id}>
-                    {doctor.name} - {doctor.specialization} ({doctor.hospital})
-                  </option>
-                ))}
-              </select>
+                placeholder="Search for a doctor..."
+                value={doctorSearch}
+                onChange={handleDoctorSearchChange}
+                onFocus={() => setShowDoctorDropdown(true)}
+                autoComplete="off"
+              />
+              {showDoctorDropdown && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                  {filteredDoctors.length > 0 ? (
+                    filteredDoctors.map(doctor => (
+                      <div
+                        key={doctor.id}
+                        className="px-4 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                        onClick={() => handleDoctorSelect(doctor)}
+                      >
+                        <div className="font-medium text-gray-900">{doctor.name}</div>
+                        <div className="text-sm text-gray-600">
+                          {doctor.specialization} • {doctor.doctor_type} • Class {doctor.doctor_class}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2 text-gray-500">No doctors found</div>
+                  )}
+                </div>
+              )}
+              {/* Click outside to close dropdown */}
+              {showDoctorDropdown && (
+                <div
+                  className="fixed inset-0 z-5"
+                  onClick={() => setShowDoctorDropdown(false)}
+                />
+              )}
             </div>
 
             {/* Visit Date */}
