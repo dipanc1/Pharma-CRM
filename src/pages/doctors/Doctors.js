@@ -11,6 +11,8 @@ function Doctors() {
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [addressFilter, setAddressFilter] = useState('');
+  const [uniqueAddresses, setUniqueAddresses] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -18,20 +20,20 @@ function Doctors() {
   useEffect(() => {
     fetchDoctors();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize]);
+  }, []);
+
+  useEffect(() => {
+    setPage(1); // Reset to first page when filters change
+  }, [searchTerm, classFilter, typeFilter, addressFilter]);
 
   const fetchDoctors = async () => {
     try {
       setLoading(true);
-      let query = supabase
+      // Fetch all doctors for filtering
+      const { data, error, count } = await supabase
         .from('doctors')
         .select('*', { count: 'exact' })
         .order('name');
-
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-
-      const { data, error, count } = await query.range(from, to);
 
       if (error) {
         console.error('Supabase error:', error);
@@ -40,10 +42,23 @@ function Doctors() {
 
       setDoctors(data || []);
       setTotalCount(count || 0);
+      
+      // Extract unique cities from addresses (assuming city is the last part after last comma)
+      const cities = [...new Set((data || [])
+        .map(doctor => {
+          if (!doctor.address || doctor.address.trim() === '') return null;
+          // Extract city from address - assuming it's the last part after comma
+          const parts = doctor.address.split(',');
+          return parts[parts.length - 1].trim();
+        })
+        .filter(city => city && city !== '')
+      )].sort();
+      setUniqueAddresses(cities);
     } catch (error) {
       console.error('Error fetching doctors:', error);
       setDoctors([]);
       setTotalCount(0);
+      setUniqueAddresses([]);
     } finally {
       setLoading(false);
     }
@@ -81,9 +96,21 @@ function Doctors() {
 
     const matchesClass = !classFilter || doctor.doctor_class === classFilter;
     const matchesType = !typeFilter || doctor.doctor_type === typeFilter;
+    
+    // Check if address contains the selected city
+    const matchesAddress = !addressFilter || (doctor.address && doctor.address.toLowerCase().includes(addressFilter.toLowerCase()));
 
-    return matchesSearch && matchesClass && matchesType;
+    return matchesSearch && matchesClass && matchesType && matchesAddress;
   });
+
+  // Apply pagination to filtered results
+  const paginatedDoctors = filteredDoctors.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
+
+  const totalFilteredCount = filteredDoctors.length;
+  const maxPage = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
 
   if (loading) {
     return (
@@ -102,7 +129,7 @@ function Doctors() {
 
       {/* Search and Filters */}
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
               Search Doctors
@@ -147,6 +174,24 @@ function Doctors() {
               <option value="prescriber">Prescriber</option>
             </select>
           </div>
+          <div>
+            <label htmlFor="addressFilter" className="block text-sm font-medium text-gray-700 mb-2">
+              Filter by City
+            </label>
+            <select
+              id="addressFilter"
+              className="input-field"
+              value={addressFilter}
+              onChange={(e) => setAddressFilter(e.target.value)}
+            >
+              <option value="">All Cities</option>
+              {uniqueAddresses.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -154,28 +199,33 @@ function Doctors() {
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <div className="text-sm text-gray-600">
-            {searchTerm || classFilter || typeFilter ? (
-              <>Showing {filteredDoctors.length} of {doctors.length} doctors (filtered from {totalCount} total)</>
+            {searchTerm || classFilter || typeFilter || addressFilter ? (
+              <>Showing {Math.min(pageSize, totalFilteredCount - (page - 1) * pageSize)} of {totalFilteredCount} doctors (filtered from {totalCount} total)</>
             ) : (
-              <>Showing {doctors.length} of {totalCount} doctors</>
+              <>Showing {Math.min(pageSize, totalCount - (page - 1) * pageSize)} of {totalCount} doctors</>
             )}
           </div>
           <div className="flex items-center space-x-2">
             <button
-              className="btn-secondary px-3 py-1"
+              className={`px-3 py-1 ${
+                page === 1 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                  : 'btn-secondary hover:bg-gray-300'
+              }`}
               onClick={() => setPage(prev => Math.max(1, prev - 1))}
               disabled={page === 1}
             >
               Prev
             </button>
-            <span className="text-sm text-gray-700">Page {page}</span>
+            <span className="text-sm text-gray-700">Page {page} of {maxPage}</span>
             <button
-              className="btn-secondary px-3 py-1"
-              onClick={() => {
-                const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
-                setPage(prev => Math.min(maxPage, prev + 1));
-              }}
-              disabled={page >= Math.ceil(totalCount / pageSize)}
+              className={`px-3 py-1 ${
+                page >= maxPage 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                  : 'btn-secondary hover:bg-gray-300'
+              }`}
+              onClick={() => setPage(prev => Math.min(maxPage, prev + 1))}
+              disabled={page >= maxPage}
             >
               Next
             </button>
@@ -188,15 +238,15 @@ function Doctors() {
                 <th className="table-header">Name</th>
                 <th className="table-header">Specialization</th>
                 <th className="table-header">Hospital</th>
+                <th className="table-header">Address</th>
                 <th className="table-header">Class</th>
                 <th className="table-header">Type</th>
                 <th className="table-header">Contact</th>
-                <th className="table-header">Email</th>
                 <th className="table-header">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredDoctors.map((doctor) => (
+              {paginatedDoctors.map((doctor) => (
                 <tr key={doctor.id} className="hover:bg-gray-50">
                   <td className="table-cell">
                     <div>
@@ -208,6 +258,9 @@ function Doctors() {
                   </td>
                   <td className="table-cell text-gray-500">
                     {doctor.hospital || 'N/A'}
+                  </td>
+                  <td className="table-cell text-gray-500">
+                    {doctor.address || 'N/A'}
                   </td>
                   <td className="table-cell">
                     {doctor.doctor_class ? (
@@ -234,9 +287,6 @@ function Doctors() {
                   </td>
                   <td className="table-cell text-gray-500">
                     {doctor.contact_number || 'N/A'}
-                  </td>
-                  <td className="table-cell text-gray-500">
-                    {doctor.email || 'N/A'}
                   </td>
                   <td className="table-cell">
                     <div className="flex space-x-2">
@@ -269,12 +319,12 @@ function Doctors() {
           </table>
         </div>
 
-        {filteredDoctors.length === 0 && (
+        {paginatedDoctors.length === 0 && (
           <div className="text-center py-12">
             <div className="text-gray-500">
-              {searchTerm || classFilter || typeFilter ? 'No doctors found matching your filters.' : 'No doctors added yet.'}
+              {searchTerm || classFilter || typeFilter || addressFilter ? 'No doctors found matching your filters.' : 'No doctors added yet.'}
             </div>
-            {!searchTerm && !classFilter && !typeFilter && (
+            {!searchTerm && !classFilter && !typeFilter && !addressFilter && (
               <NoRecordsAddButtonLayout>
                 <AddButton title="Add First Doctor" link="/doctors/add" icon={<PlusIcon className="h-4 w-4 mr-2" />} />
               </NoRecordsAddButtonLayout>

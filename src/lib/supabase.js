@@ -15,7 +15,7 @@ export const DB_SCHEMA = {
       hospital VARCHAR,
       contact_number VARCHAR,
       email VARCHAR,
-      address TEXT,
+      address VARCHAR,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
