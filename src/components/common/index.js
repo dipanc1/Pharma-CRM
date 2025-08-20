@@ -4,4 +4,6 @@ export { default as AddButton } from './AddButton';
 export { default as Header } from './Header';
 export { default as BackTitleAndButton } from './BackTitleAndButton';
 export { default as BackEditTitleAndButton } from './BackEditTitleAndButton';
-    
+export { default as SecondaryButton } from './SecondaryButton';
+export { default as DeleteButton } from './DeleteButton';
+export { default as Loader } from './Loader';
