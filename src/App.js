@@ -11,7 +11,7 @@ import Login from './pages/auth/Login';
 import Dashboard from './pages/dashboard';
 
 // Sales pages
-import Sales from './pages/sales/Sales';
+import Sales from './pages/sales';
 
 // Products pages
 import Products from './pages/products/Products';

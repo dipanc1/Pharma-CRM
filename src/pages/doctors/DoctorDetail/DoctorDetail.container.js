@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
+import { Toast } from '../../../components';
+import useToast from '../../../hooks/useToast';
 import DoctorDetail from './DoctorDetail';
 
 function DoctorDetailContainer() {
@@ -9,6 +11,7 @@ function DoctorDetailContainer() {
   const [doctor, setDoctor] = useState(null);
   const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { toast, showSuccess, showError, hideToast } = useToast();
 
   useEffect(() => {
     fetchDoctorData();
@@ -49,7 +52,7 @@ function DoctorDetailContainer() {
 
     } catch (error) {
       console.error('Error fetching doctor data:', error);
-      alert('Error loading doctor details');
+      showError('Error loading doctor details');
     } finally {
       setLoading(false);
     }
@@ -64,11 +67,14 @@ function DoctorDetailContainer() {
           .eq('id', id);
 
         if (error) throw error;
-        alert('Doctor deleted successfully');
-        navigate('/doctors');
+        
+        showSuccess('Doctor deleted successfully');
+        setTimeout(() => {
+          navigate('/doctors');
+        }, 1500);
       } catch (error) {
         console.error('Error deleting doctor:', error);
-        alert('Error deleting doctor');
+        showError('Error deleting doctor');
       }
     }
   };
@@ -103,17 +109,25 @@ function DoctorDetailContainer() {
 
 
   return (
-    <DoctorDetail
-      doctor={doctor}
-      visits={visits}
-      loading={loading}
-      deleteDoctor={deleteDoctor}
-      calculateTotalSales={calculateTotalSales}
-      getDoctorClassStyle={getDoctorClassStyle}
-      getDoctorTypeStyle={getDoctorTypeStyle}
-      getVisitStatusStyle={getVisitStatusStyle}
-      formatCurrency={formatCurrency}
-    />
+    <>
+      <DoctorDetail
+        doctor={doctor}
+        visits={visits}
+        loading={loading}
+        deleteDoctor={deleteDoctor}
+        calculateTotalSales={calculateTotalSales}
+        getDoctorClassStyle={getDoctorClassStyle}
+        getDoctorTypeStyle={getDoctorTypeStyle}
+        getVisitStatusStyle={getVisitStatusStyle}
+        formatCurrency={formatCurrency}
+      />
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+      />
+    </>
   );
 }
 

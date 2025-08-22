@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
+import { Toast } from '../../../components';
+import useToast from '../../../hooks/useToast';
 import AddDoctor from './AddDoctor';
 
 function AddDoctorContainer() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const { toast, showSuccess, showError, hideToast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     specialization: '',
@@ -38,11 +41,13 @@ function AddDoctorContainer() {
 
       if (error) throw error;
 
-      alert('Doctor added successfully!');
-      navigate('/doctors');
+      showSuccess('Doctor added successfully!');
+      setTimeout(() => {
+        navigate('/doctors');
+      }, 1500);
     } catch (error) {
       console.error('Error adding doctor:', error);
-      alert('Error adding doctor. Please try again.');
+      showError('Error adding doctor. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -117,13 +122,21 @@ function AddDoctorContainer() {
   ];
 
   return (
-    <AddDoctor
-      formData={formData}
-      handleChange={handleChange}
-      handleSubmit={handleSubmit}
-      loading={loading}
-      FORM_FIELDS={FORM_FIELDS}
-    />
+    <>
+      <AddDoctor
+        formData={formData}
+        handleChange={handleChange}
+        handleSubmit={handleSubmit}
+        loading={loading}
+        FORM_FIELDS={FORM_FIELDS}
+      />
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+      />
+    </>
   );
 }
 

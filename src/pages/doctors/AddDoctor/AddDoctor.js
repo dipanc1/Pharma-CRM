@@ -1,12 +1,7 @@
 import React from 'react';
-import { BackTitleAndButton, SecondaryButton } from '../../../components/common';
+import { BackTitleAndButton, SecondaryButton, FilterSelect } from '../../../components';
 
-
-const renderFormField = (
-  field,
-  formData,
-  handleChange
-) => {
+const FormField = ({ field, formData, handleChange }) => {
   const { name, label, type, required, placeholder, options, rows, colSpan = '' } = field;
   const value = formData[name] || '';
 
@@ -14,20 +9,15 @@ const renderFormField = (
     switch (type) {
       case 'select':
         return (
-          <select
+          <FilterSelect
             id={name}
-            name={name}
-            className="input-field"
+            label=""
             value={value}
             onChange={handleChange}
-            required={required}
-          >
-            {options.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            options={options.slice(1)} // Remove first "Select" option
+            placeholder={options[0].label}
+            className=""
+          />
         );
 
       case 'textarea':
@@ -61,7 +51,7 @@ const renderFormField = (
   };
 
   return (
-    <div key={name} className={colSpan}>
+    <div className={colSpan}>
       <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-2">
         {label} {required && '*'}
       </label>
@@ -71,7 +61,6 @@ const renderFormField = (
 };
 
 function AddDoctor({ formData, handleChange, handleSubmit, loading, FORM_FIELDS }) {
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -81,7 +70,9 @@ function AddDoctor({ formData, handleChange, handleSubmit, loading, FORM_FIELDS 
       <div className="card max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {FORM_FIELDS.map(field => renderFormField(field, formData, handleChange))}
+            {FORM_FIELDS.map(field => 
+              <FormField key={field.name} field={field} formData={formData} handleChange={handleChange} />
+            )}
           </div>
 
           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
