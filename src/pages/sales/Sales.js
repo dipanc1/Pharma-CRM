@@ -12,7 +12,14 @@ import {
   Cell
 } from 'recharts';
 import { format } from 'date-fns';
-import { Header, FilterSelect, Table, Pagination } from '../../components';
+import { 
+  Header, 
+  FilterSelect, 
+  Table, 
+  Pagination, 
+  Loader,
+  SearchInput 
+} from '../../components';
 
 function Sales({
   sales,
@@ -35,34 +42,25 @@ function Sales({
   totalRevenue,
   totalItems,
   categoryData,
-  doctorData
+  doctorData,
+  doctorSearch,
+  setDoctorSearch,
+  showDoctorDropdown,
+  setShowDoctorDropdown,
+  filteredDoctors,
+  handleDoctorSelect
 }) {
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
 
   const tableHeaders = ['Date', 'Doctor', 'Product', 'Category', 'Quantity', 'Unit Price', 'Total Amount'];
-
-  const doctorOptions = doctors.map(doctor => ({ value: doctor.id, label: doctor.name }));
   const productOptions = products.map(product => ({ value: product.id, label: product.name }));
-
   const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
-
-  const hasDateRangeError = startDate && endDate && endDate < startDate;
   const hasActiveFilters = startDate || endDate || doctorFilter || productFilter;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex justify-center items-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading sales data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
+  return loading ? (
+    <Loader />
+  ) : (
     <div className="space-y-6">
-      {/* Header */}
       <Header title="Sales Analytics" buttons={[]} />
 
       {/* Stats Cards */}
@@ -104,7 +102,7 @@ function Sales({
               onChange={(e) => setStartDate(e.target.value)}
             />
             {endDate && !startDate && (
-              <p className="mt-1 text-xs text-gray-500">Select start date to filter by date.</p>
+              <p className="mt-1 text-xs text-gray-500">Select start date to apply the date range.</p>
             )}
           </div>
           
@@ -120,22 +118,55 @@ function Sales({
               min={startDate || undefined}
               onChange={(e) => setEndDate(e.target.value)}
             />
-            {hasDateRangeError && (
+            {startDate && endDate && endDate < startDate && (
               <p className="mt-1 text-xs text-red-600">End date cannot be earlier than start date.</p>
             )}
             {startDate && !endDate && (
-              <p className="mt-1 text-xs text-gray-500">Select end date to filter by date.</p>
+              <p className="mt-1 text-xs text-gray-500">Select end date to apply the date range.</p>
             )}
           </div>
           
-          <FilterSelect
-            label="Filter by Doctor"
-            value={doctorFilter}
-            onChange={(e) => setDoctorFilter(e.target.value)}
-            options={doctorOptions}
-            placeholder="All Doctors"
-            id="doctorFilter"
-          />
+          <div className="relative">
+            <SearchInput
+              label="Filter by Doctor"
+              placeholder="Search for a doctor..."
+              value={doctorSearch}
+              onChange={(e) => setDoctorSearch(e.target.value)}
+              id="doctor_search"
+            />
+            <div 
+              onClick={() => setShowDoctorDropdown(true)}
+              className="absolute inset-0 cursor-pointer"
+            />
+            
+            {showDoctorDropdown && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                {filteredDoctors.length > 0 ? (
+                  filteredDoctors.map(doctor => (
+                    <div
+                      key={doctor.id}
+                      className="px-4 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                      onClick={() => handleDoctorSelect(doctor)}
+                    >
+                      <div className="font-medium text-gray-900">{doctor.name}</div>
+                      <div className="text-sm text-gray-600">
+                        {doctor.specialization} • {doctor.doctor_type} • Class {doctor.doctor_class}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-2 text-gray-500">No doctors found</div>
+                )}
+              </div>
+            )}
+            {/* Click outside to close dropdown */}
+            {showDoctorDropdown && (
+              <div
+                className="fixed inset-0 z-5"
+                onClick={() => setShowDoctorDropdown(false)}
+              />
+            )}
+          </div>
           
           <FilterSelect
             label="Filter by Product"
@@ -154,25 +185,31 @@ function Sales({
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Sales by Category</h3>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="amount"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']} />
-              </PieChart>
-            </ResponsiveContainer>
+            {categoryData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="amount"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                No data available
+              </div>
+            )}
           </div>
         </div>
 
@@ -180,15 +217,21 @@ function Sales({
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Top Doctors by Sales</h3>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={doctorData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="doctor" angle={-45} textAnchor="end" height={80} />
-                <YAxis />
-                <Tooltip formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']} />
-                <Bar dataKey="amount" fill="#3B82F6" />
-              </BarChart>
-            </ResponsiveContainer>
+            {doctorData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={doctorData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="doctor" angle={-45} textAnchor="end" height={80} />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']} />
+                  <Bar dataKey="amount" fill="#3B82F6" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                No data available
+              </div>
+            )}
           </div>
         </div>
       </div>

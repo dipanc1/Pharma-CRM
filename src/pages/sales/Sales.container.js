@@ -18,6 +18,9 @@ function SalesContainer() {
   const [totalCount, setTotalCount] = useState(0);
   const { toast, showError, hideToast } = useToast();
 
+  const [doctorSearch, setDoctorSearch] = useState('');
+  const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
+
   useEffect(() => {
     fetchSales();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -37,9 +40,17 @@ function SalesContainer() {
     try {
       setLoading(true);
 
-      // Compute date flags
+      // Date validation and short-circuit rules (same as visits)
+      const justStart = !!(startDate && !endDate);
+      const justEnd = !!(!startDate && endDate);
       const invalidRange = !!(startDate && endDate && endDate < startDate);
-      const applyDateRange = !!(startDate && endDate && !invalidRange);
+
+      if (justStart || justEnd || invalidRange) {
+        setSalesState([]);
+        setTotalCount(0);
+        setLoading(false);
+        return;
+      }
 
       let query = supabase
         .from('sales')
@@ -54,7 +65,7 @@ function SalesContainer() {
         .order('created_at', { ascending: false });
 
       // Apply date filters only when both dates are selected and valid
-      if (applyDateRange) {
+      if (startDate && endDate) {
         query = query
           .gte('visits.visit_date', startDate)
           .lte('visits.visit_date', endDate);
@@ -87,7 +98,7 @@ function SalesContainer() {
     try {
       const { data, error } = await supabase
         .from('doctors')
-        .select('id, name')
+        .select('id, name, specialization, doctor_type, doctor_class')
         .order('name');
 
       if (error) throw error;
@@ -140,6 +151,28 @@ function SalesContainer() {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 10);
 
+  // Doctor search functionality (like AddVisit)
+  const filteredDoctors = doctors.filter(doctor => 
+    doctor.name.toLowerCase().includes(doctorSearch.toLowerCase()) ||
+    doctor.specialization?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
+    doctor.doctor_type?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
+    doctor.doctor_class?.toLowerCase().includes(doctorSearch.toLowerCase())
+  );
+
+  const handleDoctorSelect = (doctor) => {
+    setDoctorFilter(doctor.id);
+    setDoctorSearch(`${doctor.name} - ${doctor.specialization} (${doctor.doctor_type} - ${doctor.doctor_class})`);
+    setShowDoctorDropdown(false);
+  };
+
+  const handleDoctorSearchChange = (value) => {
+    setDoctorSearch(value);
+    setShowDoctorDropdown(true);
+    if (!value) {
+      setDoctorFilter('');
+    }
+  };
+
   return (
     <>
       <Sales
@@ -164,6 +197,12 @@ function SalesContainer() {
         totalItems={totalItems}
         categoryData={categoryData}
         doctorData={doctorData}
+        doctorSearch={doctorSearch}
+        setDoctorSearch={handleDoctorSearchChange}
+        showDoctorDropdown={showDoctorDropdown}
+        setShowDoctorDropdown={setShowDoctorDropdown}
+        filteredDoctors={filteredDoctors}
+        handleDoctorSelect={handleDoctorSelect}
       />
       <Toast
         message={toast.message}
