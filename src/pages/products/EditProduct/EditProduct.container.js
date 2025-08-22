@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
-import { Loader, Toast } from '../../../components';
+import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
 import EditProduct from './EditProduct';
 
@@ -75,7 +75,11 @@ function EditProductContainer() {
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        showError('Error fetching product details');
+        navigate('/products');
+        return;
+      }
 
       setFormData({
         id: data.id,
@@ -87,9 +91,7 @@ function EditProductContainer() {
     } catch (error) {
       console.error('Error fetching product:', error);
       showError('Error loading product details');
-      setTimeout(() => {
-        navigate('/products');
-      }, 2000);
+      navigate('/products');
     } finally {
       setLoading(false);
     }
@@ -116,12 +118,13 @@ function EditProductContainer() {
         })
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        showError('Error updating product. Please try again.');
+        return;
+      }
 
       showSuccess('Product updated successfully!');
-      setTimeout(() => {
-        navigate('/products');
-      }, 1500);
+      navigate('/products');
     } catch (error) {
       console.error('Error updating product:', error);
       showError('Error updating product. Please try again.');
@@ -133,10 +136,6 @@ function EditProductContainer() {
   const handleCancel = () => {
     navigate('/products');
   };
-
-  if (loading) {
-    return <Loader />;
-  }
 
   return (
     <>

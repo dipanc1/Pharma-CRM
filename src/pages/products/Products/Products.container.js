@@ -23,7 +23,10 @@ function ProductsContainer() {
         .select('*')
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        showError('Error fetching products. Please try again.');
+        return;
+      }
       setProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -41,8 +44,11 @@ function ProductsContainer() {
           .delete()
           .eq('id', id);
 
-        if (error) throw error;
-        
+        if (error) {
+          showError('Error deleting product. Please try again.');
+          return;
+        }
+
         showSuccess('Product deleted successfully');
         fetchProducts();
       } catch (error) {

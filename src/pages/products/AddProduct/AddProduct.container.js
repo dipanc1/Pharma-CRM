@@ -36,12 +36,12 @@ function AddProductContainer() {
           price: parseFloat(formData.price) || 0
         }]);
 
-      if (error) throw error;
-
+      if (error) {
+        showError('Error adding product. Please try again.');
+        return;
+      }
       showSuccess('Product added successfully!');
-      setTimeout(() => {
-        navigate('/products');
-      }, 1500);
+      navigate('/products');
     } catch (error) {
       console.error('Error adding product:', error);
       showError('Error adding product. Please try again.');
