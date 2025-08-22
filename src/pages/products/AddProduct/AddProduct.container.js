@@ -51,7 +51,6 @@ function AddProductContainer() {
   };
 
   const PRODUCT_CATEGORIES = [
-    { value: '', label: 'Select category' },
     { value: 'Antibiotics', label: 'Antibiotics' },
     { value: 'Pain Relief', label: 'Pain Relief' },
     { value: 'Cardiovascular', label: 'Cardiovascular' },
@@ -75,7 +74,8 @@ function AddProductContainer() {
       name: 'category',
       label: 'Category',
       type: 'select',
-      options: PRODUCT_CATEGORIES
+      options: PRODUCT_CATEGORIES,
+      placeholder: 'Select category'
     },
     {
       name: 'price',

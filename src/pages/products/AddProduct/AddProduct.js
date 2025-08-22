@@ -1,6 +1,4 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../../lib/supabase';
+import React from 'react';
 import { BackTitleAndButton, SecondaryButton, FilterSelect } from '../../../components';
 
 const FormField = ({ field, formData, handleChange }) => {
@@ -13,11 +11,12 @@ const FormField = ({ field, formData, handleChange }) => {
         return (
           <FilterSelect
             id={name}
+            name={name}
             label=""
             value={value}
             onChange={handleChange}
-            options={options.slice(1)} // Remove first "Select" option
-            placeholder={options[0].label}
+            options={options}
+            placeholder={placeholder || `Select ${label}`}
             className=""
           />
         );
@@ -78,90 +77,7 @@ const FormField = ({ field, formData, handleChange }) => {
   );
 };
 
-function AddProduct() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    category: ''
-  });
-
-  const FORM_FIELDS = [
-    {
-      name: 'name',
-      label: 'Product Name',
-      type: 'text',
-      required: true,
-      placeholder: 'Enter product name',
-      colSpan: 'md:col-span-2'
-    },
-    {
-      name: 'category',
-      label: 'Category',
-      type: 'select',
-      options: [
-        { value: '', label: 'Select category' },
-        { value: 'Antibiotics', label: 'Antibiotics' },
-        { value: 'Pain Relief', label: 'Pain Relief' },
-        { value: 'Cardiovascular', label: 'Cardiovascular' },
-        { value: 'Diabetes', label: 'Diabetes' },
-        { value: 'Respiratory', label: 'Respiratory' },
-        { value: 'Vitamins', label: 'Vitamins' },
-        { value: 'Supplements', label: 'Supplements' },
-        { value: 'Other', label: 'Other' }
-      ],
-      placeholder: 'Select category'
-    },
-    {
-      name: 'price',
-      label: 'Price (₹)',
-      type: 'number',
-      placeholder: '0.00'
-    },
-    {
-      name: 'description',
-      label: 'Description',
-      type: 'textarea',
-      rows: 4,
-      placeholder: 'Enter product description...',
-      colSpan: 'md:col-span-2'
-    }
-  ];
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { error } = await supabase
-        .from('products')
-        .insert([{
-          ...formData,
-          price: parseFloat(formData.price) || 0
-        }]);
-
-      if (error) throw error;
-
-      alert('Product added successfully!');
-      navigate('/products');
-    } catch (error) {
-      console.error('Error adding product:', error);
-      alert('Error adding product. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+function AddProduct({ formData, handleChange, handleSubmit, loading, FORM_FIELDS }) {
   return (
     <div className="space-y-6">
       {/* Header */}

@@ -11,6 +11,7 @@ const FormField = ({ field, formData, handleChange }) => {
         return (
           <FilterSelect
             id={name}
+            name={name}
             label=""
             value={value}
             onChange={handleChange}

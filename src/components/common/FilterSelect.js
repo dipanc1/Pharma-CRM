@@ -7,15 +7,19 @@ const FilterSelect = ({
   options = [], 
   placeholder = "All",
   id,
+  name,
   className = ""
 }) => {
   return (
     <div className={className}>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-2">
-        {label}
-      </label>
+      {label && (
+        <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-2">
+          {label}
+        </label>
+      )}
       <select
         id={id}
+        name={name || id}
         className="input-field"
         value={value}
         onChange={onChange}

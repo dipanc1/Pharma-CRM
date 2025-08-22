@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../../../lib/supabase';
-import { BackEditTitleAndButton, FilterSelect, SecondaryButton } from '../../../components';
+import React from 'react';
+import { BackEditTitleAndButton, FilterSelect, SecondaryButton, Loader } from '../../../components';
 
 const FormField = ({ field, formData, handleChange }) => {
   const { name, label, type, required, placeholder, options, rows, colSpan = '' } = field;
@@ -13,6 +11,7 @@ const FormField = ({ field, formData, handleChange }) => {
         return (
           <FilterSelect
             id={name}
+            name={name}
             label=""
             value={value}
             onChange={handleChange}
@@ -78,133 +77,10 @@ const FormField = ({ field, formData, handleChange }) => {
   );
 };
 
-function EditProduct() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    category: ''
-  });
-
-  useEffect(() => {
-    fetchProduct();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  const fetchProduct = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-
-      setFormData({
-        name: data.name || '',
-        description: data.description || '',
-        price: data.price ? data.price.toString() : '',
-        category: data.category || ''
-      });
-    } catch (error) {
-      console.error('Error fetching product:', error);
-      alert('Error loading product details');
-      navigate('/products');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-
-    try {
-      const { error } = await supabase
-        .from('products')
-        .update({
-          ...formData,
-          price: parseFloat(formData.price) || 0
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      alert('Product updated successfully!');
-      navigate('/products');
-    } catch (error) {
-      console.error('Error updating product:', error);
-      alert('Error updating product. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const FORM_FIELDS = [
-    {
-      name: 'name',
-      label: 'Product Name',
-      type: 'text',
-      required: true,
-      placeholder: 'Enter product name',
-      colSpan: 'md:col-span-2'
-    },
-    {
-      name: 'category',
-      label: 'Category',
-      type: 'select',
-      options: [
-        { value: '', label: 'Select category' },
-        { value: 'Antibiotics', label: 'Antibiotics' },
-        { value: 'Pain Relief', label: 'Pain Relief' },
-        { value: 'Cardiovascular', label: 'Cardiovascular' },
-        { value: 'Diabetes', label: 'Diabetes' },
-        { value: 'Respiratory', label: 'Respiratory' },
-        { value: 'Vitamins', label: 'Vitamins' },
-        { value: 'Supplements', label: 'Supplements' },
-        { value: 'Other', label: 'Other' }
-      ],
-      placeholder: 'Select category'
-    },
-    {
-      name: 'price',
-      label: 'Price (₹)',
-      type: 'number',
-      placeholder: '0.00'
-    },
-    {
-      name: 'description',
-      label: 'Description',
-      type: 'textarea',
-      rows: 4,
-      placeholder: 'Enter product description...',
-      colSpan: 'md:col-span-2'
-    }
-  ];
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-
-  return (
+function EditProduct({ formData, handleChange, handleSubmit, loading, saving, onCancel, FORM_FIELDS }) {
+  return loading ? (
+    <Loader />
+  ) : (
     <div className="space-y-6">
       {/* Header */}
       <BackEditTitleAndButton title="Edit Product" backButtonPath="/products" />
