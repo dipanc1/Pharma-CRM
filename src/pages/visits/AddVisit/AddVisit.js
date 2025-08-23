@@ -5,7 +5,8 @@ import {
   SecondaryButton, 
   SearchInput,
   Table,
-  FilterSelect
+  FilterSelect,
+  AddButton
 } from '../../../components';
 
 function AddVisit({
@@ -192,14 +193,16 @@ function AddVisit({
             </div>
 
             <div className="flex items-end">
-              <button
-                type="button"
+              <div
                 onClick={addSale}
-                className="btn-primary w-full"
+                className="w-full"
               >
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Add Item
-              </button>
+                <AddButton 
+                  title="Add Item" 
+                  link="#" 
+                  icon={<PlusIcon className="h-4 w-4 mr-2" />}
+                />
+              </div>
             </div>
           </div>
 

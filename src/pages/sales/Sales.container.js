@@ -159,18 +159,20 @@ function SalesContainer() {
     doctor.doctor_class?.toLowerCase().includes(doctorSearch.toLowerCase())
   );
 
+  const handleDoctorSearchChange = (value) => {
+    setDoctorSearch(value);
+    if (value.trim()) {
+      setShowDoctorDropdown(true);
+    } else {
+      setDoctorFilter('');
+      setShowDoctorDropdown(false);
+    }
+  };
+
   const handleDoctorSelect = (doctor) => {
     setDoctorFilter(doctor.id);
     setDoctorSearch(`${doctor.name} - ${doctor.specialization} (${doctor.doctor_type} - ${doctor.doctor_class})`);
     setShowDoctorDropdown(false);
-  };
-
-  const handleDoctorSearchChange = (value) => {
-    setDoctorSearch(value);
-    setShowDoctorDropdown(true);
-    if (!value) {
-      setDoctorFilter('');
-    }
   };
 
   return (
