@@ -9,7 +9,8 @@ import {
   Pagination, 
   StatusBadge, 
   Table, 
-  ActionButtons 
+  ActionButtons,
+  Loader
 } from '../../../components';
 import NoRecordsAddButtonLayout from '../../common/NoRecordsAddButtonLayout';
 
@@ -76,18 +77,9 @@ function Doctors({
     'Name', 'Specialization', 'Hospital', 'Address', 'Class', 'Type', 'Contact', 'Actions'
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex justify-center items-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading doctors...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
+  return loading ? (
+    <Loader />
+  ) : (
     <div className="space-y-6">
       {/* Header */}
       <Header title="Doctors" buttons={[
