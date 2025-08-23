@@ -15,7 +15,6 @@ import {
 import NoRecordsAddButtonLayout from '../../common/NoRecordsAddButtonLayout';
 
 function Doctors({
-  doctors,
   loading,
   searchTerm,
   setSearchTerm,
@@ -31,7 +30,6 @@ function Doctors({
   pageSize,
   totalCount,
   deleteDoctor,
-  filteredDoctors,
   paginatedDoctors,
   totalFilteredCount,
   maxPage

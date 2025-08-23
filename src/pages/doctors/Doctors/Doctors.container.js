@@ -117,7 +117,6 @@ function DoctorsContainer() {
   return (
     <>
       <Doctors
-        doctors={doctors}
         loading={loading}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -133,7 +132,6 @@ function DoctorsContainer() {
         pageSize={pageSize}
         totalCount={totalCount}
         deleteDoctor={deleteDoctor}
-        filteredDoctors={filteredDoctors}
         paginatedDoctors={paginatedDoctors}
         totalFilteredCount={totalFilteredCount}
         maxPage={maxPage}

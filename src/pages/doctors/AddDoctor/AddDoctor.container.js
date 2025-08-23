@@ -42,9 +42,7 @@ function AddDoctorContainer() {
       if (error) throw error;
 
       showSuccess('Doctor added successfully!');
-      setTimeout(() => {
-        navigate('/doctors');
-      }, 1500);
+      navigate('/doctors');
     } catch (error) {
       console.error('Error adding doctor:', error);
       showError('Error adding doctor. Please try again.');

@@ -4,7 +4,8 @@ import {
   BackEditTitleAndButton, 
   SecondaryButton, 
   FilterSelect,
-  Table
+  Table,
+  Loader
 } from '../../../components';
 
 function EditVisit({
@@ -13,7 +14,6 @@ function EditVisit({
   handleSubmit,
   loading,
   saving,
-  onCancel,
   doctors,
   products,
   sales,
@@ -38,15 +38,9 @@ function EditVisit({
     label: `${doctor.name} - ${doctor.specialization} (${doctor.hospital})`
   }));
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-
-  return (
+  return loading ? (
+    <Loader />
+  ) : (
     <div className="space-y-6">
       {/* Header */}
       <BackEditTitleAndButton title="Edit Visit" backButtonPath={`/visits/${formData.id || ''}`} />

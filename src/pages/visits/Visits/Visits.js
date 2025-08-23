@@ -51,11 +51,9 @@ function Visits({
   const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
   const hasActiveFilters = searchTerm || startDate || endDate || statusFilter !== 'all';
 
-  if (loading) {
-    return <Loader />;
-  }
-
-  return (
+  return loading ? (
+    <Loader />
+  ) : (
     <div className="space-y-6">
       <Header title="Doctor Visits" buttons={[
         { to: "/visits/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Visit" }

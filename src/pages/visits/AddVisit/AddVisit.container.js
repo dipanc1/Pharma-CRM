@@ -142,9 +142,7 @@ function AddVisitContainer() {
       }
 
       showSuccess('Visit added successfully!');
-      setTimeout(() => {
-        navigate('/visits');
-      }, 1500);
+      navigate('/visits');
     } catch (error) {
       console.error('Error adding visit:', error);
       showError('Error adding visit. Please try again.');
@@ -183,7 +181,6 @@ function AddVisitContainer() {
         handleFormChange={handleFormChange}
         handleSubmit={handleSubmit}
         loading={loading}
-        doctors={doctors}
         products={products}
         doctorSearch={doctorSearch}
         setDoctorSearch={setDoctorSearch}

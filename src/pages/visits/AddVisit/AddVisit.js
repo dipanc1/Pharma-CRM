@@ -13,7 +13,6 @@ function AddVisit({
   handleFormChange,
   handleSubmit,
   loading,
-  doctors,
   products,
   doctorSearch,
   handleDoctorSearchChange,

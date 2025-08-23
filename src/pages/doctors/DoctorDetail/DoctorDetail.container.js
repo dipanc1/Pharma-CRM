@@ -69,9 +69,7 @@ function DoctorDetailContainer() {
         if (error) throw error;
         
         showSuccess('Doctor deleted successfully');
-        setTimeout(() => {
-          navigate('/doctors');
-        }, 1500);
+        navigate('/doctors');
       } catch (error) {
         console.error('Error deleting doctor:', error);
         showError('Error deleting doctor');

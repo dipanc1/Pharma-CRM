@@ -23,23 +23,17 @@ function VisitDetail({
   const { id } = useParams();
   const salesTableHeaders = ['Product', 'Category', 'Quantity', 'Unit Price', 'Total'];
 
-  if (loading) {
-    return <Loader />;
-  }
-
-  if (!visit) {
-    return (
-      <div className="text-center py-12">
-        <div className="text-gray-500">Visit not found</div>
-        <Link to="/visits" className="btn-primary mt-4 inline-flex">
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Back to Visits
-        </Link>
-      </div>
-    );
-  }
-
-  return (
+  return loading ? (
+    <Loader />
+  ) : !visit ? (
+    <div className="text-center py-12">
+      <div className="text-gray-500">Visit not found</div>
+      <Link to="/visits" className="btn-primary mt-4 inline-flex">
+        <ArrowLeftIcon className="h-4 w-4 mr-2" />
+        Back to Visits
+      </Link>
+    </div>
+  ) : (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">

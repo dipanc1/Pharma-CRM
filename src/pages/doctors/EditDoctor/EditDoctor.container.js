@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
-import { Loader, Toast } from '../../../components';
+import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
 import EditDoctor from './EditDoctor';
 
@@ -162,10 +162,6 @@ function EditDoctorContainer() {
   const handleCancel = () => {
     navigate(`/doctors/${id}`);
   };
-
-  if (loading) {
-    return <Loader />;
-  }
 
   return (
     <>
