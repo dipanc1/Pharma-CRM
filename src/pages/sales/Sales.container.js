@@ -176,17 +176,14 @@ function SalesContainer() {
   return (
     <>
       <Sales
-        sales={salesState}
         loading={loading}
         startDate={startDate}
         setStartDate={setStartDate}
         endDate={endDate}
         setEndDate={setEndDate}
         doctorFilter={doctorFilter}
-        setDoctorFilter={setDoctorFilter}
         productFilter={productFilter}
         setProductFilter={setProductFilter}
-        doctors={doctors}
         products={products}
         page={page}
         setPage={setPage}

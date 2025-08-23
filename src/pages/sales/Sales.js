@@ -22,17 +22,14 @@ import {
 } from '../../components';
 
 function Sales({
-  sales,
   loading,
   startDate,
   setStartDate,
   endDate,
   setEndDate,
   doctorFilter,
-  setDoctorFilter,
   productFilter,
   setProductFilter,
-  doctors,
   products,
   page,
   setPage,
