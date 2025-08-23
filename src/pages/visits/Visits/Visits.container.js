@@ -5,7 +5,6 @@ import useToast from '../../../hooks/useToast';
 import Visits from './Visits';
 
 function VisitsContainer() {
-  const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -17,11 +16,17 @@ function VisitsContainer() {
   const [doctorVisitCounts, setDoctorVisitCounts] = useState([]);
   const [countsLoading, setCountsLoading] = useState(false);
   const { toast, showSuccess, showError, hideToast } = useToast();
+  const [allVisits, setAllVisits] = useState([]);
 
   useEffect(() => {
     fetchVisits();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, page, pageSize, statusFilter]);
+  }, [startDate, endDate, statusFilter]);
+
+  useEffect(() => {
+    // Reset page when search term changes
+    setPage(1);
+  }, [searchTerm]);
 
   useEffect(() => {
     fetchDoctorVisitCounts();
@@ -37,7 +42,7 @@ function VisitsContainer() {
       const invalidRange = !!(startDate && endDate && endDate < startDate);
 
       if (justStart || justEnd || invalidRange) {
-        setVisits([]);
+        setAllVisits([]);
         setTotalCount(0);
         setLoading(false);
         return;
@@ -54,7 +59,7 @@ function VisitsContainer() {
             total_amount,
             products (name)
           )
-        `, { count: 'exact' })
+        `)
         .order('visit_date', { ascending: false });
 
       if (startDate && endDate) {
@@ -67,14 +72,11 @@ function VisitsContainer() {
         query = query.neq('status', 'completed');
       }
 
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-
-      const { data, error, count } = await query.range(from, to);
+      const { data, error } = await query;
 
       if (error) throw error;
-      setVisits(data || []);
-      setTotalCount(count || 0);
+      setAllVisits(data || []);
+      setTotalCount(data?.length || 0);
     } catch (error) {
       console.error('Error fetching visits:', error);
       showError('Error loading visits');
@@ -160,19 +162,32 @@ function VisitsContainer() {
     return sales?.reduce((total, sale) => total + parseFloat(sale.total_amount), 0) || 0;
   };
 
-  const filteredVisits = visits.filter(visit => {
-    const matchesSearch =
-      (visit.doctors?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (visit.doctors?.specialization || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (visit.status || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (visit.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+  // Apply search filtering
+  const filteredVisits = allVisits.filter(visit => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (visit.doctors?.name || '').toLowerCase().includes(searchLower) ||
+      (visit.doctors?.specialization || '').toLowerCase().includes(searchLower) ||
+      (visit.doctors?.hospital || '').toLowerCase().includes(searchLower) ||
+      (visit.status || '').toLowerCase().includes(searchLower) ||
+      (visit.notes || '').toLowerCase().includes(searchLower)
+    );
   });
+
+  // Apply pagination to filtered results
+  const paginatedVisits = filteredVisits.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
+
+  const totalFilteredCount = filteredVisits.length;
+  const maxPage = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
 
   return (
     <>
       <Visits
-        visits={visits}
         loading={loading}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -190,7 +205,9 @@ function VisitsContainer() {
         countsLoading={countsLoading}
         deleteVisit={deleteVisit}
         calculateTotalSales={calculateTotalSales}
-        filteredVisits={filteredVisits}
+        filteredVisits={paginatedVisits}
+        totalFilteredCount={totalFilteredCount}
+        maxPage={maxPage}
       />
       <Toast
         message={toast.message}

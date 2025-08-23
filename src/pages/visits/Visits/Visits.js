@@ -15,7 +15,6 @@ import NoRecordsAddButtonLayout from '../../common/NoRecordsAddButtonLayout';
 import { format } from 'date-fns';
 
 function Visits({
-  visits,
   loading,
   searchTerm,
   setSearchTerm,
@@ -33,7 +32,9 @@ function Visits({
   countsLoading,
   deleteVisit,
   calculateTotalSales,
-  filteredVisits
+  filteredVisits,
+  totalFilteredCount,
+  maxPage
 }) {
   const tableHeaders = ['Doctor', 'Visit Date', 'Status', 'Total Sales', 'Notes', 'Actions'];
   
@@ -48,7 +49,6 @@ function Visits({
       : 'bg-yellow-100 text-yellow-800';
   };
 
-  const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
   const hasActiveFilters = searchTerm || startDate || endDate || statusFilter !== 'all';
 
   return loading ? (
@@ -66,7 +66,7 @@ function Visits({
             label="Search Visits"
             placeholder="Search by doctor name, specialization, status or notes..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             id="visit_search"
           />
           
@@ -157,9 +157,20 @@ function Visits({
       <div className="card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">Visits List</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              Visits List
+              {hasActiveFilters && (
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                  ({totalFilteredCount} filtered)
+                </span>
+              )}
+            </h3>
             <div className="text-sm text-gray-600 mt-1">
-              Showing {filteredVisits.length} of {totalCount} visits
+              {hasActiveFilters ? (
+                <>Showing {Math.min(pageSize, Math.max(0, totalFilteredCount - (page - 1) * pageSize))} of {totalFilteredCount} visits (filtered from {totalCount} total)</>
+              ) : (
+                <>Showing {Math.min(pageSize, Math.max(0, totalCount - (page - 1) * pageSize))} of {totalCount} visits</>
+              )}
             </div>
           </div>
           
