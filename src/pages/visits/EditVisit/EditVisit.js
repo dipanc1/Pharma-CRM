@@ -1,8 +1,9 @@
 import React from 'react';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { 
-  BackEditTitleAndButton, 
-  SecondaryButton, 
+import {
+  BackEditTitleAndButton,
+  SecondaryButton,
+  SearchInput,
   FilterSelect,
   Table,
   Loader
@@ -21,22 +22,24 @@ function EditVisit({
   handleSaleChange,
   addSale,
   removeSale,
-  totalSalesAmount
+  totalSalesAmount,
+  doctorSearch,
+  handleDoctorSearchChange,
+  showDoctorDropdown,
+  setShowDoctorDropdown,
+  filteredDoctors,
+  handleDoctorSelect
 }) {
   const tableHeaders = ['Product', 'Quantity', 'Unit Price', 'Total', 'Actions'];
-  const productOptions = products.map(product => ({ 
-    value: product.id, 
-    label: `${product.name} - ₹${product.price}` 
+  const productOptions = products.map(product => ({
+    value: product.id,
+    label: `${product.name} - ₹${product.price}`
   }));
   const statusOptions = [
     { value: 'completed', label: 'Completed' },
     { value: 'scheduled', label: 'Scheduled' },
     { value: 'cancelled', label: 'Cancelled' }
   ];
-  const doctorOptions = doctors.map(doctor => ({
-    value: doctor.id,
-    label: `${doctor.name} - ${doctor.specialization} (${doctor.hospital})`
-  }));
 
   return loading ? (
     <Loader />
@@ -50,18 +53,46 @@ function EditVisit({
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Visit Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
+
             {/* Doctor Selection */}
-            <div className="md:col-span-2">
-              <FilterSelect
+            <div className="md:col-span-2 relative">
+              <SearchInput
                 label="Doctor *"
-                id="doctor_id"
-                name="doctor_id"
-                value={formData.doctor_id}
-                onChange={handleFormChange}
-                options={doctorOptions}
-                placeholder="Select a doctor"
+                placeholder="Search for a doctor..."
+                value={doctorSearch}
+                onChange={handleDoctorSearchChange}
+                onFocus={() => setShowDoctorDropdown(true)}
+                id="doctor_search"
               />
+
+              {showDoctorDropdown && doctorSearch && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                  {filteredDoctors.length > 0 ? (
+                    filteredDoctors.map(doctor => (
+                      <div
+                        key={doctor.id}
+                        className="px-4 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                        onClick={() => handleDoctorSelect(doctor)}
+                      >
+                        <div className="font-medium text-gray-900">{doctor.name}</div>
+                        <div className="text-sm text-gray-600">
+                          {doctor.specialization} • {doctor.doctor_type} • Class {doctor.doctor_class}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2 text-gray-500">No doctors found</div>
+                  )}
+                </div>
+              )}
+
+              {/* Click outside to close dropdown */}
+              {showDoctorDropdown && (
+                <div
+                  className="fixed inset-0 z-5"
+                  onClick={() => setShowDoctorDropdown(false)}
+                />
+              )}
             </div>
 
             {/* Visit Date */}
@@ -117,7 +148,7 @@ function EditVisit({
 
           {/* Add Sale Form */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            
+
             {/* Product Selection */}
             <div>
               <FilterSelect

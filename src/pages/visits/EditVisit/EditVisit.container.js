@@ -20,6 +20,8 @@ function EditVisitContainer() {
     status: 'completed'
   });
   const [sales, setSales] = useState([]);
+  const [doctorSearch, setDoctorSearch] = useState('');
+  const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
   const [newSale, setNewSale] = useState({
     product_id: '',
     quantity: 1,
@@ -27,11 +29,24 @@ function EditVisitContainer() {
   });
 
   useEffect(() => {
-    fetchVisitData();
     fetchDoctors();
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, []);
+
+  useEffect(() => {
+    if (doctors.length > 0) {
+      fetchVisitData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctors, id]);
+
+  const setInitialDoctorSearch = (doctorId) => {
+    const doctor = doctors.find(d => d.id === doctorId);
+    if (doctor) {
+      setDoctorSearch(`${doctor.name} - ${doctor.specialization} (${doctor.doctor_type} - ${doctor.doctor_class})`);
+    }
+  };
 
   const fetchVisitData = async () => {
     try {
@@ -74,6 +89,11 @@ function EditVisitContainer() {
 
       setSales(existingSales);
 
+      // Set initial doctor search after both visit data and doctors are loaded
+      if (data.doctor_id && doctors.length > 0) {
+        setInitialDoctorSearch(data.doctor_id);
+      }
+
     } catch (error) {
       console.error('Error fetching visit data:', error);
       showError('Error loading visit details');
@@ -87,7 +107,7 @@ function EditVisitContainer() {
     try {
       const { data, error } = await supabase
         .from('doctors')
-        .select('id, name, specialization, hospital')
+        .select('id, name, specialization, doctor_type, doctor_class')
         .order('name');
 
       if (error) throw error;
@@ -95,6 +115,28 @@ function EditVisitContainer() {
     } catch (error) {
       console.error('Error fetching doctors:', error);
       showError('Error loading doctors');
+    }
+  };
+
+  // Add these new functions
+  const filteredDoctors = doctors.filter(doctor =>
+    doctor.name.toLowerCase().includes(doctorSearch.toLowerCase()) ||
+    doctor.specialization?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
+    doctor.doctor_type?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
+    doctor.doctor_class?.toLowerCase().includes(doctorSearch.toLowerCase())
+  );
+
+  const handleDoctorSelect = (doctor) => {
+    setFormData(prev => ({ ...prev, doctor_id: doctor.id }));
+    setDoctorSearch(`${doctor.name} - ${doctor.specialization} (${doctor.doctor_type} - ${doctor.doctor_class})`);
+    setShowDoctorDropdown(false);
+  };
+
+  const handleDoctorSearchChange = (e) => {
+    setDoctorSearch(e.target.value);
+    setShowDoctorDropdown(true);
+    if (!e.target.value) {
+      setFormData(prev => ({ ...prev, doctor_id: '' }));
     }
   };
 
@@ -237,6 +279,12 @@ function EditVisitContainer() {
         addSale={addSale}
         removeSale={removeSale}
         totalSalesAmount={totalSalesAmount}
+        doctorSearch={doctorSearch}
+        handleDoctorSearchChange={handleDoctorSearchChange}
+        showDoctorDropdown={showDoctorDropdown}
+        setShowDoctorDropdown={setShowDoctorDropdown}
+        filteredDoctors={filteredDoctors}
+        handleDoctorSelect={handleDoctorSelect}
       />
       <Toast
         message={toast.message}

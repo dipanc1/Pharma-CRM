@@ -57,14 +57,11 @@ function AddVisit({
                 placeholder="Search for a doctor..."
                 value={doctorSearch}
                 onChange={handleDoctorSearchChange}
+                onFocus={() => setShowDoctorDropdown(true)}
                 id="doctor_search"
               />
-              <div 
-                onClick={() => setShowDoctorDropdown(true)}
-                className="absolute inset-0 cursor-pointer"
-              />
               
-              {showDoctorDropdown && (
+              {showDoctorDropdown && doctorSearch && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                   {filteredDoctors.length > 0 ? (
                     filteredDoctors.map(doctor => (
