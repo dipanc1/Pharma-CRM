@@ -20,6 +20,7 @@ const navigation = [
   { name: 'Visits', href: '/visits', icon: CalendarIcon },
   { name: 'Products', href: '/products', icon: CubeIcon },
   { name: 'Sales', href: '/sales', icon: ChartBarIcon },
+  { name: 'Inventory', href: '/inventory', icon: CubeIcon }
 ];
 
 function Layout() {

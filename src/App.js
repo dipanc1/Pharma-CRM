@@ -13,6 +13,9 @@ import Dashboard from './pages/dashboard';
 // Sales pages
 import Sales from './pages/sales';
 
+// Inventory pages
+import InventoryDashboard from './pages/inventory';
+
 // Products pages
 import Products from './pages/products/Products';
 import AddProduct from './pages/products/AddProduct';
@@ -62,6 +65,9 @@ function App() {
 
             {/* Sales Routes */}
             <Route path="sales" element={<Sales />} />
+
+            {/* Inventory Route */}
+            <Route path="/inventory" element={<InventoryDashboard />} />
           </Route>
         </Routes>
       </div>
