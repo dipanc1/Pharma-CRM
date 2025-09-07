@@ -8,3 +8,4 @@ export { default as Table } from './common/Table';
 export { default as ActionButtons } from './common/ActionButtons';
 export { default as InfoField } from './common/InfoField';
 export { default as Toast } from './common/Toast';
+export { default as AddStockModal } from './common/AddStockModal';

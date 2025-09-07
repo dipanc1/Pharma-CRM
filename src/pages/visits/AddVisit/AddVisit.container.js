@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabase';
 import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
 import AddVisit from './AddVisit';
+import { addStockTransaction, updateProductStock, TRANSACTION_TYPES, calculateStockSummary } from '../../../utils/stockUtils';
 
 function AddVisitContainer() {
   const navigate = useNavigate();
@@ -22,14 +23,15 @@ function AddVisitContainer() {
   const [sales, setSales] = useState([]);
   const [newSale, setNewSale] = useState({
     product_id: '',
-    quantity: 1,
-    unit_price: 0
-  });
+    quantity: '',
+    unit_price: ''
+  })
+  const [currentStock, setCurrentStock] = useState(null);
 
   useEffect(() => {
     fetchDoctors();
     fetchProducts();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchDoctors = async () => {
@@ -51,7 +53,7 @@ function AddVisitContainer() {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, price')
+        .select('id, name, price, current_stock')
         .order('name');
 
       if (error) throw error;
@@ -70,35 +72,60 @@ function AddVisitContainer() {
     }));
   };
 
-  const handleSaleChange = (e) => {
+
+  const handleSaleChange = async (e) => {
     const { name, value } = e.target;
     setNewSale(prev => ({
       ...prev,
-      [name]: name === 'quantity' || name === 'unit_price' ? parseFloat(value) || 0 : value
+      [name]: name === 'quantity' || name === 'unit_price'
+        ? value
+        : value
     }));
+
+    if (name === 'product_id' && value) {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const stockSummary = await calculateStockSummary(value, today);
+        setCurrentStock(stockSummary.closingStock);
+      } catch (error) {
+        console.error('Error checking stock:', error);
+        setCurrentStock(null);
+      }
+    }
   };
 
   const addSale = () => {
-    if (!newSale.product_id || newSale.quantity <= 0 || newSale.unit_price <= 0) {
+    const quantity = parseFloat(newSale.quantity);
+    const unit_price = parseFloat(newSale.unit_price);
+
+    if (!newSale.product_id || !newSale.quantity || isNaN(quantity) || quantity <= 0 || !newSale.unit_price || isNaN(unit_price) || unit_price <= 0) {
       showError('Please fill in all sale details');
       return;
     }
 
+    if (currentStock !== null && quantity > currentStock) {
+      showError(`Insufficient stock. Available: ${currentStock}`);
+      return;
+    }
+
     const product = products.find(p => p.id === newSale.product_id);
-    const total_amount = newSale.quantity * newSale.unit_price;
+    const total_amount = quantity * unit_price;
 
     setSales(prev => [...prev, {
-      ...newSale,
-      id: Date.now(), // temporary ID
-      product_name: product?.name,
-      total_amount
+      id: Date.now(),
+      product_id: newSale.product_id,
+      quantity: quantity,
+      unit_price: unit_price,
+      total_amount,
+      product_name: product?.name
     }]);
 
     setNewSale({
       product_id: '',
-      quantity: 1,
-      unit_price: 0
+      quantity: '',
+      unit_price: ''
     });
+    setCurrentStock(null);
   };
 
   const removeSale = (index) => {
@@ -124,7 +151,7 @@ function AddVisitContainer() {
 
       if (visitError) throw visitError;
 
-      // Insert sales if any
+      // Insert sales and update stock if any
       if (sales.length > 0) {
         const salesData = sales.map(sale => ({
           visit_id: visit.id,
@@ -139,6 +166,22 @@ function AddVisitContainer() {
           .insert(salesData);
 
         if (salesError) throw salesError;
+
+        // Add stock transactions for each sale
+        for (const sale of sales) {
+          await addStockTransaction({
+            product_id: sale.product_id,
+            transaction_type: TRANSACTION_TYPES.SALE,
+            quantity: -sale.quantity, // Negative for sale
+            transaction_date: formData.visit_date,
+            reference_type: 'visit',
+            reference_id: visit.id,
+            notes: `Sale via visit to doctor ID: ${formData.doctor_id}`
+          });
+
+          // Update current stock in products table
+          await updateProductStock(sale.product_id);
+        }
       }
 
       showSuccess('Visit added successfully!');
@@ -153,7 +196,7 @@ function AddVisitContainer() {
 
   const totalSalesAmount = sales.reduce((total, sale) => total + sale.total_amount, 0);
 
-  const filteredDoctors = doctors.filter(doctor => 
+  const filteredDoctors = doctors.filter(doctor =>
     doctor.name.toLowerCase().includes(doctorSearch.toLowerCase()) ||
     doctor.specialization?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
     doctor.doctor_type?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
@@ -195,6 +238,7 @@ function AddVisitContainer() {
         addSale={addSale}
         removeSale={removeSale}
         totalSalesAmount={totalSalesAmount}
+        currentStock={currentStock}
       />
       <Toast
         message={toast.message}

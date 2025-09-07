@@ -1,12 +1,13 @@
 import React from 'react';
-import { PlusIcon } from '@heroicons/react/24/outline';
-import { 
-  AddButton, 
-  Header, 
+import { PlusIcon, CubeIcon, PencilIcon } from '@heroicons/react/24/outline';
+import {
+  AddButton,
+  Header,
   SearchInput,
-  Table, 
+  Table,
   ActionButtons,
-  Loader
+  Loader,
+  AddStockModal
 } from '../../../components';
 import NoRecordsAddButtonLayout from '../../common/NoRecordsAddButtonLayout';
 
@@ -16,9 +17,15 @@ function Products({
   searchTerm,
   setSearchTerm,
   deleteProduct,
-  filteredProducts
+  filteredProducts,
+  onAddStock,
+  onEditStock,
+  stockModal,
+  onStockSubmit,
+  onCloseStockModal
 }) {
-  const tableHeaders = ['Product Name', 'Category', 'Price', 'Description', 'Actions'];
+  // Update table headers to include separate stock column
+  const tableHeaders = ['Product Name', 'Category', 'Price', 'Current Stock', 'Stock Actions', 'Description', 'Actions'];
 
   return loading ? (
     <Loader />
@@ -65,6 +72,37 @@ function Products({
                 <Table.Cell className="font-medium text-gray-900">
                   ₹{product.price ? parseFloat(product.price).toFixed(2) : '0.00'}
                 </Table.Cell>
+                <Table.Cell>
+                  <div className="flex items-center space-x-2">
+                    <span className={`font-medium ${product.current_stock <= 10 ? 'text-red-600' : 'text-green-600'}`}>
+                      {product.current_stock || 0}
+                    </span>
+                    {product.current_stock <= 10 && (
+                      <span className="text-xs text-red-500">Low Stock</span>
+                    )}
+                  </div>
+                </Table.Cell>
+                {/* New Stock Actions Column */}
+                <Table.Cell>
+                  <div className="flex gap-2 items-center">
+                    <button
+                      onClick={() => onAddStock(product)}
+                      className="flex items-center text-blue-600 hover:text-blue-700 text-xs font-medium px-3 py-1.5 rounded-md border border-blue-200 hover:bg-blue-50 transition-colors"
+                      title="Add Stock"
+                    >
+                      <CubeIcon className="h-3 w-3 mr-1" />
+                      Add Stock
+                    </button>
+                    <button
+                      onClick={() => onEditStock(product)}
+                      className="flex items-center text-green-600 hover:text-green-700 text-xs font-medium px-3 py-1.5 rounded-md border border-green-200 hover:bg-green-50 transition-colors"
+                      title="Edit Stock"
+                    >
+                      <PencilIcon className="h-3 w-3 mr-1" />
+                      Edit Stock
+                    </button>
+                  </div>
+                </Table.Cell>
                 <Table.Cell className="max-w-xs">
                   {product.description ? (
                     <div className="truncate" title={product.description}>
@@ -76,9 +114,9 @@ function Products({
                 </Table.Cell>
                 <Table.Cell>
                   <ActionButtons
+                    viewPath={`/products/${product.id}`}
                     editPath={`/products/${product.id}/edit`}
                     onDelete={() => deleteProduct(product.id)}
-                    showView={false}
                   />
                 </Table.Cell>
               </Table.Row>
@@ -97,6 +135,16 @@ function Products({
           </div>
         )}
       </div>
+
+      <AddStockModal
+        isOpen={stockModal.isOpen}
+        onClose={onCloseStockModal}
+        product={stockModal.product}
+        onSubmit={onStockSubmit}
+        loading={stockModal.loading}
+        mode={stockModal.mode}
+        initialQuantity={stockModal.product?.current_stock || 0}
+      />
     </div>
   );
 }

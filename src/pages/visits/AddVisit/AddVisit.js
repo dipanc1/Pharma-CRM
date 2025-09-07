@@ -1,8 +1,8 @@
 import React from 'react';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { 
-  BackTitleAndButton, 
-  SecondaryButton, 
+import {
+  BackTitleAndButton,
+  SecondaryButton,
   SearchInput,
   Table,
   FilterSelect,
@@ -26,12 +26,13 @@ function AddVisit({
   handleSaleChange,
   addSale,
   removeSale,
-  totalSalesAmount
+  totalSalesAmount,
+  currentStock
 }) {
   const tableHeaders = ['Product', 'Quantity', 'Unit Price', 'Total', 'Actions'];
-  const productOptions = products.map(product => ({ 
-    value: product.id, 
-    label: `${product.name} - ₹${product.price}` 
+  const productOptions = products.map(product => ({
+    value: product.id,
+    label: `${product.name} - ₹${product.price} (Stock: ${product.current_stock || 0})`
   }));
   const statusOptions = [
     { value: 'completed', label: 'Completed' },
@@ -49,7 +50,7 @@ function AddVisit({
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Visit Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
+
             {/* Doctor Search - Using SearchInput component */}
             <div className="md:col-span-2 relative">
               <SearchInput
@@ -60,7 +61,7 @@ function AddVisit({
                 onFocus={() => setShowDoctorDropdown(true)}
                 id="doctor_search"
               />
-              
+
               {showDoctorDropdown && doctorSearch && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                   {filteredDoctors.length > 0 ? (
@@ -81,7 +82,7 @@ function AddVisit({
                   )}
                 </div>
               )}
-              
+
               {/* Click outside to close dropdown */}
               {showDoctorDropdown && (
                 <div
@@ -144,7 +145,7 @@ function AddVisit({
 
           {/* Add Sale Form */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            
+
             {/* Product Selection - Using FilterSelect component */}
             <div>
               <FilterSelect
@@ -161,16 +162,29 @@ function AddVisit({
             <div>
               <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-2">
                 Quantity
+                {currentStock !== null && (
+                  <span className="text-sm text-gray-500 ml-2">
+                    (Available: {currentStock})
+                  </span>
+                )}
               </label>
-              <input
-                type="number"
-                id="quantity"
-                name="quantity"
-                min="1"
-                className="input-field"
-                value={newSale.quantity}
-                onChange={handleSaleChange}
-              />
+              <div className="space-y-1">
+                <input
+                  type="number"
+                  id="quantity"
+                  name="quantity"
+                  min="1"
+                  max={currentStock || undefined}
+                  className="input-field"
+                  value={newSale.quantity}
+                  onChange={handleSaleChange}
+                />
+                {currentStock !== null && newSale.quantity > currentStock && (
+                  <div className="text-red-500 text-xs mt-1 p-2 bg-red-50 rounded-md border border-red-200">
+                    ⚠️ Quantity exceeds available stock ({currentStock})
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>

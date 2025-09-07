@@ -6,7 +6,8 @@ import {
   SearchInput,
   FilterSelect,
   Table,
-  Loader
+  Loader,
+  AddButton
 } from '../../../components';
 
 function EditVisit({
@@ -28,12 +29,13 @@ function EditVisit({
   showDoctorDropdown,
   setShowDoctorDropdown,
   filteredDoctors,
-  handleDoctorSelect
+  handleDoctorSelect,
+  currentStock
 }) {
   const tableHeaders = ['Product', 'Quantity', 'Unit Price', 'Total', 'Actions'];
   const productOptions = products.map(product => ({
     value: product.id,
-    label: `${product.name} - ₹${product.price}`
+    label: `${product.name} - ₹${product.price} (Stock: ${product.current_stock || 0})`
   }));
   const statusOptions = [
     { value: 'completed', label: 'Completed' },
@@ -165,16 +167,29 @@ function EditVisit({
             <div>
               <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-2">
                 Quantity
+                {currentStock !== null && (
+                  <span className="text-sm text-gray-500 ml-2">
+                    (Available: {currentStock})
+                  </span>
+                )}
               </label>
-              <input
-                type="number"
-                id="quantity"
-                name="quantity"
-                min="1"
-                className="input-field"
-                value={newSale.quantity}
-                onChange={handleSaleChange}
-              />
+              <div className="space-y-1">
+                <input
+                  type="number"
+                  id="quantity"
+                  name="quantity"
+                  min="1"
+                  max={currentStock || undefined}
+                  className="input-field"
+                  value={newSale.quantity}
+                  onChange={handleSaleChange}
+                />
+                {currentStock !== null && newSale.quantity > currentStock && (
+                  <div className="text-red-500 text-xs mt-1 p-2 bg-red-50 rounded-md border border-red-200">
+                    ⚠️ Quantity exceeds available stock ({currentStock})
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>
@@ -194,14 +209,16 @@ function EditVisit({
             </div>
 
             <div className="flex items-end">
-              <button
-                type="button"
+              <div
                 onClick={addSale}
-                className="btn-primary w-full"
+                className="w-full"
               >
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Add Item
-              </button>
+                <AddButton
+                  title="Add Item"
+                  link="#"
+                  icon={<PlusIcon className="h-4 w-4 mr-2" />}
+                />
+              </div>
             </div>
           </div>
 
