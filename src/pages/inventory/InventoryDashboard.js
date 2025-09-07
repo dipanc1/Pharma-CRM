@@ -14,7 +14,6 @@ import {
     Legend
 } from 'recharts';
 import {
-    Header,
     FilterSelect,
     Table,
     StatusBadge
@@ -83,23 +82,6 @@ function InventoryDashboard({
         return 'text-green-600 bg-green-50';
     };
 
-    const headerButtons = [
-        {
-            label: 'Export Data',
-            onClick: onExportData,
-            icon: <DocumentArrowDownIcon className="h-4 w-4" />,
-            variant: 'secondary',
-            disabled: loading || (inventoryData || []).length === 0
-        },
-        {
-            label: 'Refresh',
-            onClick: onRefresh,
-            icon: <ChartBarIcon className="h-4 w-4" />,
-            variant: 'primary',
-            disabled: loading
-        }
-    ];
-
     const safeStats = summaryStats || {
         totalProducts: 0,
         totalPurchases: 0,
@@ -128,7 +110,28 @@ function InventoryDashboard({
 
     return (
         <div className="space-y-6">
-            <Header title="Inventory Dashboard" buttons={headerButtons} />
+            {/* Custom Header for Inventory Dashboard */}
+            <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-900">Inventory Dashboard</h1>
+                <div className="flex space-x-3">
+                    <button
+                        onClick={onExportData}
+                        disabled={loading || (inventoryData || []).length === 0}
+                        className={`inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                        <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
+                        Export Data
+                    </button>
+                    <button
+                        onClick={onRefresh}
+                        disabled={loading}
+                        className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                        <ChartBarIcon className="h-4 w-4 mr-2" />
+                        Refresh
+                    </button>
+                </div>
+            </div>
 
             {/* Date Range and Filters */}
             <div className="card">
@@ -407,10 +410,7 @@ function InventoryDashboard({
                             {(inventoryData || []).map((item) => (
                                 <Table.Row key={item.product_id} className="hover:bg-gray-50">
                                     <Table.Cell className="font-medium">
-                                        <div>
-                                            <div className="font-medium text-gray-900">{item.product_name}</div>
-                                            <div className="text-sm text-gray-500">ID: {item.product_id.slice(0, 8)}...</div>
-                                        </div>
+                                        <div className="font-medium text-gray-900">{item.product_name}</div>
                                     </Table.Cell>
                                     <Table.Cell>
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">

@@ -265,9 +265,8 @@ function InventoryDashboardContainer() {
     const handleExportData = () => {
         try {
             const csvData = [
-                ['Product ID', 'Product Name', 'Category', 'Opening Stock', 'Purchases', 'Sales', 'Adjustments', 'Closing Stock', 'Stock Value', 'Price'],
+                ['Product Name', 'Category', 'Opening Stock', 'Purchases', 'Sales', 'Adjustments', 'Closing Stock', 'Stock Value', 'Price'],
                 ...(inventoryData || []).map(item => [
-                    item.product_id,
                     item.product_name,
                     item.category || 'N/A',
                     item.opening_stock,
