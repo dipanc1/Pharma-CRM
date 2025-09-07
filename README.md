@@ -540,7 +540,7 @@ npm run cypress:open
 
 ### Commercial Support
 For enterprise features, custom development, or priority support:
-- Email: [Click here to contact me](mailto:dipanchhabra@gmail.com)
+- Email: [Click here to contact me over email](mailto:dipanchhabra@gmail.com)
 - Website: [Click here to visit my website](https://dipan-portfolio2.netlify.app)
 
 ## License
