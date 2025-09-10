@@ -123,7 +123,7 @@ function Visits({
         <div className="card">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-semibold text-gray-700">
-              Visit Frequency in Selected Period
+              Doctor Visit Frequency in Selected Period
             </h2>
             <div className="flex items-center gap-3">
               <span className="text-xs text-gray-500">Status: {statusFilter}</span>
@@ -139,15 +139,23 @@ function Visits({
                   ? true
                   : (d.doctor?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                   (d.doctor?.specialization || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  (d.doctor?.hospital || '').toLowerCase().includes(searchTerm.toLowerCase())
+                  (d.doctor?.hospital || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (d.doctor?.city || '').toLowerCase().includes(searchTerm.toLowerCase())
               )
               .map(d => (
                 <span
                   key={d.doctor_id}
-                  className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-medium border border-blue-200"
-                  title={`${d.doctor?.name || 'Unknown'} — ${d.count} visit(s) in period`}
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border ${
+                    d.count === 0
+                      ? 'bg-gray-50 text-gray-700 border-gray-200'
+                      : 'bg-blue-50 text-blue-700 border-blue-200'
+                  }`}
+                  title={`${d.doctor?.name || 'Unknown'} — ${d.count} visit(s) in period${d.doctor?.city ? ` • ${d.doctor.city}` : ''}`}
                 >
                   {(d.doctor?.name || 'Unknown')}: {d.count}
+                  {d.doctor?.city && (
+                    <span className="ml-1 text-gray-500">• {d.doctor.city}</span>
+                  )}
                 </span>
               ))}
           </div>

@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
+import { format, startOfMonth } from 'date-fns';
 import Visits from './Visits';
 
 function VisitsContainer() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -44,7 +45,6 @@ function VisitsContainer() {
       if (justStart || justEnd || invalidRange) {
         setAllVisits([]);
         setTotalCount(0);
-        setLoading(false);
         return;
       }
 
@@ -74,12 +74,20 @@ function VisitsContainer() {
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        showError('Failed to load visits. Please check your connection and try again.');
+        setAllVisits([]);
+        setTotalCount(0);
+        return;
+      }
+
       setAllVisits(data || []);
       setTotalCount(data?.length || 0);
+
     } catch (error) {
-      console.error('Error fetching visits:', error);
-      showError('Error loading visits');
+      showError('Error loading visits. Please try again.');
+      setAllVisits([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
@@ -87,53 +95,81 @@ function VisitsContainer() {
 
   const fetchDoctorVisitCounts = async () => {
     try {
-      const noDates = !startDate && !endDate;
       const justStart = !!(startDate && !endDate);
       const justEnd = !!(!startDate && endDate);
       const invalidRange = !!(startDate && endDate && endDate < startDate);
 
-      if (noDates || justStart || justEnd || invalidRange) {
+      if (justStart || justEnd || invalidRange) {
         setDoctorVisitCounts([]);
         return;
       }
 
       setCountsLoading(true);
-      let query = supabase
-        .from('visits')
-        .select(`
-          doctor_id,
-          status,
-          doctors (name, specialization, hospital)
-        `);
+      
+      // Step 1: Get all doctors first
+      const { data: allDoctors, error: doctorsError } = await supabase
+        .from('doctors')
+        .select('id, name, specialization, hospital, address')
+        .order('name');
 
-      query = query.gte('visit_date', startDate).lte('visit_date', endDate);
-
-      if (statusFilter === 'completed') {
-        query = query.eq('status', 'completed');
-      } else if (statusFilter === 'other') {
-        query = query.neq('status', 'completed');
+      if (doctorsError) {
+        showError('Database error fetching doctors:', doctorsError);
+        return;
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      // Step 2: Get visit counts for the date range
+      let visitQuery = supabase
+        .from('visits')
+        .select('doctor_id, status');
 
-      const map = new Map();
-      (data || []).forEach((row) => {
-        if (!row.doctor_id) return;
-        const existing = map.get(row.doctor_id) || {
-          doctor_id: row.doctor_id,
-          doctor: row.doctors,
-          count: 0,
-        };
-        existing.count += 1;
-        if (!existing.doctor && row.doctors) existing.doctor = row.doctors;
-        map.set(row.doctor_id, existing);
+      if (startDate && endDate) {
+        visitQuery = visitQuery.gte('visit_date', startDate).lte('visit_date', endDate);
+      }
+
+      if (statusFilter === 'completed') {
+        visitQuery = visitQuery.eq('status', 'completed');
+      } else if (statusFilter === 'other') {
+        visitQuery = visitQuery.neq('status', 'completed');
+      }
+
+      const { data: visits, error: visitsError } = await visitQuery;
+      
+      if (visitsError) {
+        showError('Database error fetching visit counts');
+        return;
+      }
+
+      // Step 3: Create a map of doctor visit counts
+      const visitCountMap = new Map();
+      (visits || []).forEach((visit) => {
+        if (!visit.doctor_id) return;
+        const count = visitCountMap.get(visit.doctor_id) || 0;
+        visitCountMap.set(visit.doctor_id, count + 1);
       });
 
-      const list = Array.from(map.values()).sort((a, b) => b.count - a.count);
-      setDoctorVisitCounts(list);
-    } catch (err) {
-      console.error('Error fetching doctor visit counts:', err);
+      // Step 4: Combine all doctors with their visit counts (including 0 visits)
+      const doctorVisitCounts = allDoctors.map(doctor => ({
+        doctor_id: doctor.id,
+        doctor: {
+          name: doctor.name,
+          specialization: doctor.specialization,
+          hospital: doctor.hospital,
+          city: doctor.address // Using address as city
+        },
+        count: visitCountMap.get(doctor.id) || 0
+      }));
+
+      // Sort by visit count (descending), then by name
+      const sortedCounts = doctorVisitCounts.sort((a, b) => {
+        if (b.count !== a.count) {
+          return b.count - a.count;
+        }
+        return (a.doctor?.name || '').localeCompare(b.doctor?.name || '');
+      });
+
+      setDoctorVisitCounts(sortedCounts);   
+    } catch (error) {
+      showError('Error loading visit statistics. Please try again.');
       setDoctorVisitCounts([]);
     } finally {
       setCountsLoading(false);
@@ -143,17 +179,48 @@ function VisitsContainer() {
   const deleteVisit = async (id) => {
     if (window.confirm('Are you sure you want to delete this visit? This will also delete all associated sales.')) {
       try {
+        // Get visit details for confirmation message
+        const { data: visitData } = await supabase
+          .from('visits')
+          .select(`
+            visit_date,
+            doctors (name),
+            sales (id)
+          `)
+          .eq('id', id)
+          .single();
+
         const { error } = await supabase
           .from('visits')
           .delete()
           .eq('id', id);
 
-        if (error) throw error;
-        showSuccess('Visit deleted successfully');
-        fetchVisits();
+        if (error) {
+          showError('Failed to delete visit. Please try again.');
+          return;
+        }
+
+        // Show detailed success message
+        const doctorName = visitData?.doctors?.name || 'Unknown Doctor';
+        const visitDate = visitData?.visit_date ? format(new Date(visitData.visit_date), 'MMM dd, yyyy') : '';
+        const salesCount = visitData?.sales?.length || 0;
+        
+        let successMessage = `Visit deleted successfully`;
+        if (doctorName && visitDate) {
+          successMessage += ` (${doctorName} - ${visitDate})`;
+        }
+        if (salesCount > 0) {
+          successMessage += ` and ${salesCount} associated sale${salesCount !== 1 ? 's' : ''}`;
+        }
+
+        showSuccess(successMessage);
+        
+        // Refresh data
+        await fetchVisits();
+        await fetchDoctorVisitCounts();
+
       } catch (error) {
-        console.error('Error deleting visit:', error);
-        showError('Error deleting visit');
+        showError('Error deleting visit. Please try again.');
       }
     }
   };
