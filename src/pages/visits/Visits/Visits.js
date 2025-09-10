@@ -1,7 +1,7 @@
 import React from 'react';
 import { PlusIcon } from '@heroicons/react/24/outline';
-import { 
-  Header, 
+import {
+  Header,
   SearchInput,
   FilterSelect,
   Table,
@@ -28,6 +28,9 @@ function Visits({
   totalCount,
   statusFilter,
   setStatusFilter,
+  cityFilter,
+  setCityFilter,
+  cityOptions,
   doctorVisitCounts,
   countsLoading,
   deleteVisit,
@@ -37,11 +40,16 @@ function Visits({
   maxPage
 }) {
   const tableHeaders = ['Doctor', 'Visit Date', 'Status', 'Total Sales', 'Notes', 'Actions'];
-  
+
   const statusOptions = [
     { value: 'completed', label: 'Completed' },
     { value: 'other', label: 'Other' }
   ];
+
+  const cityFilterOptions = cityOptions.map(city => ({
+    value: city,
+    label: city
+  }));
 
   const getVisitStatusStyle = (status) => {
     return status === 'completed'
@@ -49,7 +57,7 @@ function Visits({
       : 'bg-yellow-100 text-yellow-800';
   };
 
-  const hasActiveFilters = searchTerm || startDate || endDate || statusFilter !== 'all';
+  const hasActiveFilters = searchTerm || startDate || endDate || statusFilter !== 'all' || cityFilter;
 
   return loading ? (
     <Loader />
@@ -60,8 +68,8 @@ function Visits({
       ]} />
 
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+
           <SearchInput
             label="Search Visits"
             placeholder="Search by doctor name, specialization, status or notes..."
@@ -69,7 +77,7 @@ function Visits({
             onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             id="visit_search"
           />
-          
+
           <div>
             <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
               Start Date
@@ -86,7 +94,7 @@ function Visits({
               <p className="mt-1 text-xs text-gray-500">Select start date to apply the date range.</p>
             )}
           </div>
-          
+
           <div>
             <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-2">
               End Date
@@ -106,7 +114,7 @@ function Visits({
               <p className="mt-1 text-xs text-gray-500">Select end date to apply the date range.</p>
             )}
           </div>
-          
+
           {/* Status Filter - Using FilterSelect component */}
           <FilterSelect
             label="Status"
@@ -116,6 +124,15 @@ function Visits({
             options={statusOptions}
             placeholder="All"
           />
+
+          <FilterSelect
+            label="City"
+            id="cityFilter"
+            value={cityFilter}
+            onChange={(e) => { setCityFilter(e.target.value); setPage(1); }}
+            options={cityFilterOptions}
+            placeholder="All Cities"
+          />
         </div>
       </div>
 
@@ -124,9 +141,17 @@ function Visits({
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-semibold text-gray-700">
               Doctor Visit Frequency in Selected Period
+              {cityFilter && (
+                <span className="ml-2 text-xs text-blue-600 font-normal">
+                  (City: {cityFilter})
+                </span>
+              )}
             </h2>
             <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-500">Status: {statusFilter}</span>
+              <span className="text-xs text-gray-500">
+                Status: {statusFilter}
+                {cityFilter && ` • City: ${cityFilter}`}
+              </span>
               {countsLoading && (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600" />
               )}
@@ -145,15 +170,14 @@ function Visits({
               .map(d => (
                 <span
                   key={d.doctor_id}
-                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border ${
-                    d.count === 0
-                      ? 'bg-gray-50 text-gray-700 border-gray-200'
-                      : 'bg-blue-50 text-blue-700 border-blue-200'
-                  }`}
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border ${d.count === 0
+                    ? 'bg-gray-50 text-gray-700 border-gray-200'
+                    : 'bg-blue-50 text-blue-700 border-blue-200'
+                    }`}
                   title={`${d.doctor?.name || 'Unknown'} — ${d.count} visit(s) in period${d.doctor?.city ? ` • ${d.doctor.city}` : ''}`}
                 >
                   {(d.doctor?.name || 'Unknown')}: {d.count}
-                  {d.doctor?.city && (
+                  {d.doctor?.city && !cityFilter && (
                     <span className="ml-1 text-gray-500">• {d.doctor.city}</span>
                   )}
                 </span>
@@ -181,7 +205,7 @@ function Visits({
               )}
             </div>
           </div>
-          
+
           <Pagination
             currentPage={page}
             totalPages={maxPage}
@@ -199,6 +223,9 @@ function Visits({
                     <div className="font-medium text-gray-900">{visit.doctors?.name}</div>
                     <div className="text-sm text-gray-500">
                       {visit.doctors?.specialization} • {visit.doctors?.hospital}
+                      {visit.doctors?.address && (
+                        <span className="ml-1">• {visit.doctors.address}</span>
+                      )}
                     </div>
                   </div>
                 </Table.Cell>

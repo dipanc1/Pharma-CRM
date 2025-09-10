@@ -14,25 +14,56 @@ function VisitsContainer() {
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [cityFilter, setCityFilter] = useState('');
+  const [cityOptions, setCityOptions] = useState([]);
   const [doctorVisitCounts, setDoctorVisitCounts] = useState([]);
   const [countsLoading, setCountsLoading] = useState(false);
   const { toast, showSuccess, showError, hideToast } = useToast();
   const [allVisits, setAllVisits] = useState([]);
 
   useEffect(() => {
-    fetchVisits();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, statusFilter]);
+    // Reset page when filters change
+    setPage(1);
+  }, [searchTerm, cityFilter]);
 
   useEffect(() => {
-    // Reset page when search term changes
-    setPage(1);
-  }, [searchTerm]);
+    fetchVisits();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate, statusFilter, cityFilter]);
 
   useEffect(() => {
     fetchDoctorVisitCounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, statusFilter]);
+  }, [startDate, endDate, statusFilter, cityFilter]);
+
+  useEffect(() => {
+    fetchCityOptions();
+  }, []);
+
+  const fetchCityOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('doctors')
+        .select('address')
+        .order('address');
+
+      if (error) {
+        console.error('Error fetching city options:', error);
+        return;
+      }
+
+      const uniqueCities = [...new Set(
+        data
+          .map(doctor => doctor.address)
+          .filter(city => city && city.trim() !== '')
+          .map(city => city.trim())
+      )].sort();
+
+      setCityOptions(uniqueCities);
+    } catch (error) {
+      console.error('Error fetching city options:', error);
+    }
+  };
 
   const fetchVisits = async () => {
     try {
@@ -51,15 +82,15 @@ function VisitsContainer() {
       let query = supabase
         .from('visits')
         .select(`
-          *,
-          doctors (name, specialization, hospital),
-          sales (
-            id,
-            quantity,
-            total_amount,
-            products (name)
-          )
-        `)
+        *,
+        doctors (name, specialization, hospital, address),
+        sales (
+          id,
+          quantity,
+          total_amount,
+          products (name)
+        )
+      `)
         .order('visit_date', { ascending: false });
 
       if (startDate && endDate) {
@@ -81,8 +112,18 @@ function VisitsContainer() {
         return;
       }
 
-      setAllVisits(data || []);
-      setTotalCount(data?.length || 0);
+      let filteredData = data || [];
+
+      if (cityFilter) {
+        filteredData = filteredData.filter(visit => {
+          const visitCity = visit.doctors?.address?.trim();
+          const selectedCity = cityFilter.trim();
+          return visitCity === selectedCity;
+        });
+      }
+
+      setAllVisits(filteredData);
+      setTotalCount(filteredData.length);
 
     } catch (error) {
       showError('Error loading visits. Please try again.');
@@ -105,19 +146,31 @@ function VisitsContainer() {
       }
 
       setCountsLoading(true);
-      
-      // Step 1: Get all doctors first
-      const { data: allDoctors, error: doctorsError } = await supabase
+
+      // Step 1: Get ALL doctors first, then filter by city if needed
+      let doctorsQuery = supabase
         .from('doctors')
         .select('id, name, specialization, hospital, address')
         .order('name');
 
+      const { data: allDoctors, error: doctorsError } = await doctorsQuery;
+
       if (doctorsError) {
-        showError('Database error fetching doctors:', doctorsError);
+        showError('Database error fetching doctors');
         return;
       }
 
-      // Step 2: Get visit counts for the date range
+      // Filter doctors by city on the client side
+      let filteredDoctors = allDoctors;
+      if (cityFilter) {
+        filteredDoctors = allDoctors.filter(doctor => {
+          const doctorCity = doctor.address?.trim();
+          const selectedCity = cityFilter.trim();
+          return doctorCity === selectedCity;
+        });
+      }
+
+      // Step 2: Get visit counts for the date range (for ALL doctors, not just filtered ones)
       let visitQuery = supabase
         .from('visits')
         .select('doctor_id, status');
@@ -133,7 +186,7 @@ function VisitsContainer() {
       }
 
       const { data: visits, error: visitsError } = await visitQuery;
-      
+
       if (visitsError) {
         showError('Database error fetching visit counts');
         return;
@@ -147,8 +200,8 @@ function VisitsContainer() {
         visitCountMap.set(visit.doctor_id, count + 1);
       });
 
-      // Step 4: Combine all doctors with their visit counts (including 0 visits)
-      const doctorVisitCounts = allDoctors.map(doctor => ({
+      // Step 4: Combine filtered doctors with their visit counts (including 0 visits)
+      const doctorVisitCounts = filteredDoctors.map(doctor => ({
         doctor_id: doctor.id,
         doctor: {
           name: doctor.name,
@@ -167,7 +220,7 @@ function VisitsContainer() {
         return (a.doctor?.name || '').localeCompare(b.doctor?.name || '');
       });
 
-      setDoctorVisitCounts(sortedCounts);   
+      setDoctorVisitCounts(sortedCounts);
     } catch (error) {
       showError('Error loading visit statistics. Please try again.');
       setDoctorVisitCounts([]);
@@ -204,7 +257,7 @@ function VisitsContainer() {
         const doctorName = visitData?.doctors?.name || 'Unknown Doctor';
         const visitDate = visitData?.visit_date ? format(new Date(visitData.visit_date), 'MMM dd, yyyy') : '';
         const salesCount = visitData?.sales?.length || 0;
-        
+
         let successMessage = `Visit deleted successfully`;
         if (doctorName && visitDate) {
           successMessage += ` (${doctorName} - ${visitDate})`;
@@ -214,7 +267,7 @@ function VisitsContainer() {
         }
 
         showSuccess(successMessage);
-        
+
         // Refresh data
         await fetchVisits();
         await fetchDoctorVisitCounts();
@@ -232,7 +285,7 @@ function VisitsContainer() {
   // Apply search filtering
   const filteredVisits = allVisits.filter(visit => {
     if (!searchTerm) return true;
-    
+
     const searchLower = searchTerm.toLowerCase();
     return (
       (visit.doctors?.name || '').toLowerCase().includes(searchLower) ||
@@ -268,6 +321,9 @@ function VisitsContainer() {
         totalCount={totalCount}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
+        cityFilter={cityFilter}
+        setCityFilter={setCityFilter}
+        cityOptions={cityOptions}
         doctorVisitCounts={doctorVisitCounts}
         countsLoading={countsLoading}
         deleteVisit={deleteVisit}
