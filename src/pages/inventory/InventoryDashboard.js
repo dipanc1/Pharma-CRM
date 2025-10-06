@@ -36,6 +36,9 @@ function InventoryDashboard({
     setEndDate,
     productFilter,
     setProductFilter,
+    companyFilter,
+    setCompanyFilter,
+    companyOptions,
     products,
     inventoryData,
     stockMovementData,
@@ -66,7 +69,7 @@ function InventoryDashboard({
         }))
     ];
 
-    const hasFilters = startDate || endDate || productFilter;
+    const hasFilters = startDate || endDate || productFilter || companyFilter;
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-IN', {
@@ -143,6 +146,7 @@ function InventoryDashboard({
                                 setStartDate('');
                                 setEndDate('');
                                 setProductFilter('');
+                                setCompanyFilter('');
                             }}
                             className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                         >
@@ -150,7 +154,7 @@ function InventoryDashboard({
                         </button>
                     )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-2">
                             Start Date
@@ -182,14 +186,20 @@ function InventoryDashboard({
                         <FilterSelect
                             label="Filter by Product"
                             value={productFilter || ''}
-                            onChange={(e) => {
-                                const value = e.target ? e.target.value : e;
-                                console.log('Product filter changed to:', value);
-                                setProductFilter(value);
-                            }}
+                            onChange={(e) => setProductFilter(e.target.value)}
                             options={productOptions}
                             placeholder="All Products"
                             id="productFilter"
+                        />
+                    </div>
+                    <div>
+                        <FilterSelect
+                            label="Filter by Company"
+                            value={companyFilter || ''}
+                            onChange={(e) => setCompanyFilter(e.target.value)}
+                            options={companyOptions}
+                            placeholder="All Companies"
+                            id="companyFilter"
                         />
                     </div>
                 </div>

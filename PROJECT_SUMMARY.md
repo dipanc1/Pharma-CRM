@@ -45,11 +45,11 @@ A comprehensive **Pharmaceutical Sales CRM** system that helps sales representat
 - ✅ **Doctor Integration**: Seamless connection between visits and doctor profiles
 
 ### 3. **Product Management** (`/products`)
-- ✅ **Pharmaceutical Catalog**: Comprehensive product database with categories
-- ✅ **Category System**: Organized by type (Antibiotics, Pain Relief, Cardiovascular, Diabetes, etc.)
+- ✅ **Pharmaceutical Catalog**: Comprehensive product database organized by company/manufacturer
+- ✅ **Company Organization**: Products grouped by pharmaceutical companies (LSB LIFE SCIENCES, FLOWRICH PHARMA, CRANIX PHARMA, BRVYMA)
 - ✅ **Pricing Management**: Unit prices with decimal precision
 - ✅ **Stock Tracking**: Current stock levels with automated calculations
-- ✅ **Search & Filter**: Multi-criteria filtering for quick product location
+- ✅ **Search & Filter**: Multi-criteria filtering including company name for quick product location
 
 ### 4. **Sales Recording** (Integrated with Visits)
 - ✅ **Multi-Product Sales**: Record multiple products sold in a single visit
@@ -75,8 +75,9 @@ A comprehensive **Pharmaceutical Sales CRM** system that helps sales representat
 ### 7. **Inventory Management** (`/inventory`)
 - ✅ **Real-time Dashboard**: Live inventory tracking with visual analytics
 - ✅ **Stock Movements**: Track purchases, sales, adjustments, and returns
+- ✅ **Advanced Filtering**: Filter by product, company, and date range
 - ✅ **Low Stock Alerts**: Automated notifications for products needing restocking
-- ✅ **Category Distribution**: Visual breakdown of inventory by product categories
+- ✅ **Company Distribution**: Visual breakdown of inventory value by pharmaceutical company
 - ✅ **Export Functionality**: CSV export for external analysis and reporting
 
 ## 🎨 User Interface & Experience
@@ -211,8 +212,11 @@ npm start  # Launches on http://localhost:3000
 
 ### Easy Customizations
 ```javascript
-// Add new product categories
-const categories = ['Antibiotics', 'Your New Category'];
+// Add new pharmaceutical companies
+const COMPANIES = [
+  { value: 'LSB LIFE SCIENCES', label: 'LSB LIFE SCIENCES' },
+  { value: 'YOUR NEW COMPANY', label: 'YOUR NEW COMPANY' }
+];
 
 // Modify dashboard metrics
 const customKPIs = {

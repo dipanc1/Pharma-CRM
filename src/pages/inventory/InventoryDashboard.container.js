@@ -11,6 +11,7 @@ function InventoryDashboardContainer() {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [productFilter, setProductFilter] = useState('');
+    const [companyFilter, setCompanyFilter] = useState('');
     const [products, setProducts] = useState([]);
     const [inventoryData, setInventoryData] = useState([]);
     const [stockMovementData, setStockMovementData] = useState([]);
@@ -35,7 +36,7 @@ function InventoryDashboardContainer() {
             fetchInventoryData();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [products, startDate, endDate, productFilter]);
+    }, [products, startDate, endDate, productFilter, companyFilter]);
 
     const fetchProducts = async () => {
         try {
@@ -142,6 +143,9 @@ function InventoryDashboardContainer() {
             let productsToProcess = products;
             if (productFilter) {
                 productsToProcess = products.filter(p => p.id === productFilter);
+            }
+            if (companyFilter) {
+                productsToProcess = productsToProcess.filter(p => p.company_name === companyFilter);
             }
 
             // Process products in batches for better performance
@@ -300,6 +304,10 @@ function InventoryDashboardContainer() {
         }
     };
 
+    const companyOptions = [...new Set(products.map(p => p.company_name).filter(Boolean))]
+        .sort()
+        .map(company => ({ value: company, label: company }));
+
     return (
         <>
             <InventoryDashboard
@@ -310,6 +318,9 @@ function InventoryDashboardContainer() {
                 setEndDate={setEndDate}
                 productFilter={productFilter}
                 setProductFilter={setProductFilter}
+                companyFilter={companyFilter}
+                setCompanyFilter={setCompanyFilter}
+                companyOptions={companyOptions}
                 products={products}
                 inventoryData={inventoryData}
                 stockMovementData={stockMovementData}

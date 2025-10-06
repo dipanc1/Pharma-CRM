@@ -31,7 +31,7 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 
 ### 💊 Product Management
 - Comprehensive pharmaceutical product catalog
-- Multiple product categories (Antibiotics, Pain Relief, Cardiovascular, Diabetes, etc.)
+- Organized by company/manufacturer (e.g., LSB LIFE SCIENCES, FLOWRICH PHARMA, CRANIX PHARMA, BRVYMA)
 - Batch number and expiry date tracking
 - Pricing management with discount support
 - Product performance analytics
@@ -39,7 +39,8 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 ### 📦 Inventory Management
 - Real-time inventory dashboard with comprehensive analytics
 - Track opening stock, purchases, sales, returns, and adjustments
-- Interactive stock movement charts and category distribution
+- Interactive stock movement charts and company distribution
+- Filter by product, company, and date range
 - Automated low stock alerts and reorder notifications
 - Export detailed inventory reports to CSV/Excel
 - Batch tracking and expiry management
@@ -292,8 +293,9 @@ For testing purposes, run the sample data script:
 #### 🔍 Advanced Search and Filtering
 - **Doctors**: Search by name, specialization, hospital
 - **Visits**: Filter by date range, doctor, status
-- **Products**: Filter by category, stock level, expiry
-- **Sales**: Analyze by time period, doctor, product category
+- **Products**: Filter by company name, stock level
+- **Sales**: Analyze by time period, doctor, product company
+- **Inventory**: Filter by product, company, date range
 
 ## Advanced Configuration
 
@@ -311,16 +313,15 @@ REACT_APP_SUPPORT_EMAIL=support@yourcompany.com
 
 ### Customization Options
 
-#### Adding New Product Categories
-Edit the category options in [`src/pages/AddProduct.js`](src/pages/AddProduct.js):
+#### Adding New Product Companies
+Edit the company options in [`src/pages/products/AddProduct/AddProduct.container.js`](src/pages/products/AddProduct/AddProduct.container.js):
 ```javascript
-const categories = [
-  'Antibiotics',
-  'Pain Relief',
-  'Cardiovascular',
-  'Diabetes',
-  'Respiratory',
-  'Your New Category'  // Add here
+const COMPANIES = [
+  { value: 'LSB LIFE SCIENCES', label: 'LSB LIFE SCIENCES' },
+  { value: 'FLOWRICH PHARMA', label: 'FLOWRICH PHARMA' },
+  { value: 'CRANIX PHARMA', label: 'CRANIX PHARMA' },
+  { value: 'BRVYMA', label: 'BRVYMA' },
+  { value: 'YOUR NEW COMPANY', label: 'YOUR NEW COMPANY' }  // Add here
 ];
 ```
 
