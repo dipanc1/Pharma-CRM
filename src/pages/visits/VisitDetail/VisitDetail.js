@@ -1,9 +1,9 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeftIcon, PencilIcon } from '@heroicons/react/24/outline';
-import { 
-  BackTitleAndButton, 
-  DeleteButton, 
+import {
+  BackTitleAndButton,
+  DeleteButton,
   SecondaryButton,
   Table,
   StatusBadge,
@@ -21,7 +21,7 @@ function VisitDetail({
   formatCurrency
 }) {
   const { id } = useParams();
-  const salesTableHeaders = ['Product', 'Category', 'Quantity', 'Unit Price', 'Total'];
+  const salesTableHeaders = ['Product', 'Company Name', 'Quantity', 'Unit Price', 'Total'];
 
   return loading ? (
     <Loader />
@@ -59,9 +59,9 @@ function VisitDetail({
               {visit.doctors?.specialization} • {visit.doctors?.hospital}
             </p>
           </div>
-          <InfoField 
-            label="Visit Date" 
-            value={format(new Date(visit.visit_date), 'MMMM dd, yyyy')} 
+          <InfoField
+            label="Visit Date"
+            value={format(new Date(visit.visit_date), 'MMMM dd, yyyy')}
           />
           <div>
             <label className="block text-sm font-medium text-gray-500">Status</label>
@@ -79,9 +79,9 @@ function VisitDetail({
             </p>
           </div>
           <div className="md:col-span-2">
-            <InfoField 
-              label="Notes" 
-              value={visit.notes || 'No notes recorded'} 
+            <InfoField
+              label="Notes"
+              value={visit.notes || 'No notes recorded'}
             />
           </div>
         </div>
@@ -99,7 +99,7 @@ function VisitDetail({
                   {sale.products?.name}
                 </Table.Cell>
                 <Table.Cell>
-                  {sale.products?.category || 'N/A'}
+                  {sale.products?.company_name || 'N/A'}
                 </Table.Cell>
                 <Table.Cell>
                   {sale.quantity}

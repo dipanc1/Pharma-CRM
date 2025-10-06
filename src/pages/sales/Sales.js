@@ -12,13 +12,13 @@ import {
   Cell
 } from 'recharts';
 import { format } from 'date-fns';
-import { 
-  Header, 
-  FilterSelect, 
-  Table, 
-  Pagination, 
+import {
+  Header,
+  FilterSelect,
+  Table,
+  Pagination,
   Loader,
-  SearchInput 
+  SearchInput
 } from '../../components';
 
 function Sales({
@@ -38,7 +38,7 @@ function Sales({
   filteredSales,
   totalRevenue,
   totalItems,
-  categoryData,
+  companyData,
   doctorData,
   doctorSearch,
   setDoctorSearch,
@@ -49,7 +49,7 @@ function Sales({
 }) {
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
 
-  const tableHeaders = ['Date', 'Doctor', 'Product', 'Category', 'Quantity', 'Unit Price', 'Total Amount'];
+  const tableHeaders = ['Date', 'Doctor', 'Product', 'Company Name', 'Quantity', 'Unit Price', 'Total Amount'];
   const productOptions = products.map(product => ({ value: product.id, label: product.name }));
   const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
   const hasActiveFilters = startDate || endDate || doctorFilter || productFilter;
@@ -102,7 +102,7 @@ function Sales({
               <p className="mt-1 text-xs text-gray-500">Select start date to apply the date range.</p>
             )}
           </div>
-          
+
           <div>
             <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-2">
               End Date
@@ -122,7 +122,7 @@ function Sales({
               <p className="mt-1 text-xs text-gray-500">Select end date to apply the date range.</p>
             )}
           </div>
-          
+
           <div className="relative">
             <SearchInput
               label="Filter by Doctor"
@@ -132,7 +132,7 @@ function Sales({
               onFocus={() => setShowDoctorDropdown(true)}
               id="doctor_search"
             />
-            
+
             {showDoctorDropdown && doctorSearch && (
               <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                 {filteredDoctors.length > 0 ? (
@@ -161,7 +161,7 @@ function Sales({
               />
             )}
           </div>
-          
+
           <FilterSelect
             label="Filter by Product"
             value={productFilter}
@@ -175,24 +175,24 @@ function Sales({
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sales by Category */}
+        {/* Sales by Company */}
         <div className="card">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Sales by Category</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Sales by Company</h3>
           <div className="h-64">
-            {categoryData.length > 0 ? (
+            {companyData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={categoryData}
+                    data={companyData}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
+                    label={({ company, percent }) => `${company} ${(percent * 100).toFixed(0)}%`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="amount"
                   >
-                    {categoryData.map((entry, index) => (
+                    {companyData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -262,7 +262,7 @@ function Sales({
                   </div>
                 </Table.Cell>
                 <Table.Cell className="font-medium">{sale.products?.name}</Table.Cell>
-                <Table.Cell>{sale.products?.category || 'N/A'}</Table.Cell>
+                <Table.Cell>{sale.products?.company_name || 'N/A'}</Table.Cell>
                 <Table.Cell>{sale.quantity}</Table.Cell>
                 <Table.Cell>₹{parseFloat(sale.unit_price).toFixed(2)}</Table.Cell>
                 <Table.Cell className="font-medium">₹{parseFloat(sale.total_amount).toFixed(2)}</Table.Cell>

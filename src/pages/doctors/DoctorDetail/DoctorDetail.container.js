@@ -41,7 +41,7 @@ function DoctorDetailContainer() {
             id,
             quantity,
             total_amount,
-            products (name, category)
+            products (name, company_name)
           )
         `)
         .eq('doctor_id', id)
@@ -67,7 +67,7 @@ function DoctorDetailContainer() {
           .eq('id', id);
 
         if (error) throw error;
-        
+
         showSuccess('Doctor deleted successfully');
         navigate('/doctors');
       } catch (error) {

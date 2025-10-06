@@ -31,7 +31,7 @@ function VisitDetailContainer() {
             quantity,
             unit_price,
             total_amount,
-            products (name, category)
+            products (name, company_name)
           )
         `)
         .eq('id', id)
@@ -58,7 +58,7 @@ function VisitDetailContainer() {
           .eq('id', id);
 
         if (error) throw error;
-        
+
         showSuccess('Visit deleted successfully');
         navigate('/visits');
       } catch (error) {

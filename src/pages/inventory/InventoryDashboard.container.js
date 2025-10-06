@@ -105,7 +105,7 @@ function InventoryDashboardContainer() {
             return {
                 product_id: product.id,
                 product_name: product.name,
-                category: product.category,
+                company_name: product.company_name,
                 opening_stock: openingStockSummary.closingStock,
                 purchases,
                 sales,
@@ -119,7 +119,7 @@ function InventoryDashboardContainer() {
             return {
                 product_id: product.id,
                 product_name: product.name,
-                category: product.category,
+                company_name: product.company_name,
                 opening_stock: 0,
                 purchases: 0,
                 sales: 0,
@@ -240,15 +240,15 @@ function InventoryDashboardContainer() {
     };
 
     const generateCategoryStockData = (inventoryData) => {
-        const categoryTotals = (inventoryData || []).reduce((acc, item) => {
-            const category = item.category || 'Other';
-            acc[category] = (acc[category] || 0) + item.stock_value;
+        const companyTotals = (inventoryData || []).reduce((acc, item) => {
+            const company = item.company_name || 'Other';
+            acc[company] = (acc[company] || 0) + item.stock_value;
             return acc;
         }, {});
 
-        const chartData = Object.entries(categoryTotals)
-            .map(([category, value]) => ({
-                category,
+        const chartData = Object.entries(companyTotals)
+            .map(([company, value]) => ({
+                company,
                 value: parseFloat(value)
             }))
             .sort((a, b) => b.value - a.value);
@@ -265,10 +265,10 @@ function InventoryDashboardContainer() {
     const handleExportData = () => {
         try {
             const csvData = [
-                ['Product Name', 'Category', 'Opening Stock', 'Purchases', 'Sales', 'Adjustments', 'Closing Stock', 'Stock Value', 'Price'],
+                ['Product Name', 'Company Name', 'Opening Stock', 'Purchases', 'Sales', 'Adjustments', 'Closing Stock', 'Stock Value', 'Price'],
                 ...(inventoryData || []).map(item => [
                     item.product_name,
-                    item.category || 'N/A',
+                    item.company_name || 'N/A',
                     item.opening_stock,
                     item.purchases,
                     item.sales,

@@ -60,7 +60,7 @@ function SalesContainer() {
             visit_date,
             doctors (id, name, specialization, hospital)
           ),
-          products (name, category)
+          products (name, company_name)
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
 
@@ -127,15 +127,15 @@ function SalesContainer() {
   const totalRevenue = filteredSales.reduce((total, sale) => total + parseFloat(sale.total_amount), 0);
   const totalItems = filteredSales.reduce((total, sale) => total + sale.quantity, 0);
 
-  // Sales by product category
-  const salesByCategory = filteredSales.reduce((acc, sale) => {
-    const category = sale.products?.category || 'Other';
-    acc[category] = (acc[category] || 0) + parseFloat(sale.total_amount);
+  // Sales by product company
+  const salesByCompany = filteredSales.reduce((acc, sale) => {
+    const company = sale.products?.company_name || 'Other';
+    acc[company] = (acc[company] || 0) + parseFloat(sale.total_amount);
     return acc;
   }, {});
 
-  const categoryData = Object.entries(salesByCategory).map(([category, amount]) => ({
-    category,
+  const companyData = Object.entries(salesByCompany).map(([company, amount]) => ({
+    company,
     amount: parseFloat(amount)
   }));
 
@@ -152,7 +152,7 @@ function SalesContainer() {
     .slice(0, 10);
 
   // Doctor search functionality (like AddVisit)
-  const filteredDoctors = doctors.filter(doctor => 
+  const filteredDoctors = doctors.filter(doctor =>
     doctor.name.toLowerCase().includes(doctorSearch.toLowerCase()) ||
     doctor.specialization?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
     doctor.doctor_type?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
@@ -194,7 +194,7 @@ function SalesContainer() {
         filteredSales={filteredSales}
         totalRevenue={totalRevenue}
         totalItems={totalItems}
-        categoryData={categoryData}
+        companyData={companyData}
         doctorData={doctorData}
         doctorSearch={doctorSearch}
         setDoctorSearch={handleDoctorSearchChange}

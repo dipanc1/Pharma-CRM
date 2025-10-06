@@ -49,7 +49,7 @@ function InventoryDashboard({
 
     const tableHeaders = [
         'Product',
-        'Category',
+        'Company Name',
         'Opening Stock',
         'Purchases',
         'Sales',
@@ -318,7 +318,7 @@ function InventoryDashboard({
 
                 {/* Stock by Category */}
                 <div className="card">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Stock Value by Category</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Stock Value by Company</h3>
                     <div className="h-64">
                         {(categoryStockData || []).length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
@@ -328,7 +328,7 @@ function InventoryDashboard({
                                         cx="50%"
                                         cy="50%"
                                         labelLine={false}
-                                        label={({ category, percent }) => percent > 5 ? `${category} ${(percent * 100).toFixed(0)}%` : ''}
+                                        label={({ company, percent }) => percent > 5 ? `${company} ${(percent * 100).toFixed(0)}%` : ''}
                                         outerRadius={80}
                                         fill="#8884d8"
                                         dataKey="value"
@@ -345,8 +345,8 @@ function InventoryDashboard({
                             <div className="flex items-center justify-center h-full text-gray-500">
                                 <div className="text-center">
                                     <ChartBarIcon className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                                    <p>No category data available</p>
-                                    <p className="text-sm text-gray-400">Add products with categories to see distribution</p>
+                                    <p>No company data available</p>
+                                    <p className="text-sm text-gray-400">Add products with companies to see distribution</p>
                                 </div>
                             </div>
                         )}
@@ -414,7 +414,7 @@ function InventoryDashboard({
                                     </Table.Cell>
                                     <Table.Cell>
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                            {item.category || 'N/A'}
+                                            {item.company_name || 'N/A'}
                                         </span>
                                     </Table.Cell>
                                     <Table.Cell className="text-center">
