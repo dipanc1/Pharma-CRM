@@ -7,7 +7,8 @@ import {
   Table,
   ActionButtons,
   Loader,
-  AddStockModal
+  AddStockModal,
+  FilterSelect
 } from '../../../components';
 import NoRecordsAddButtonLayout from '../../common/NoRecordsAddButtonLayout';
 
@@ -22,9 +23,11 @@ function Products({
   onEditStock,
   stockModal,
   onStockSubmit,
-  onCloseStockModal
+  onCloseStockModal,
+  selectedCompany,
+  setSelectedCompany,
+  companyOptions
 }) {
-  // Update table headers to include company name instead of category
   const tableHeaders = ['Product Name', 'Company Name', 'Price', 'Current Stock', 'Stock Actions', 'Description', 'Actions'];
 
   return loading ? (
@@ -36,14 +39,21 @@ function Products({
         { to: "/products/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Product" }
       ]} />
 
-      {/* Search */}
+      {/* Search and Filter */}
       <div className="card">
-        <div className="max-w-md">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SearchInput
             label="Search Products"
-            placeholder="Search by name, description, or company..."
+            placeholder="Search by name or description..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <FilterSelect
+            label="Filter by Company"
+            value={selectedCompany}
+            onChange={(e) => setSelectedCompany(e.target.value)}
+            options={companyOptions}
+            placeholder="All Companies"
           />
         </div>
       </div>
@@ -125,9 +135,9 @@ function Products({
         ) : (
           <div className="text-center py-12">
             <div className="text-gray-500 mb-4">
-              {searchTerm ? 'No products found matching your search.' : 'No products added yet.'}
+              {searchTerm || selectedCompany ? 'No products found matching your filters.' : 'No products added yet.'}
             </div>
-            {!searchTerm && (
+            {!searchTerm && !selectedCompany && (
               <NoRecordsAddButtonLayout>
                 <AddButton title="Add First Product" link="/products/add" icon={<PlusIcon className="h-4 w-4 mr-2" />} />
               </NoRecordsAddButtonLayout>

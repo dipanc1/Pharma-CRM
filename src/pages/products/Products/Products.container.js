@@ -9,6 +9,7 @@ function ProductsContainer() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState('');
 
   const [stockModal, setStockModal] = useState({
     isOpen: false,
@@ -19,16 +20,27 @@ function ProductsContainer() {
 
   const { toast, showSuccess, showError, hideToast } = useToast();
 
+  const COMPANIES = [
+    { value: 'LSB LIFE SCIENCES', label: 'LSB LIFE SCIENCES' },
+    { value: 'FLOWRICH PHARMA', label: 'FLOWRICH PHARMA' },
+    { value: 'CRANIX PHARMA', label: 'CRANIX PHARMA' },
+    { value: 'BRVYMA', label: 'BRVYMA' }
+  ];
+
   useEffect(() => {
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter(product => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesCompany = !selectedCompany || product.company_name === selectedCompany;
+
+    return matchesSearch && matchesCompany;
+  });
 
   const fetchProducts = async () => {
     try {
@@ -124,7 +136,7 @@ function ProductsContainer() {
 
       if (success) {
         closeStockModal();
-        fetchProducts(); // Refresh the products list
+        fetchProducts();
       }
     } catch (error) {
       console.error('Error with stock operation:', error);
@@ -148,6 +160,9 @@ function ProductsContainer() {
         stockModal={stockModal}
         onStockSubmit={handleStockSubmit}
         onCloseStockModal={closeStockModal}
+        selectedCompany={selectedCompany}
+        setSelectedCompany={setSelectedCompany}
+        companyOptions={COMPANIES}
       />
       <Toast
         message={toast.message}
