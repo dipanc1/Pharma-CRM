@@ -24,8 +24,8 @@ function Products({
   onStockSubmit,
   onCloseStockModal
 }) {
-  // Update table headers to include separate stock column
-  const tableHeaders = ['Product Name', 'Category', 'Price', 'Current Stock', 'Stock Actions', 'Description', 'Actions'];
+  // Update table headers to include company name instead of category
+  const tableHeaders = ['Product Name', 'Company Name', 'Price', 'Current Stock', 'Stock Actions', 'Description', 'Actions'];
 
   return loading ? (
     <Loader />
@@ -41,7 +41,7 @@ function Products({
         <div className="max-w-md">
           <SearchInput
             label="Search Products"
-            placeholder="Search by name, description, or category..."
+            placeholder="Search by name, description, or company..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -67,7 +67,7 @@ function Products({
                   {product.name}
                 </Table.Cell>
                 <Table.Cell>
-                  {product.category || 'N/A'}
+                  {product.company_name || 'N/A'}
                 </Table.Cell>
                 <Table.Cell className="font-medium text-gray-900">
                   ₹{product.price ? parseFloat(product.price).toFixed(2) : '0.00'}
@@ -82,7 +82,7 @@ function Products({
                     )}
                   </div>
                 </Table.Cell>
-                {/* New Stock Actions Column */}
+                {/* Stock Actions Column */}
                 <Table.Cell>
                   <div className="flex gap-2 items-center">
                     <button

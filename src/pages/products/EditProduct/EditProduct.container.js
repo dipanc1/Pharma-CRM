@@ -16,18 +16,14 @@ function EditProductContainer() {
     name: '',
     description: '',
     price: '',
-    category: ''
+    company_name: ''
   });
 
-  const PRODUCT_CATEGORIES = [
-    { value: 'Antibiotics', label: 'Antibiotics' },
-    { value: 'Pain Relief', label: 'Pain Relief' },
-    { value: 'Cardiovascular', label: 'Cardiovascular' },
-    { value: 'Diabetes', label: 'Diabetes' },
-    { value: 'Respiratory', label: 'Respiratory' },
-    { value: 'Vitamins', label: 'Vitamins' },
-    { value: 'Supplements', label: 'Supplements' },
-    { value: 'Other', label: 'Other' }
+  const COMPANIES = [
+    { value: 'LSB LIFE SCIENCES', label: 'LSB LIFE SCIENCES' },
+    { value: 'FLOWRICH PHARMA', label: 'FLOWRICH PHARMA' },
+    { value: 'CRANIX PHARMA', label: 'CRANIX PHARMA' },
+    { value: 'BRVYMA', label: 'BRVYMA' }
   ];
 
   const FORM_FIELDS = [
@@ -40,15 +36,17 @@ function EditProductContainer() {
       colSpan: 'md:col-span-2'
     },
     {
-      name: 'category',
-      label: 'Category',
+      name: 'company_name',
+      label: 'Company Name',
       type: 'select',
-      options: PRODUCT_CATEGORIES
+      required: true,
+      options: COMPANIES
     },
     {
       name: 'price',
       label: 'Price (₹)',
       type: 'number',
+      required: true,
       placeholder: '0.00'
     },
     {
@@ -86,7 +84,7 @@ function EditProductContainer() {
         name: data.name || '',
         description: data.description || '',
         price: data.price ? data.price.toString() : '',
-        category: data.category || ''
+        company_name: data.company_name || ''
       });
     } catch (error) {
       console.error('Error fetching product:', error);

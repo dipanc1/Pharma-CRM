@@ -27,7 +27,7 @@ function ProductsContainer() {
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    product.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const fetchProducts = async () => {
@@ -105,7 +105,7 @@ function ProductsContainer() {
 
     try {
       let success = false;
-      
+
       if (mode === 'edit') {
         success = await handleEditStock(stockModal.product.id, quantity, notes);
         if (success) {

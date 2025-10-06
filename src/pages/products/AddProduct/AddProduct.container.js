@@ -13,7 +13,7 @@ function AddProductContainer() {
     name: '',
     description: '',
     price: '',
-    category: ''
+    company_name: ''
   });
 
   const handleChange = (e) => {
@@ -50,15 +50,11 @@ function AddProductContainer() {
     }
   };
 
-  const PRODUCT_CATEGORIES = [
-    { value: 'Antibiotics', label: 'Antibiotics' },
-    { value: 'Pain Relief', label: 'Pain Relief' },
-    { value: 'Cardiovascular', label: 'Cardiovascular' },
-    { value: 'Diabetes', label: 'Diabetes' },
-    { value: 'Respiratory', label: 'Respiratory' },
-    { value: 'Vitamins', label: 'Vitamins' },
-    { value: 'Supplements', label: 'Supplements' },
-    { value: 'Other', label: 'Other' }
+  const COMPANIES = [
+    { value: 'LSB LIFE SCIENCES', label: 'LSB LIFE SCIENCES' },
+    { value: 'FLOWRICH PHARMA', label: 'FLOWRICH PHARMA' },
+    { value: 'CRANIX PHARMA', label: 'CRANIX PHARMA' },
+    { value: 'BRVYMA', label: 'BRVYMA' }
   ];
 
   const FORM_FIELDS = [
@@ -71,16 +67,18 @@ function AddProductContainer() {
       colSpan: 'md:col-span-2'
     },
     {
-      name: 'category',
-      label: 'Category',
+      name: 'company_name',
+      label: 'Company Name',
       type: 'select',
-      options: PRODUCT_CATEGORIES,
-      placeholder: 'Select category'
+      required: true,
+      options: COMPANIES,
+      placeholder: 'Select company'
     },
     {
       name: 'price',
       label: 'Price (₹)',
       type: 'number',
+      required: true,
       placeholder: '0.00'
     },
     {
