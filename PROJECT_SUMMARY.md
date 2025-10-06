@@ -68,7 +68,7 @@ A comprehensive **Pharmaceutical Sales CRM** system that helps sales representat
 ### 6. **Sales Analytics** (`/sales`)
 - ✅ **Comprehensive Reporting**: Detailed sales analysis with multiple views
 - ✅ **Advanced Filtering**: Filter by date ranges, specific doctors, or products
-- ✅ **Category Analytics**: Sales breakdown by product categories (pie charts)
+- ✅ **Company Analytics**: Sales breakdown by pharmaceutical company (pie charts)
 - ✅ **Doctor Performance**: Bar charts showing top-performing doctor relationships
 - ✅ **Transaction Details**: Complete sales history with search and sort capabilities
 
@@ -109,7 +109,7 @@ A comprehensive **Pharmaceutical Sales CRM** system that helps sales representat
 doctors (id, name, specialization, hospital, contact_info, created_at)
 ├── visits (id, doctor_id, visit_date, notes, status, created_at)
     ├── sales (id, visit_id, product_id, quantity, unit_price, total_amount)
-products (id, name, description, price, category, current_stock)
+products (id, name, description, price, company_name, current_stock)
 stock_transactions (id, product_id, transaction_type, quantity, date)
 ```
 

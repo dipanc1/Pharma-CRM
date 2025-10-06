@@ -32,6 +32,7 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 ### 💊 Product Management
 - Comprehensive pharmaceutical product catalog
 - Organized by company/manufacturer (e.g., LSB LIFE SCIENCES, FLOWRICH PHARMA, CRANIX PHARMA, BRVYMA)
+- **Note**: Products are organized by pharmaceutical company rather than generic categories for better tracking
 - Batch number and expiry date tracking
 - Pricing management with discount support
 - Product performance analytics
@@ -56,7 +57,7 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - Real-time business metrics and KPIs
 - Interactive sales performance charts
 - Top doctors by sales volume and frequency
-- Revenue analysis by product category and time periods
+- Revenue analysis by product company and time periods
 - Inventory insights with stock value tracking
 - Trend analysis and forecasting
 
