@@ -124,7 +124,7 @@ function Products({
                 </Table.Cell>
                 <Table.Cell>
                   <ActionButtons
-                    viewPath={`/products/${product.id}`}
+                    viewPath={null}
                     editPath={`/products/${product.id}/edit`}
                     onDelete={() => deleteProduct(product.id)}
                   />
