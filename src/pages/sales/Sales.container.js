@@ -3,12 +3,13 @@ import Sales from './Sales';
 import { supabase } from '../../lib/supabase';
 import { Toast } from '../../components';
 import useToast from '../../hooks/useToast';
+import { format, startOfMonth } from 'date-fns';
 
 function SalesContainer() {
   const [salesState, setSalesState] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [doctorFilter, setDoctorFilter] = useState('');
   const [doctors, setDoctors] = useState([]);
   const [productFilter, setProductFilter] = useState('');

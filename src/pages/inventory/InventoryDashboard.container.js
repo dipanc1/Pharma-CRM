@@ -4,12 +4,13 @@ import useToast from '../../hooks/useToast';
 import InventoryDashboard from './InventoryDashboard';
 import { calculateStockSummary } from '../../utils/stockUtils';
 import { Toast } from '../../components';
+import { format, startOfMonth } from 'date-fns';
 
 function InventoryDashboardContainer() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+    const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [productFilter, setProductFilter] = useState('');
     const [companyFilter, setCompanyFilter] = useState('');
     const [products, setProducts] = useState([]);
