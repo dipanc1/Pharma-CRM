@@ -145,12 +145,11 @@ CREATE TABLE products (
   name VARCHAR NOT NULL,
   description TEXT,
   price DECIMAL(10,2) NOT NULL DEFAULT 0,
-  category VARCHAR NOT NULL,
+  company_name VARCHAR NOT NULL,
   current_stock INTEGER DEFAULT 0,
   min_stock_level INTEGER DEFAULT 10,
   batch_number VARCHAR,
   expiry_date DATE,
-  manufacturer VARCHAR,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

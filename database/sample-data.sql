@@ -10,15 +10,15 @@ INSERT INTO doctors (name, specialization, hospital, contact_number, email, addr
 ('Dr. Lisa Wang', 'Dermatology', 'Skin Care Clinic', '+1-555-0105', 'lisa.wang@skincare.com', '654 Beauty Lane, City, State 12345');
 
 -- Sample Products
-INSERT INTO products (name, description, price, category) VALUES
-('Amoxicillin 500mg', 'Broad-spectrum antibiotic for bacterial infections', 15.99, 'Antibiotics'),
-('Ibuprofen 400mg', 'Anti-inflammatory pain reliever', 8.50, 'Pain Relief'),
-('Lisinopril 10mg', 'ACE inhibitor for hypertension', 12.75, 'Cardiovascular'),
-('Metformin 500mg', 'Oral diabetes medication', 9.25, 'Diabetes'),
-('Albuterol Inhaler', 'Bronchodilator for asthma', 22.00, 'Respiratory'),
-('Vitamin D3 1000IU', 'Supports bone health and immune function', 14.99, 'Vitamins'),
-('Omega-3 Fish Oil', 'Heart health supplement', 18.50, 'Supplements'),
-('Omeprazole 20mg', 'Proton pump inhibitor for acid reflux', 11.25, 'Other');
+INSERT INTO products (name, description, price, company_name) VALUES
+('Amoxicillin 500mg', 'Broad-spectrum antibiotic for bacterial infections', 15.99, 'LSB LIFE SCIENCES'),
+('Ibuprofen 400mg', 'Anti-inflammatory pain reliever', 8.50, 'FLOWRICH PHARMA'),
+('Lisinopril 10mg', 'ACE inhibitor for hypertension', 12.75, 'CRANIX PHARMA'),
+('Metformin 500mg', 'Oral diabetes medication', 9.25, 'BRVYMA'),
+('Albuterol Inhaler', 'Bronchodilator for asthma', 22.00, 'LSB LIFE SCIENCES'),
+('Vitamin D3 1000IU', 'Supports bone health and immune function', 14.99, 'FLOWRICH PHARMA'),
+('Omega-3 Fish Oil', 'Heart health supplement', 18.50, 'CRANIX PHARMA'),
+('Omeprazole 20mg', 'Proton pump inhibitor for acid reflux', 11.25, 'BRVYMA');
 
 -- Sample Visits (you'll need to replace doctor_id with actual UUIDs from your doctors table)
 -- Note: These will need to be updated with actual doctor IDs after running the doctor inserts

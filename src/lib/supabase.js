@@ -39,7 +39,8 @@ export const DB_SCHEMA = {
       name VARCHAR NOT NULL,
       description TEXT,
       price DECIMAL(10,2),
-      category VARCHAR,
+      company_name VARCHAR,
+      current_stock INTEGER DEFAULT 0,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
