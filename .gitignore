@@ -1,2 +1,5 @@
 node_modules
 .env
+# Database backups
+database/backups/*.json
+!database/backups/.gitkeep

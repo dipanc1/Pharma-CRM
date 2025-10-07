@@ -18,7 +18,10 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "setup": "node setup.js"
+    "setup": "node setup.js",
+    "backup": "node database/backup.js",
+    "restore": "node database/restore.js",
+    "backup:auto": "node database/backup.js && echo 'Backup completed at' && date"
   },
   "eslintConfig": {
     "extends": [
