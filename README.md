@@ -13,6 +13,7 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - **Inventory Management**: Real-time stock tracking with low-stock alerts
 - **Professional Reporting**: Beautiful charts and analytics for presentations
 - **Mobile Responsive**: Works seamlessly on desktop, tablet, and mobile devices
+- **Data Protection**: Automated backup system with schema versioning
 
 ## Features
 
@@ -21,6 +22,7 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - Store specialization, hospital details, and personal notes
 - Advanced search and filter functionality
 - Import/export doctor data (CSV support)
+- Doctor classification (Type: Prescriber/Dispenser, Class: A/B/C)
 
 ### 📅 Visit Tracking
 - Record doctor visits with precise date and time tracking
@@ -28,6 +30,7 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - Track visit status (completed, scheduled, cancelled, rescheduled)
 - Associate multiple sales transactions with each visit
 - Set follow-up reminders and notifications
+- Filter by date range, city, and status
 
 ### 💊 Product Management
 - Comprehensive pharmaceutical product catalog
@@ -41,10 +44,11 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - Real-time inventory dashboard with comprehensive analytics
 - Track opening stock, purchases, sales, returns, and adjustments
 - Interactive stock movement charts and company distribution
-- Filter by product, company, and date range
+- **Filter by product, company, and date range**
 - Automated low stock alerts and reorder notifications
 - Export detailed inventory reports to CSV/Excel
 - Batch tracking and expiry management
+- Visual company-wise stock distribution
 
 ### 💰 Sales Tracking
 - Record detailed sales during doctor visits
@@ -52,6 +56,7 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - Multi-product sales in single visits
 - Commission calculations and reporting
 - Target vs achievement tracking
+- **Filter by doctor, product, and company**
 
 ### 📊 Dashboard & Analytics
 - Real-time business metrics and KPIs
@@ -60,12 +65,22 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - Revenue analysis by product company and time periods
 - Inventory insights with stock value tracking
 - Trend analysis and forecasting
+- **Monthly and all-time performance views**
+
+### 🔄 Backup & Restore System
+- **Automated Database Backups**: Complete data and schema backup
+- **Schema Export**: Export complete database schema as SQL
+- **Version Control**: Track schema changes over time
+- **Easy Restoration**: Simple backup restoration process
+- **Backup Comparison**: Compare backups to see data changes
+- **Automatic Cleanup**: Keep last 10 backups automatically
+- **Migration History**: All migration files included in backups
 
 ### 🔐 Security Features
 - Row Level Security (RLS) with Supabase
 - Secure authentication and authorization
 - Data encryption in transit and at rest
-- Regular automated backups
+- Regular automated backups with versioning
 
 ## Tech Stack
 
@@ -108,6 +123,17 @@ REACT_APP_SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
 ### 3. Database Setup
+
+#### Option A: Using Migration Files (Recommended)
+Run each migration file in order in your Supabase SQL editor:
+
+1. **Initial Schema** ([`database/migrations/001_initial_schema.sql`](database/migrations/001_initial_schema.sql))
+2. **Doctor Fields** ([`database/migrations/002_add_doctor_fields.sql`](database/migrations/002_add_doctor_fields.sql))
+3. **Stock Tracking** ([`database/migrations/003_add_stock_tracking.sql`](database/migrations/003_add_stock_tracking.sql))
+4. **Security Policies** ([`database/migrations/004_add_rls_policies.sql`](database/migrations/004_add_rls_policies.sql))
+5. **Performance Indexes** ([`database/migrations/005_add_indexes.sql`](database/migrations/005_add_indexes.sql))
+
+#### Option B: Complete Schema (All-in-One)
 Run the complete database schema in your Supabase SQL editor:
 
 ```sql
@@ -123,7 +149,8 @@ CREATE TABLE doctors (
   contact_number VARCHAR,
   email VARCHAR,
   address TEXT,
-  notes TEXT,
+  doctor_type VARCHAR DEFAULT 'prescriber' CHECK (doctor_type IN ('prescriber', 'stockist')),
+  doctor_class VARCHAR DEFAULT 'C' CHECK (doctor_class IN ('A', 'B', 'C')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -133,10 +160,8 @@ CREATE TABLE visits (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   doctor_id UUID REFERENCES doctors(id) ON DELETE CASCADE,
   visit_date DATE NOT NULL,
-  visit_time TIME,
   notes TEXT,
-  status VARCHAR DEFAULT 'completed' CHECK (status IN ('scheduled', 'completed', 'cancelled', 'rescheduled')),
-  follow_up_date DATE,
+  status VARCHAR DEFAULT 'completed',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -146,12 +171,9 @@ CREATE TABLE products (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name VARCHAR NOT NULL,
   description TEXT,
-  price DECIMAL(10,2) NOT NULL DEFAULT 0,
-  company_name VARCHAR NOT NULL,
+  price DECIMAL(10,2),
+  company_name VARCHAR,
   current_stock INTEGER DEFAULT 0,
-  min_stock_level INTEGER DEFAULT 10,
-  batch_number VARCHAR,
-  expiry_date DATE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -161,14 +183,13 @@ CREATE TABLE sales (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   visit_id UUID REFERENCES visits(id) ON DELETE CASCADE,
   product_id UUID REFERENCES products(id) ON DELETE CASCADE,
-  quantity INTEGER NOT NULL CHECK (quantity > 0),
-  unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price >= 0),
-  discount_percent DECIMAL(5,2) DEFAULT 0 CHECK (discount_percent >= 0 AND discount_percent <= 100),
-  total_amount DECIMAL(10,2) NOT NULL CHECK (total_amount >= 0),
+  quantity INTEGER NOT NULL,
+  unit_price DECIMAL(10,2) NOT NULL,
+  total_amount DECIMAL(10,2) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create stock_transactions table for inventory tracking
+-- Create stock_transactions table
 CREATE TABLE stock_transactions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   product_id UUID REFERENCES products(id) ON DELETE CASCADE,
@@ -182,11 +203,14 @@ CREATE TABLE stock_transactions (
 
 -- Create indexes for better performance
 CREATE INDEX idx_visits_doctor_id ON visits(doctor_id);
-CREATE INDEX idx_visits_date ON visits(visit_date);
+CREATE INDEX idx_visits_date ON visits(visit_date DESC);
 CREATE INDEX idx_sales_visit_id ON sales(visit_id);
 CREATE INDEX idx_sales_product_id ON sales(product_id);
 CREATE INDEX idx_stock_transactions_product_id ON stock_transactions(product_id);
-CREATE INDEX idx_stock_transactions_date ON stock_transactions(transaction_date);
+CREATE INDEX idx_stock_transactions_date ON stock_transactions(transaction_date DESC);
+CREATE INDEX idx_doctors_name ON doctors(name);
+CREATE INDEX idx_products_name ON products(name);
+CREATE INDEX idx_products_company ON products(company_name);
 
 -- Create function to calculate current stock
 CREATE OR REPLACE FUNCTION calculate_current_stock(product_uuid UUID)
@@ -219,6 +243,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger to auto-update stock on transactions
+DROP TRIGGER IF EXISTS trigger_update_stock ON stock_transactions;
 CREATE TRIGGER trigger_update_stock
   AFTER INSERT OR UPDATE OR DELETE ON stock_transactions
   FOR EACH ROW EXECUTE FUNCTION update_product_stock();
@@ -246,10 +271,110 @@ npm start
 The application will be available at `http://localhost:3000`
 
 ### 5. Load Sample Data (Optional)
-For testing purposes, run the sample data script:
+For testing purposes, load sample data from [`database/sample-data.sql`](database/sample-data.sql)
+
+## 🔄 Database Backup & Restore
+
+### Manual Backup (Complete - Data + Schema + Migrations)
 ```bash
--- Load sample data (available in database/sample-data.sql)
+# Create a full backup with schema and migration files
+npm run backup
+
+# Backups are saved to database/backups/ directory
+# Format: backup_YYYY-MM-DDTHH-MM-SS.json
 ```
+
+### Schema-Only Export
+```bash
+# Export complete schema as executable SQL
+npm run backup:schema
+
+# Creates: database/backups/schema_YYYY-MM-DDTHH-MM-SS.sql
+```
+
+### Data-Only Backup
+```bash
+# Backup data without schema information
+npm run backup:no-schema
+```
+
+### Restore from Backup
+```bash
+# Interactive restore - choose from available backups
+npm run restore
+
+# Follow the prompts to select and restore a backup
+```
+
+### View Schema from Backup
+```bash
+# Interactive schema viewer
+npm run restore:schema
+
+# Select a backup to view its schema
+# Option to save schema to a file
+```
+
+### Compare Backups
+```bash
+# See what changed between two backups
+node database/compare-schema.js backup_2025-01-07.json backup_2025-01-08.json
+```
+
+### Backup File Structure
+Each backup includes:
+```json
+{
+  "timestamp": "2025-01-07T10:30:00.000Z",
+  "version": "2.0",
+  "type": "full",
+  "tables": {
+    "doctors": { "count": 50, "data": [...] },
+    "products": { "count": 120, "data": [...] },
+    "visits": { "count": 300, "data": [...] },
+    "sales": { "count": 450, "data": [...] },
+    "stock_transactions": { "count": 600, "data": [...] }
+  },
+  "schema": {
+    "schema": {...},
+    "type": "fallback"
+  },
+  "migrations": {
+    "001_initial_schema.sql": "CREATE TABLE...",
+    "002_add_doctor_fields.sql": "ALTER TABLE...",
+    ...
+  }
+}
+```
+
+### Automated Backups (Production)
+```bash
+# Install cron dependency
+npm install node-cron
+
+# Run automated backup scheduler
+node database/schedule-backup.js
+
+# Backups run automatically:
+# - Daily at 2:00 AM (full backup with schema)
+# - Every 6 hours (data only)
+```
+
+### Backup Management Features
+- ✅ **Last 10 backups** kept automatically (older ones deleted)
+- ✅ **Schema exports** (last 5 kept)
+- ✅ **Migration history** included in each backup
+- ✅ **Data integrity** with record counts
+- ✅ **Easy comparison** between backups
+- ✅ **JSON format** for easy inspection
+
+### Backup Best Practices
+1. **Regular Backups**: Run daily backups in production (`npm run backup`)
+2. **Schema Versioning**: Export schema after major database changes
+3. **Off-site Storage**: Copy backups to cloud storage (Google Drive, Dropbox, etc.)
+4. **Test Restores**: Regularly test backup restoration process
+5. **Before Migrations**: Always backup before running new migrations
+6. **Document Changes**: Keep notes about significant schema changes
 
 ## Usage Guide
 
@@ -259,44 +384,52 @@ For testing purposes, run the sample data script:
 3. **Record Visits**: Start tracking doctor visits with associated sales
 4. **Monitor Performance**: Use Dashboard and Sales analytics to track progress
 5. **Manage Inventory**: Keep stock levels updated and monitor low stock alerts
+6. **Regular Backups**: Set up automated backups for data protection
 
 ### Core Workflows
 
 #### 📋 Recording a Complete Doctor Visit
 1. Navigate to **Visits** → **Add Visit**
 2. Select doctor from the searchable dropdown
-3. Set visit date, time, and status
+3. Set visit date and status
 4. Add detailed visit notes and outcomes
 5. **Add Sales Items**:
    - Select products from your catalog
    - Enter quantities and confirm pricing
-   - Apply any discounts if applicable
-6. Set follow-up date if needed
-7. Save the complete visit record
+   - System automatically tracks stock levels
+6. Save the complete visit record
 
 #### 📊 Analyzing Sales Performance
 1. **Dashboard Overview**: Check key metrics and trends
 2. **Sales Analytics**: 
-   - Filter by date ranges, doctors, or products
+   - Filter by date ranges, doctors, products, or companies
    - View performance charts and comparisons
    - Identify top-performing relationships
 3. **Export Reports**: Download data for external analysis
 
 #### 📦 Managing Inventory
-1. **Monitor Stock Levels**: Check current inventory status
+1. **Monitor Stock Levels**: Check current inventory status on dashboard
 2. **Record Transactions**:
    - Log new purchases and stock receipts
-   - Record sales and adjustments
-   - Handle returns and damaged goods
-3. **Track Alerts**: Respond to low stock notifications
-4. **Generate Reports**: Export inventory summaries
+   - Record sales (automatic via visits)
+   - Handle adjustments and returns
+3. **Filter Analysis**: View inventory by product, company, or date range
+4. **Track Alerts**: Respond to low stock notifications
+5. **Generate Reports**: Export inventory summaries to CSV
 
 #### 🔍 Advanced Search and Filtering
-- **Doctors**: Search by name, specialization, hospital
-- **Visits**: Filter by date range, doctor, status
+- **Doctors**: Search by name, specialization, hospital; Filter by class (A/B/C) and type (Prescriber/Dispenser)
+- **Visits**: Filter by date range, doctor city, and status
 - **Products**: Filter by company name, stock level
-- **Sales**: Analyze by time period, doctor, product company
-- **Inventory**: Filter by product, company, date range
+- **Sales**: Analyze by time period, specific doctor, or product company
+- **Inventory**: Multi-filter by product, company, and date range
+
+#### 💾 Data Backup Workflow
+1. **Daily Routine**: Run `npm run backup` at end of day
+2. **Before Changes**: Backup before major operations or migrations
+3. **Monthly Review**: Compare backups to track growth
+4. **Schema Updates**: Export schema after database changes
+5. **Disaster Recovery**: Keep off-site backup copies
 
 ## Advanced Configuration
 
@@ -326,8 +459,10 @@ const COMPANIES = [
 ];
 ```
 
+Also update in [`src/pages/products/EditProduct/EditProduct.container.js`](src/pages/products/EditProduct/EditProduct.container.js)
+
 #### Modifying Dashboard Metrics
-Update statistics in [`src/pages/Dashboard.js`](src/pages/Dashboard.js):
+Update statistics in [`src/pages/dashboard/Dashboard.container.js`](src/pages/dashboard/Dashboard.container.js):
 ```javascript
 // Add new metric cards or modify existing ones
 const customMetrics = {
@@ -335,10 +470,23 @@ const customMetrics = {
 };
 ```
 
+#### Customizing Backup Schedule
+Edit [`database/schedule-backup.js`](database/schedule-backup.js):
+```javascript
+// Change backup frequency
+cron.schedule('0 2 * * *', () => {  // Daily at 2 AM
+  performBackup();
+});
+
+cron.schedule('0 */6 * * *', () => { // Every 6 hours
+  performBackup({ includeSchema: false });
+});
+```
+
 #### Styling and Branding
 - **Colors**: Modify [`tailwind.config.js`](tailwind.config.js)
 - **Fonts**: Update [`src/index.css`](src/index.css)
-- **Logo**: Replace in [`src/components/Layout.js`](src/components/Layout.js)
+- **Logo**: Replace in [`src/components/layout/Header.js`](src/components/layout/Header.js)
 
 ## Project Structure
 
@@ -358,38 +506,57 @@ pharma-crm/
 │   ├── lib/                   # External service configurations
 │   │   └── supabase.js        # Supabase client setup
 │   ├── pages/                 # Application pages/routes
-│   │   ├── auth/              # Authentication pages
 │   │   ├── dashboard/         # Dashboard components
-│   │   ├── common/            # Shared page components
-│   │   └── inventory/         # Inventory management
+│   │   ├── doctors/           # Doctor management
+│   │   ├── visits/            # Visit tracking
+│   │   ├── products/          # Product catalog
+│   │   ├── sales/             # Sales analytics
+│   │   ├── inventory/         # Inventory management
+│   │   └── common/            # Shared page components
 │   ├── utils/                 # Utility functions
 │   │   └── stockUtils.js      # Stock calculation utilities
 │   ├── App.js                 # Main application component
 │   ├── index.js               # Application entry point
 │   └── index.css              # Global styles and Tailwind imports
 ├── database/                  # Database related files
-│   ├── auth-policies.sql      # Authentication policies
+│   ├── migrations/            # Database migration files
+│   │   ├── 001_initial_schema.sql
+│   │   ├── 002_add_doctor_fields.sql
+│   │   ├── 003_add_stock_tracking.sql
+│   │   ├── 004_add_rls_policies.sql
+│   │   └── 005_add_indexes.sql
+│   ├── backups/               # Backup storage directory
+│   │   └── .gitkeep          # Keeps directory in git
+│   ├── backup.js              # Backup utility script
+│   ├── restore.js             # Restore utility script
+│   ├── restore-schema.js      # Schema viewer utility
+│   ├── compare-schema.js      # Backup comparison utility
+│   ├── schedule-backup.js     # Automated backup scheduler
 │   ├── sample-data.sql        # Sample data for testing
-│   └── migrations/            # Database migration files
+│   └── auth-policies.sql      # Authentication policies
 ├── .env.example               # Environment variables template
+├── .gitignore                 # Git ignore rules
 ├── package.json               # Project dependencies and scripts
 ├── tailwind.config.js         # Tailwind CSS configuration
+├── setup.js                   # Initial setup script
 └── README.md                  # This documentation
 ```
 
 ## Performance Optimization
 
 ### Database Optimization
-- Indexes on frequently queried columns
+- Indexes on frequently queried columns (doctor_id, dates, product_id)
 - Optimized queries with proper joins
 - Real-time subscriptions for live updates
 - Connection pooling via Supabase
+- Automatic stock calculation triggers
 
 ### Frontend Optimization
 - Lazy loading for routes and components
 - Memoization for expensive calculations
 - Optimized re-renders with React.memo
 - Image optimization and compression
+- Efficient state management with Context API
 
 ## Troubleshooting
 
@@ -412,6 +579,18 @@ npm install
 
 # Clear npm cache
 npm cache clean --force
+```
+
+#### Backup/Restore Issues
+```bash
+# Ensure database directory exists
+mkdir -p database/backups
+
+# Check Node.js version (should be v18+)
+node --version
+
+# Verify Supabase connection
+node -e "require('dotenv').config(); console.log(process.env.REACT_APP_SUPABASE_URL)"
 ```
 
 #### Deployment Issues
@@ -451,6 +630,16 @@ npm run build
 # Upload build/ folder to your hosting provider
 ```
 
+### Production Backup Strategy
+```bash
+# Set up automated backups with cron
+npm install node-cron
+node database/schedule-backup.js
+
+# Or use cloud backup services
+# Store backups in S3, Google Cloud Storage, etc.
+```
+
 ## API Integration
 
 ### Supabase Features Used
@@ -476,6 +665,7 @@ export default async function handler(req, res) {
 - Input validation and sanitization
 - HTTPS enforced in production
 - Regular security updates
+- **Automated backups with version control**
 
 ### Authentication (Ready for Implementation)
 ```javascript
@@ -487,6 +677,12 @@ const { data, error } = await supabase.auth.signInWithPassword({
   password: 'password'
 });
 ```
+
+### Backup Security
+- Backup files stored locally (can be moved to secure cloud storage)
+- Sensitive data encrypted in transit
+- Access control via file system permissions
+- Automatic cleanup of old backups
 
 ## Contributing
 
@@ -519,18 +715,22 @@ npm run cypress:open
 - Visit and sales tracking
 - Basic analytics and reporting
 - Inventory management
+- **Complete backup and restore system**
+- **Schema versioning and migration management**
 
 ### Phase 2 (Planned) 🚧
 - User authentication and multi-user support
 - Advanced reporting and exports
 - Email notifications and reminders
 - Mobile application (React Native)
+- **Cloud backup integration (S3, Google Cloud)**
 
 ### Phase 3 (Future) 📋
 - AI-powered insights and recommendations
 - Integration with external systems
 - Advanced inventory forecasting
 - Customer portal for doctors
+- **Real-time collaboration features**
 
 ## Support and Community
 
@@ -541,8 +741,8 @@ npm run cypress:open
 
 ### Commercial Support
 For enterprise features, custom development, or priority support:
-- Email: [Click here to contact me over email](mailto:dipanchhabra@gmail.com)
-- Website: [Click here to visit my website](https://dipan-portfolio2.netlify.app)
+- Email: [dipanchhabra@gmail.com](mailto:dipanchhabra@gmail.com)
+- Website: [dipan-portfolio2.netlify.app](https://dipan-portfolio2.netlify.app)
 
 ## License
 
@@ -563,4 +763,4 @@ Feel free to use this project for commercial purposes. Attribution is appreciate
 
 **Made with ❤️ for pharmaceutical sales professionals**
 
-*Last updated: 07-09-2025*
+*Last updated: 2025-10-08*

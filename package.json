@@ -20,8 +20,10 @@
     "eject": "react-scripts eject",
     "setup": "node setup.js",
     "backup": "node database/backup.js",
+    "backup:schema": "node database/backup.js --schema-only",
+    "backup:no-schema": "node database/backup.js --no-schema",
     "restore": "node database/restore.js",
-    "backup:auto": "node database/backup.js && echo 'Backup completed at' && date"
+    "restore:schema": "node database/restore-schema.js"
   },
   "eslintConfig": {
     "extends": [
