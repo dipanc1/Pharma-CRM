@@ -16,9 +16,9 @@ const Navbar = ({ user, signOut, setSidebarOpen }) => {
             </button>
             <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
                 <div className="flex flex-1"></div>
-                <div className="flex items-center gap-x-4 lg:gap-x-6">
+                <div className="flex items-center gap-x-1 lg:gap-x-1">
                     <div className="text-sm font-medium text-gray-900">
-                        Welcome, {user?.email}
+                        Welcome, {user?.user_metadata?.display_name ?? 'User'}
                     </div>
                     <button
                         onClick={signOut}
