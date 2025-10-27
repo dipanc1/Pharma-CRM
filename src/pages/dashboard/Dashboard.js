@@ -6,7 +6,8 @@ import {
   CurrencyRupeeIcon,
   CubeIcon,
   PlusIcon,
-  EyeIcon
+  EyeIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { format } from 'date-fns';
@@ -15,14 +16,12 @@ import { DashboardCard, Header } from '../../components';
 function Dashboard({ stats, recentVisits, salesData, topDoctors, COLORS, selectedMonth, setSelectedMonth, monthOptions }) {
   const currentMonth = format(new Date(), 'MMMM yyyy');
 
-  // Get display title based on selected month
   const getDisplayTitle = () => {
     if (selectedMonth === 'overall') {
       return 'Dashboard - All Time Data';
     } else if (selectedMonth === 'current') {
       return `Dashboard - ${currentMonth}`;
     } else {
-      // Format YYYY-MM to readable format
       const year = parseInt(selectedMonth.split('-')[0]);
       const month = parseInt(selectedMonth.split('-')[1]) - 1;
       const date = new Date(year, month);
@@ -43,7 +42,6 @@ function Dashboard({ stats, recentVisits, salesData, topDoctors, COLORS, selecte
     }
   };
 
-  // Group options for better organization
   const groupedOptions = monthOptions.reduce((groups, option) => {
     const group = option.group || 'other';
     if (!groups[group]) groups[group] = [];
@@ -99,9 +97,10 @@ function Dashboard({ stats, recentVisits, salesData, topDoctors, COLORS, selecte
         />
 
         <DashboardCard
-          title={selectedMonth === 'overall' ? 'Total Visits' : 'Visits This Period'}
-          value={stats.totalVisits}
-          icon={<CalendarIcon className="h-8 w-8 text-secondary-600" />}
+          title={selectedMonth === 'overall' ? 'Doctors Visited (All Time)' : 'Doctors Visited'}
+          value={`${stats.visitedDoctors} / ${stats.totalDoctors}`}
+          subtitle={`${stats.visitPercentage}% Coverage`}
+          icon={<ChartBarIcon className="h-8 w-8 text-secondary-600" />}
         />
 
         <DashboardCard

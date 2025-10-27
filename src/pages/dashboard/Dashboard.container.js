@@ -5,10 +5,11 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import Dashboard from './Dashboard'
 
 const DashboardContainer = () => {
-    const [selectedMonth, setSelectedMonth] = useState('current'); // 'current', 'overall', or 'YYYY-MM'
+    const [selectedMonth, setSelectedMonth] = useState('current');
     const [stats, setStats] = useState({
         totalDoctors: 0,
-        totalVisits: 0,
+        visitedDoctors: 0,
+        visitPercentage: 0,
         totalSales: 0,
         totalProducts: 0
     });
@@ -31,9 +32,8 @@ const DashboardContainer = () => {
                 endDate: endOfMonth(now).toISOString().split('T')[0]
             };
         } else {
-            // selectedMonth is in format 'YYYY-MM'
             const year = parseInt(selectedMonth.split('-')[0]);
-            const month = parseInt(selectedMonth.split('-')[1]) - 1; // JS months are 0-indexed
+            const month = parseInt(selectedMonth.split('-')[1]) - 1;
             const date = new Date(year, month);
             return {
                 startDate: startOfMonth(date).toISOString().split('T')[0],
@@ -47,31 +47,59 @@ const DashboardContainer = () => {
             const { startDate, endDate } = getDateRange();
             const isOverall = selectedMonth === 'overall';
 
-            // Fetch statistics (doctors and products remain total counts)
-            const [doctorsCount, productsCount] = await Promise.all([
-                supabase.from('doctors').select('*', { count: 'exact' }),
-                supabase.from('products').select('*', { count: 'exact' })
-            ]);
+            // Fetch total doctors count
+            const { count: totalDoctorsCount } = await supabase
+                .from('doctors')
+                .select('*', { count: 'exact' });
 
-            // Fetch visits and sales based on selected period
-            let visitsQuery = supabase.from('visits').select('*', { count: 'exact' });
-            let salesQuery = supabase.from('sales').select('*, visits!inner(visit_date)', { count: 'exact' });
+            const { count: totalProductsCount } = await supabase
+                .from('products')
+                .select('*', { count: 'exact' });
+
+            // Fetch visits for the selected period
+            let visitsQuery = supabase
+                .from('visits')
+                .select('doctor_id, status');
 
             if (!isOverall) {
-                visitsQuery = visitsQuery.gte('visit_date', startDate).lte('visit_date', endDate);
-                salesQuery = salesQuery.gte('visits.visit_date', startDate).lte('visits.visit_date', endDate);
+                visitsQuery = visitsQuery
+                    .gte('visit_date', startDate)
+                    .lte('visit_date', endDate);
             }
 
-            const [visitsCount, salesCount] = await Promise.all([visitsQuery, salesQuery]);
+            const { data: visits } = await visitsQuery;
+
+            // Calculate unique doctors visited
+            const uniqueDoctorIds = new Set(visits?.map(v => v.doctor_id) || []);
+            const visitedDoctorsCount = uniqueDoctorIds.size;
+
+            // Calculate visit percentage
+            const visitPercentage = totalDoctorsCount > 0 
+                ? ((visitedDoctorsCount / totalDoctorsCount) * 100).toFixed(1)
+                : 0;
+
+            // Fetch sales count
+            let salesQuery = supabase
+                .from('sales')
+                .select('*, visits!inner(visit_date)', { count: 'exact' });
+
+            if (!isOverall) {
+                salesQuery = salesQuery
+                    .gte('visits.visit_date', startDate)
+                    .lte('visits.visit_date', endDate);
+            }
+
+            const { count: salesCount } = await salesQuery;
 
             setStats({
-                totalDoctors: doctorsCount.count || 0,
-                totalVisits: visitsCount.count || 0,
-                totalSales: salesCount.count || 0,
-                totalProducts: productsCount.count || 0
+                totalDoctors: totalDoctorsCount || 0,
+                visitedDoctors: visitedDoctorsCount,
+                visitPercentage: parseFloat(visitPercentage),
+                totalSales: salesCount || 0,
+                totalProducts: totalProductsCount || 0
             });
 
-            // Fetch recent visits from selected period with doctor names
+            // Fetch recent visits from selected period
             let recentVisitsQuery = supabase
                 .from('visits')
                 .select(`
@@ -82,12 +110,13 @@ const DashboardContainer = () => {
                 .limit(5);
 
             if (!isOverall) {
-                recentVisitsQuery = recentVisitsQuery.gte('visit_date', startDate).lte('visit_date', endDate);
+                recentVisitsQuery = recentVisitsQuery
+                    .gte('visit_date', startDate)
+                    .lte('visit_date', endDate);
             }
 
-            const { data: visits } = await recentVisitsQuery;
-
-            setRecentVisits(visits || []);
+            const { data: recentVisitsData } = await recentVisitsQuery;
+            setRecentVisits(recentVisitsData || []);
 
             // Fetch sales data for charts
             let salesQueryForCharts = supabase
@@ -107,7 +136,7 @@ const DashboardContainer = () => {
 
             const { data: sales } = await salesQueryForCharts;
 
-            // Process sales data for charts - group by date
+            // Process sales data for charts
             const salesByDate = {};
             sales?.forEach(sale => {
                 const date = format(new Date(sale.visits.visit_date), 'MMM dd');
@@ -117,11 +146,11 @@ const DashboardContainer = () => {
             const processedSalesData = Object.entries(salesByDate)
                 .map(([date, amount]) => ({ date, amount }))
                 .sort((a, b) => new Date(`2024 ${a.date}`) - new Date(`2024 ${b.date}`))
-                .slice(-10); // Show last 10 days with sales
+                .slice(-10);
 
             setSalesData(processedSalesData);
 
-            // Fetch top doctors by sales (selected period)
+            // Fetch top doctors by sales
             let topDocsQuery = supabase
                 .from('sales')
                 .select(`
@@ -160,20 +189,17 @@ const DashboardContainer = () => {
 
     const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
-    // Generate organized month options
     const generateMonthOptions = () => {
         const now = new Date();
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth();
         
         const options = [
-            // Always show these first
             { value: 'current', label: 'This Month', group: 'quick' },
             { value: 'overall', label: 'All Time', group: 'quick' }
         ];
 
-        // Current year months (from January to current month, excluding current month if it's not January)
-        if (currentMonth > 0) { // If we're not in January
+        if (currentMonth > 0) {
             for (let month = currentMonth - 1; month >= 0; month--) {
                 const date = new Date(currentYear, month, 1);
                 const value = format(date, 'yyyy-MM');
