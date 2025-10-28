@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
@@ -7,11 +7,14 @@ import AddDoctor from './AddDoctor';
 
 function AddDoctorContainer() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const typeFromUrl = searchParams.get('type') || 'doctor';
+  
   const [loading, setLoading] = useState(false);
   const { toast, showSuccess, showError, hideToast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
-    contact_type: 'doctor', // Default to doctor
+    contact_type: typeFromUrl, // Set from URL
     specialization: '',
     hospital: '',
     contact_number: '',
@@ -23,22 +26,10 @@ function AddDoctorContainer() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    // If contact_type changes to chemist, clear doctor-specific fields
-    if (name === 'contact_type' && value === 'chemist') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-        specialization: '',
-        doctor_class: '',
-        doctor_type: ''
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -60,8 +51,9 @@ function AddDoctorContainer() {
 
       if (error) throw error;
 
-      showSuccess(`${formData.contact_type === 'chemist' ? 'Chemist' : 'Doctor'} added successfully!`);
-      navigate('/doctors');
+      const contactLabel = formData.contact_type === 'chemist' ? 'Chemist' : 'Doctor';
+      showSuccess(`${contactLabel} added successfully!`);
+      navigate(`/doctors?type=${formData.contact_type}`);
     } catch (error) {
       console.error('Error adding contact:', error);
       showError('Error adding contact. Please try again.');
@@ -69,11 +61,6 @@ function AddDoctorContainer() {
       setLoading(false);
     }
   };
-
-  const CONTACT_TYPES = [
-    { value: 'doctor', label: 'Doctor' },
-    { value: 'chemist', label: 'Chemist' }
-  ];
 
   const DOCTOR_CLASSES = [
     { value: '', label: 'Select Class' },
@@ -88,34 +75,29 @@ function AddDoctorContainer() {
     { value: 'prescriber', label: 'Prescriber' }
   ];
 
+  const isChemist = formData.contact_type === 'chemist';
+
   const FORM_FIELDS = [
     {
       name: 'name',
-      label: formData.contact_type === 'chemist' ? 'Chemist/Shop Name' : 'Doctor Name',
+      label: isChemist ? 'Chemist/Shop Name' : 'Doctor Name',
       type: 'text',
       required: true,
-      placeholder: formData.contact_type === 'chemist' 
+      placeholder: isChemist 
         ? "Enter chemist or shop name" 
         : "Enter doctor's full name",
       colSpan: 'md:col-span-2'
     },
     {
-      name: 'contact_type',
-      label: 'Contact Type',
-      type: 'select',
-      required: true,
-      options: CONTACT_TYPES
-    },
-    {
       name: 'hospital',
-      label: formData.contact_type === 'chemist' ? 'Shop Location' : 'Hospital/Clinic',
+      label: isChemist ? 'Shop Location' : 'Hospital/Clinic',
       type: 'text',
-      placeholder: formData.contact_type === 'chemist' 
+      placeholder: isChemist 
         ? 'Shop or pharmacy location' 
         : 'Hospital or clinic name'
     },
     // Conditional fields - only show for doctors
-    ...(formData.contact_type === 'doctor' ? [
+    ...(!isChemist ? [
       {
         name: 'specialization',
         label: 'Specialization',
@@ -157,6 +139,8 @@ function AddDoctorContainer() {
     }
   ];
 
+  const backPath = `/doctors?type=${formData.contact_type}`;
+
   return (
     <>
       <AddDoctor
@@ -165,6 +149,7 @@ function AddDoctorContainer() {
         handleSubmit={handleSubmit}
         loading={loading}
         FORM_FIELDS={FORM_FIELDS}
+        backPath={backPath}
       />
       <Toast
         message={toast.message}

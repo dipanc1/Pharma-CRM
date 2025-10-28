@@ -41,7 +41,7 @@ function SalesContainer() {
     try {
       setLoading(true);
 
-      // Date validation and short-circuit rules (same as visits)
+      // Date validation and short-circuit rules
       const justStart = !!(startDate && !endDate);
       const justEnd = !!(!startDate && endDate);
       const invalidRange = !!(startDate && endDate && endDate < startDate);
@@ -59,7 +59,7 @@ function SalesContainer() {
           *,
           visits!inner (
             visit_date,
-            doctors (id, name, specialization, hospital)
+            doctors (id, name, specialization, hospital, contact_type)
           ),
           products (name, company_name)
         `, { count: 'exact' })
@@ -99,7 +99,7 @@ function SalesContainer() {
     try {
       const { data, error } = await supabase
         .from('doctors')
-        .select('id, name, specialization, doctor_type, doctor_class')
+        .select('id, name, specialization, hospital, doctor_type, doctor_class, contact_type')
         .order('name');
 
       if (error) throw error;
@@ -140,25 +140,48 @@ function SalesContainer() {
     amount: parseFloat(amount)
   }));
 
-  // Sales by doctor
-  const salesByDoctor = filteredSales.reduce((acc, sale) => {
-    const doctorName = sale.visits?.doctors?.name || 'Unknown';
-    acc[doctorName] = (acc[doctorName] || 0) + parseFloat(sale.total_amount);
+  // Sales by contact (doctors and chemists)
+  const salesByContact = filteredSales.reduce((acc, sale) => {
+    const contactName = sale.visits?.doctors?.name || 'Unknown';
+    const contactType = sale.visits?.doctors?.contact_type || 'doctor';
+    const key = `${contactName}|${contactType}`;
+    
+    if (!acc[key]) {
+      acc[key] = {
+        name: contactName,
+        contact_type: contactType,
+        amount: 0
+      };
+    }
+    acc[key].amount += parseFloat(sale.total_amount);
     return acc;
   }, {});
 
-  const doctorData = Object.entries(salesByDoctor)
-    .map(([doctor, amount]) => ({ doctor, amount: parseFloat(amount) }))
+  const contactData = Object.values(salesByContact)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 10);
 
-  // Doctor search functionality (like AddVisit)
-  const filteredDoctors = doctors.filter(doctor =>
-    doctor.name.toLowerCase().includes(doctorSearch.toLowerCase()) ||
-    doctor.specialization?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
-    doctor.doctor_type?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
-    doctor.doctor_class?.toLowerCase().includes(doctorSearch.toLowerCase())
-  );
+  // Contact search functionality
+  const filteredDoctors = doctors.filter(doctor => {
+    const searchLower = doctorSearch.toLowerCase();
+    const isChemist = doctor.contact_type === 'chemist';
+    
+    return (
+      doctor.name.toLowerCase().includes(searchLower) ||
+      doctor.hospital?.toLowerCase().includes(searchLower) ||
+      (!isChemist && doctor.specialization?.toLowerCase().includes(searchLower)) ||
+      (!isChemist && doctor.doctor_type?.toLowerCase().includes(searchLower)) ||
+      (!isChemist && doctor.doctor_class?.toLowerCase().includes(searchLower))
+    );
+  });
+
+  const formatDoctorDisplay = (doctor) => {
+    const isChemist = doctor.contact_type === 'chemist';
+    if (isChemist) {
+      return `${doctor.name}${doctor.hospital ? ` - ${doctor.hospital}` : ''} [Chemist]`;
+    }
+    return `${doctor.name}${doctor.specialization ? ` - ${doctor.specialization}` : ''}${doctor.doctor_type ? ` (${doctor.doctor_type}` : ''}${doctor.doctor_class ? ` - ${doctor.doctor_class})` : doctor.doctor_type ? ')' : ''}`;
+  };
 
   const handleDoctorSearchChange = (value) => {
     setDoctorSearch(value);
@@ -172,7 +195,7 @@ function SalesContainer() {
 
   const handleDoctorSelect = (doctor) => {
     setDoctorFilter(doctor.id);
-    setDoctorSearch(`${doctor.name} - ${doctor.specialization} (${doctor.doctor_type} - ${doctor.doctor_class})`);
+    setDoctorSearch(formatDoctorDisplay(doctor));
     setShowDoctorDropdown(false);
   };
 
@@ -196,13 +219,14 @@ function SalesContainer() {
         totalRevenue={totalRevenue}
         totalItems={totalItems}
         companyData={companyData}
-        doctorData={doctorData}
+        contactData={contactData}
         doctorSearch={doctorSearch}
         setDoctorSearch={handleDoctorSearchChange}
         showDoctorDropdown={showDoctorDropdown}
         setShowDoctorDropdown={setShowDoctorDropdown}
         filteredDoctors={filteredDoctors}
         handleDoctorSelect={handleDoctorSelect}
+        formatDoctorDisplay={formatDoctorDisplay}
       />
       <Toast
         message={toast.message}

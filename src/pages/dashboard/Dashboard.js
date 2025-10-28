@@ -7,13 +7,14 @@ import {
   CubeIcon,
   PlusIcon,
   EyeIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  BuildingStorefrontIcon
 } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { format } from 'date-fns';
 import { DashboardCard, Header } from '../../components';
 
-function Dashboard({ stats, recentVisits, salesData, topDoctors, COLORS, selectedMonth, setSelectedMonth, monthOptions }) {
+function Dashboard({ stats, recentVisits, salesData, topContacts, COLORS, selectedMonth, setSelectedMonth, monthOptions }) {
   const currentMonth = format(new Date(), 'MMMM yyyy');
 
   const getDisplayTitle = () => {
@@ -60,7 +61,7 @@ function Dashboard({ stats, recentVisits, salesData, topDoctors, COLORS, selecte
       <Header
         title={getDisplayTitle()}
         buttons={[
-          { to: "/doctors/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Doctor" },
+          { to: "/doctors/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Contact" },
           { to: "/visits/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Visit" },
         ]}
       />
@@ -88,7 +89,7 @@ function Dashboard({ stats, recentVisits, salesData, topDoctors, COLORS, selecte
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
 
         <DashboardCard
           title="Total Doctors"
@@ -97,8 +98,14 @@ function Dashboard({ stats, recentVisits, salesData, topDoctors, COLORS, selecte
         />
 
         <DashboardCard
-          title={selectedMonth === 'overall' ? 'Doctors Visited (All Time)' : 'Doctors Visited'}
-          value={`${stats.visitedDoctors} / ${stats.totalDoctors}`}
+          title="Total Chemists"
+          value={stats.totalChemists}
+          icon={<BuildingStorefrontIcon className="h-8 w-8 text-teal-600" />}
+        />
+
+        <DashboardCard
+          title={selectedMonth === 'overall' ? 'Contacts Visited (All Time)' : 'Contacts Visited'}
+          value={`${stats.visitedDoctors} / ${stats.totalContacts}`}
           subtitle={`${stats.visitPercentage}% Coverage`}
           icon={<ChartBarIcon className="h-8 w-8 text-secondary-600" />}
         />
@@ -146,26 +153,29 @@ function Dashboard({ stats, recentVisits, salesData, topDoctors, COLORS, selecte
           </div>
         </div>
 
-        {/* Top Doctors Chart */}
+        {/* Top Contacts Chart */}
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Top Doctors by Sales - {getChartTitle()}
+            Top Contacts by Sales - {getChartTitle()}
           </h3>
           <div className="h-64">
-            {topDoctors.length > 0 ? (
+            {topContacts.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={topDoctors}
+                    data={topContacts}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, contact_type, percent }) => {
+                      const typeLabel = contact_type === 'chemist' ? '💊' : '👨‍⚕️';
+                      return `${name} ${typeLabel} ${(percent * 100).toFixed(0)}%`;
+                    }}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="total"
                   >
-                    {topDoctors.map((entry, index) => (
+                    {topContacts.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -176,7 +186,7 @@ function Dashboard({ stats, recentVisits, salesData, topDoctors, COLORS, selecte
               <div className="flex items-center justify-center h-full text-gray-500">
                 <div className="text-center">
                   <UserGroupIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                  <p>No doctor sales data for this period</p>
+                  <p>No contact sales data for this period</p>
                 </div>
               </div>
             )}
@@ -199,7 +209,8 @@ function Dashboard({ stats, recentVisits, salesData, topDoctors, COLORS, selecte
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="table-header">Doctor</th>
+                  <th className="table-header">Contact</th>
+                  <th className="table-header">Type</th>
                   <th className="table-header">Visit Date</th>
                   <th className="table-header">Status</th>
                   <th className="table-header">Notes</th>
@@ -207,31 +218,43 @@ function Dashboard({ stats, recentVisits, salesData, topDoctors, COLORS, selecte
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {recentVisits.map((visit) => (
-                  <tr key={visit.id}>
-                    <td className="table-cell font-medium">{visit.doctors?.name}</td>
-                    <td className="table-cell">{format(new Date(visit.visit_date), 'MMM dd, yyyy')}</td>
-                    <td className="table-cell">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${visit.status === 'completed'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                {recentVisits.map((visit) => {
+                  const isChemist = visit.doctors?.contact_type === 'chemist';
+                  return (
+                    <tr key={visit.id}>
+                      <td className="table-cell font-medium">{visit.doctors?.name}</td>
+                      <td className="table-cell">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          isChemist 
+                            ? 'bg-teal-100 text-teal-800' 
+                            : 'bg-indigo-100 text-indigo-800'
                         }`}>
-                        {visit.status}
-                      </span>
-                    </td>
-                    <td className="table-cell text-gray-500">
-                      {visit.notes ? visit.notes.substring(0, 50) + '...' : 'No notes'}
-                    </td>
-                    <td className="table-cell">
-                      <Link
-                        to={`/visits/${visit.id}`}
-                        className="text-primary-600 hover:text-primary-700"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                          {isChemist ? 'Chemist' : 'Doctor'}
+                        </span>
+                      </td>
+                      <td className="table-cell">{format(new Date(visit.visit_date), 'MMM dd, yyyy')}</td>
+                      <td className="table-cell">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${visit.status === 'completed'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                          {visit.status}
+                        </span>
+                      </td>
+                      <td className="table-cell text-gray-500">
+                        {visit.notes ? visit.notes.substring(0, 50) + '...' : 'No notes'}
+                      </td>
+                      <td className="table-cell">
+                        <Link
+                          to={`/visits/${visit.id}`}
+                          className="text-primary-600 hover:text-primary-700"
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           ) : (

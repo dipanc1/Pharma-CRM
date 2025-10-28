@@ -61,7 +61,7 @@ const FormField = ({ field, formData, handleChange }) => {
   );
 };
 
-function AddDoctor({ formData, handleChange, handleSubmit, loading, FORM_FIELDS }) {
+function AddDoctor({ formData, handleChange, handleSubmit, loading, FORM_FIELDS, backPath }) {
   const isChemist = formData.contact_type === 'chemist';
   const title = isChemist ? 'Add New Chemist' : 'Add New Doctor';
   const buttonText = isChemist ? 'Add Chemist' : 'Add Doctor';
@@ -69,7 +69,7 @@ function AddDoctor({ formData, handleChange, handleSubmit, loading, FORM_FIELDS 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <BackTitleAndButton title={title} backButtonPath="/doctors" />
+      <BackTitleAndButton title={title} backButtonPath={backPath} />
 
       {/* Info Banner */}
       {isChemist && (
@@ -100,7 +100,7 @@ function AddDoctor({ formData, handleChange, handleSubmit, loading, FORM_FIELDS 
           </div>
 
           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-            <SecondaryButton link="/doctors">
+            <SecondaryButton link={backPath}>
               Cancel
             </SecondaryButton>
             <button

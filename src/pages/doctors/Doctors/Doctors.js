@@ -33,18 +33,16 @@ function Doctors({
   paginatedDoctors,
   totalFilteredCount,
   maxPage,
-  contactTypeFilter,
-  setContactTypeFilter
+  isChemistView
 }) {
   const clearFilters = () => {
     setSearchTerm('');
     setClassFilter('');
     setTypeFilter('');
     setAddressFilter('');
-    setContactTypeFilter('');
   };
 
-  const hasActiveFilters = searchTerm || classFilter || typeFilter || addressFilter || contactTypeFilter;
+  const hasActiveFilters = searchTerm || classFilter || typeFilter || addressFilter;
 
   const getDoctorClassStyle = (doctorClass) => {
     if (!doctorClass) return 'bg-gray-100 text-gray-800';
@@ -74,24 +72,27 @@ function Doctors({
     { value: 'prescriber', label: 'Prescriber' }
   ];
 
-  const contactTypeOptions = [
-    { value: 'doctor', label: 'Doctors' },
-    { value: 'chemist', label: 'Chemists' }
-  ];
-
   const addressOptions = uniqueAddresses.map(city => ({ value: city, label: city }));
 
-  const tableHeaders = [
-    'Name', 'Type', 'Specialization/Location', 'Hospital/Shop', 'Address', 'Class', 'Type', 'Contact', 'Actions'
-  ];
+  // Dynamic headers based on view type
+  const tableHeaders = isChemistView 
+    ? ['Name', 'Shop Location', 'Address', 'Contact', 'Actions']
+    : ['Name', 'Specialization', 'Hospital/Clinic', 'Address', 'Class', 'Type', 'Contact', 'Actions'];
+
+  const pageTitle = isChemistView ? 'Chemists' : 'Doctors';
+  const addButtonText = isChemistView ? 'Add Chemist' : 'Add Doctor';
+  const addButtonPath = isChemistView ? '/doctors/add?type=chemist' : '/doctors/add?type=doctor';
+  const searchPlaceholder = isChemistView 
+    ? 'Search by name, location...' 
+    : 'Search by name, specialization, hospital...';
 
   return loading ? (
     <Loader />
   ) : (
     <div className="space-y-6">
       {/* Header */}
-      <Header title="Doctors & Chemists" buttons={[
-        { to: "/doctors/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Contact" }
+      <Header title={pageTitle} buttons={[
+        { to: addButtonPath, icon: <PlusIcon className="h-4 w-4 mr-2" />, title: addButtonText }
       ]} />
 
       {/* Search and Filters */}
@@ -108,40 +109,36 @@ function Doctors({
           )}
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+        <div className={`grid grid-cols-1 ${isChemistView ? 'md:grid-cols-2' : 'md:grid-cols-2 xl:grid-cols-4'} gap-4`}>
           <SearchInput
-            label="Search Contacts"
-            placeholder="Search by name, specialization, hospital..."
+            label={`Search ${pageTitle}`}
+            placeholder={searchPlaceholder}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-
-          <FilterSelect
-            label="Filter by Contact Type"
-            value={contactTypeFilter}
-            onChange={(e) => setContactTypeFilter(e.target.value)}
-            options={contactTypeOptions}
-            placeholder="All Types"
-            id="contactTypeFilter"
-          />
           
-          <FilterSelect
-            label="Filter by Class"
-            value={classFilter}
-            onChange={(e) => setClassFilter(e.target.value)}
-            options={classOptions}
-            placeholder="All Classes"
-            id="classFilter"
-          />
-          
-          <FilterSelect
-            label="Filter by Type"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            options={typeOptions}
-            placeholder="All Types"
-            id="typeFilter"
-          />
+          {/* Only show class and type filters for doctors */}
+          {!isChemistView && (
+            <>
+              <FilterSelect
+                label="Filter by Class"
+                value={classFilter}
+                onChange={(e) => setClassFilter(e.target.value)}
+                options={classOptions}
+                placeholder="All Classes"
+                id="classFilter"
+              />
+              
+              <FilterSelect
+                label="Filter by Type"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                options={typeOptions}
+                placeholder="All Types"
+                id="typeFilter"
+              />
+            </>
+          )}
           
           <FilterSelect
             label="Filter by City"
@@ -163,15 +160,7 @@ function Doctors({
                 colorClass="bg-blue-100 text-blue-800"
               />
             )}
-            {contactTypeFilter && (
-              <FilterBadge
-                label="Contact Type"
-                value={contactTypeFilter === 'doctor' ? 'Doctors' : 'Chemists'}
-                onRemove={() => setContactTypeFilter('')}
-                colorClass="bg-teal-100 text-teal-800"
-              />
-            )}
-            {classFilter && (
+            {!isChemistView && classFilter && (
               <FilterBadge
                 label="Class"
                 value={classFilter}
@@ -179,7 +168,7 @@ function Doctors({
                 colorClass="bg-green-100 text-green-800"
               />
             )}
-            {typeFilter && (
+            {!isChemistView && typeFilter && (
               <FilterBadge
                 label="Type"
                 value={typeFilter}
@@ -204,7 +193,7 @@ function Doctors({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <div>
             <h3 className="text-lg font-medium text-gray-900">
-              Contacts List
+              {pageTitle} List
               {hasActiveFilters && (
                 <span className="ml-2 text-sm font-normal text-gray-500">
                   ({totalFilteredCount} filtered)
@@ -213,9 +202,9 @@ function Doctors({
             </h3>
             <div className="text-sm text-gray-600 mt-1">
               {hasActiveFilters ? (
-                <>Showing {Math.min(pageSize, Math.max(0, totalFilteredCount - (page - 1) * pageSize))} of {totalFilteredCount} contacts (filtered from {totalCount} total)</>
+                <>Showing {Math.min(pageSize, Math.max(0, totalFilteredCount - (page - 1) * pageSize))} of {totalFilteredCount} {pageTitle.toLowerCase()} (filtered from {totalCount} total)</>
               ) : (
-                <>Showing {Math.min(pageSize, Math.max(0, totalCount - (page - 1) * pageSize))} of {totalCount} contacts</>
+                <>Showing {Math.min(pageSize, Math.max(0, totalCount - (page - 1) * pageSize))} of {totalCount} {pageTitle.toLowerCase()}</>
               )}
             </div>
           </div>
@@ -230,78 +219,69 @@ function Doctors({
 
         {paginatedDoctors.length > 0 ? (
           <Table headers={tableHeaders}>
-            {paginatedDoctors.map((doctor) => {
-              const isChemist = doctor.contact_type === 'chemist';
-              return (
-                <Table.Row key={doctor.id}>
-                  <Table.Cell className="font-medium text-gray-900">
-                    {doctor.name}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      isChemist 
-                        ? 'bg-teal-100 text-teal-800' 
-                        : 'bg-indigo-100 text-indigo-800'
-                    }`}>
-                      {isChemist ? 'Chemist' : 'Doctor'}
-                    </span>
-                  </Table.Cell>
-                  <Table.Cell>
-                    {isChemist ? (
-                      <span className="text-gray-500 text-sm">-</span>
-                    ) : (
-                      doctor.specialization || 'N/A'
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {doctor.hospital || 'N/A'}
-                  </Table.Cell>
-                  <Table.Cell className="max-w-xs truncate">
-                    {doctor.address || 'N/A'}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {isChemist ? (
-                      <span className="text-gray-400 text-sm">-</span>
-                    ) : (
+            {paginatedDoctors.map((doctor) => (
+              <Table.Row key={doctor.id}>
+                <Table.Cell className="font-medium text-gray-900">
+                  {doctor.name}
+                </Table.Cell>
+                
+                {isChemistView ? (
+                  <>
+                    <Table.Cell>
+                      {doctor.hospital || 'N/A'}
+                    </Table.Cell>
+                    <Table.Cell className="max-w-xs truncate">
+                      {doctor.address || 'N/A'}
+                    </Table.Cell>
+                  </>
+                ) : (
+                  <>
+                    <Table.Cell>
+                      {doctor.specialization || 'N/A'}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {doctor.hospital || 'N/A'}
+                    </Table.Cell>
+                    <Table.Cell className="max-w-xs truncate">
+                      {doctor.address || 'N/A'}
+                    </Table.Cell>
+                    <Table.Cell>
                       <StatusBadge
                         value={doctor.doctor_class || 'N/A'}
                         getStyleFunction={getDoctorClassStyle}
                         prefix="Class "
                       />
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {isChemist ? (
-                      <span className="text-gray-400 text-sm">-</span>
-                    ) : (
+                    </Table.Cell>
+                    <Table.Cell>
                       <StatusBadge
                         value={doctor.doctor_type || 'N/A'}
                         getStyleFunction={getDoctorTypeStyle}
                       />
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {doctor.contact_number || 'N/A'}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <ActionButtons
-                      viewPath={`/doctors/${doctor.id}`}
-                      editPath={`/doctors/${doctor.id}/edit`}
-                      onDelete={() => deleteDoctor(doctor.id)}
-                    />
-                  </Table.Cell>
-                </Table.Row>
-              );
-            })}
+                    </Table.Cell>
+                  </>
+                )}
+                
+                <Table.Cell>
+                  {doctor.contact_number || 'N/A'}
+                </Table.Cell>
+                <Table.Cell>
+                  <ActionButtons
+                    viewPath={`/doctors/${doctor.id}`}
+                    editPath={`/doctors/${doctor.id}/edit`}
+                    onDelete={() => deleteDoctor(doctor.id)}
+                  />
+                </Table.Cell>
+              </Table.Row>
+            ))}
           </Table>
         ) : (
           <div className="text-center py-12">
             <div className="text-gray-500 mb-4">
-              {hasActiveFilters ? 'No contacts found matching your filters.' : 'No contacts added yet.'}
+              {hasActiveFilters ? `No ${pageTitle.toLowerCase()} found matching your filters.` : `No ${pageTitle.toLowerCase()} added yet.`}
             </div>
             {!hasActiveFilters ? (
               <NoRecordsAddButtonLayout>
-                <AddButton title="Add First Contact" link="/doctors/add" icon={<PlusIcon className="h-4 w-4 mr-2" />} />
+                <AddButton title={`Add First ${isChemistView ? 'Chemist' : 'Doctor'}`} link={addButtonPath} icon={<PlusIcon className="h-4 w-4 mr-2" />} />
               </NoRecordsAddButtonLayout>
             ) : (
               <button

@@ -8,6 +8,8 @@ const DashboardContainer = () => {
     const [selectedMonth, setSelectedMonth] = useState('current');
     const [stats, setStats] = useState({
         totalDoctors: 0,
+        totalChemists: 0,
+        totalContacts: 0,
         visitedDoctors: 0,
         visitPercentage: 0,
         totalSales: 0,
@@ -15,7 +17,7 @@ const DashboardContainer = () => {
     });
     const [recentVisits, setRecentVisits] = useState([]);
     const [salesData, setSalesData] = useState([]);
-    const [topDoctors, setTopDoctors] = useState([]);
+    const [topContacts, setTopContacts] = useState([]);
 
     useEffect(() => {
         fetchDashboardData();
@@ -47,10 +49,14 @@ const DashboardContainer = () => {
             const { startDate, endDate } = getDateRange();
             const isOverall = selectedMonth === 'overall';
 
-            // Fetch total doctors count
-            const { count: totalDoctorsCount } = await supabase
+            // Fetch all contacts with their types
+            const { data: allContacts } = await supabase
                 .from('doctors')
-                .select('*', { count: 'exact' });
+                .select('id, contact_type');
+
+            const totalDoctors = allContacts?.filter(c => c.contact_type === 'doctor').length || 0;
+            const totalChemists = allContacts?.filter(c => c.contact_type === 'chemist').length || 0;
+            const totalContacts = allContacts?.length || 0;
 
             const { count: totalProductsCount } = await supabase
                 .from('products')
@@ -69,13 +75,13 @@ const DashboardContainer = () => {
 
             const { data: visits } = await visitsQuery;
 
-            // Calculate unique doctors visited
-            const uniqueDoctorIds = new Set(visits?.map(v => v.doctor_id) || []);
-            const visitedDoctorsCount = uniqueDoctorIds.size;
+            // Calculate unique contacts visited
+            const uniqueContactIds = new Set(visits?.map(v => v.doctor_id) || []);
+            const visitedContactsCount = uniqueContactIds.size;
 
             // Calculate visit percentage
-            const visitPercentage = totalDoctorsCount > 0 
-                ? ((visitedDoctorsCount / totalDoctorsCount) * 100).toFixed(1)
+            const visitPercentage = totalContacts > 0 
+                ? ((visitedContactsCount / totalContacts) * 100).toFixed(1)
                 : 0;
 
             // Fetch sales count
@@ -92,8 +98,10 @@ const DashboardContainer = () => {
             const { count: salesCount } = await salesQuery;
 
             setStats({
-                totalDoctors: totalDoctorsCount || 0,
-                visitedDoctors: visitedDoctorsCount,
+                totalDoctors,
+                totalChemists,
+                totalContacts,
+                visitedDoctors: visitedContactsCount,
                 visitPercentage: parseFloat(visitPercentage),
                 totalSales: salesCount || 0,
                 totalProducts: totalProductsCount || 0
@@ -104,7 +112,7 @@ const DashboardContainer = () => {
                 .from('visits')
                 .select(`
                     *,
-                    doctors (name)
+                    doctors (name, contact_type)
                 `)
                 .order('visit_date', { ascending: false })
                 .limit(5);
@@ -150,37 +158,46 @@ const DashboardContainer = () => {
 
             setSalesData(processedSalesData);
 
-            // Fetch top doctors by sales
-            let topDocsQuery = supabase
+            // Fetch top contacts by sales
+            let topContactsQuery = supabase
                 .from('sales')
                 .select(`
                     total_amount,
                     visits!inner (
                         visit_date,
-                        doctors (name)
+                        doctors (name, contact_type)
                     )
                 `);
 
             if (!isOverall) {
-                topDocsQuery = topDocsQuery
+                topContactsQuery = topContactsQuery
                     .gte('visits.visit_date', startDate)
                     .lte('visits.visit_date', endDate);
             }
 
-            const { data: topDocs } = await topDocsQuery;
+            const { data: topContactsData } = await topContactsQuery;
 
-            const doctorSales = {};
-            topDocs?.forEach(sale => {
-                const doctorName = sale.visits.doctors.name;
-                doctorSales[doctorName] = (doctorSales[doctorName] || 0) + parseFloat(sale.total_amount);
+            const contactSales = {};
+            topContactsData?.forEach(sale => {
+                const contactName = sale.visits.doctors.name;
+                const contactType = sale.visits.doctors.contact_type;
+                const key = `${contactName}|${contactType}`;
+                
+                if (!contactSales[key]) {
+                    contactSales[key] = {
+                        name: contactName,
+                        contact_type: contactType,
+                        total: 0
+                    };
+                }
+                contactSales[key].total += parseFloat(sale.total_amount);
             });
 
-            const topDoctorsData = Object.entries(doctorSales)
-                .map(([name, total]) => ({ name, total }))
+            const topContactsProcessed = Object.values(contactSales)
                 .sort((a, b) => b.total - a.total)
                 .slice(0, 5);
 
-            setTopDoctors(topDoctorsData);
+            setTopContacts(topContactsProcessed);
 
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
@@ -216,7 +233,7 @@ const DashboardContainer = () => {
             stats={stats}
             recentVisits={recentVisits}
             salesData={salesData}
-            topDoctors={topDoctors}
+            topContacts={topContacts}
             COLORS={COLORS}
             selectedMonth={selectedMonth}
             setSelectedMonth={setSelectedMonth}

@@ -6,6 +6,23 @@ import {
 const Sidebar = ({ navigation, sidebarOpen, setSidebarOpen }) => {
     const location = useLocation();
 
+    const isActive = (item) => {
+        // Extract the base path and query params
+        const currentPath = location.pathname;
+        const currentSearch = location.search;
+        const itemPath = item.href.split('?')[0];
+        const itemSearch = item.href.includes('?') ? '?' + item.href.split('?')[1] : '';
+
+        // Check if paths match and if there are query params, they should match too
+        if (currentPath === itemPath) {
+            if (itemSearch) {
+                return currentSearch === itemSearch;
+            }
+            return true;
+        }
+        return false;
+    };
+
     return (
         <>
             {/* Mobile sidebar */}
@@ -23,12 +40,12 @@ const Sidebar = ({ navigation, sidebarOpen, setSidebarOpen }) => {
                     </div>
                     <nav className="flex-1 space-y-1 px-2 py-4">
                         {navigation.map((item) => {
-                            const isActive = location.pathname === item.href;
+                            const active = isActive(item);
                             return (
                                 <Link
                                     key={item.name}
                                     to={item.href}
-                                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${isActive
+                                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${active
                                         ? 'bg-primary-100 text-primary-900'
                                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                         }`}
@@ -50,12 +67,12 @@ const Sidebar = ({ navigation, sidebarOpen, setSidebarOpen }) => {
                     </div>
                     <nav className="flex-1 space-y-1 px-2 py-4">
                         {navigation.map((item) => {
-                            const isActive = location.pathname === item.href;
+                            const active = isActive(item);
                             return (
                                 <Link
                                     key={item.name}
                                     to={item.href}
-                                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${isActive
+                                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${active
                                         ? 'bg-primary-100 text-primary-900'
                                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                         }`}

@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
 import Doctors from './Doctors';
 
 function DoctorsContainer() {
+  const [searchParams] = useSearchParams();
+  const typeFromUrl = searchParams.get('type') || 'doctor'; // Default to 'doctor'
+  
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,7 +20,7 @@ function DoctorsContainer() {
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const { toast, showSuccess, showError, hideToast } = useToast();
-  const [contactTypeFilter, setContactTypeFilter] = useState('');
+  const [contactTypeFilter] = useState(typeFromUrl); // Set from URL, don't allow change
 
   const filteredDoctors = doctors.filter(doctor => {
     const matchesSearch =
@@ -26,7 +30,7 @@ function DoctorsContainer() {
 
     const matchesClass = !classFilter || doctor.doctor_class === classFilter;
     const matchesType = !typeFilter || doctor.doctor_type === typeFilter;
-    const matchesContactType = !contactTypeFilter || doctor.contact_type === contactTypeFilter;
+    const matchesContactType = doctor.contact_type === contactTypeFilter; // Always filter by URL type
     const matchesAddress = !addressFilter || (doctor.address && doctor.address.toLowerCase().includes(addressFilter.toLowerCase()));
 
     return matchesSearch && matchesClass && matchesType && matchesContactType && matchesAddress;
@@ -35,7 +39,7 @@ function DoctorsContainer() {
   useEffect(() => {
     fetchDoctors();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [contactTypeFilter]);
 
   useEffect(() => {
     setPage(1); // Reset to first page when filters change
@@ -44,10 +48,11 @@ function DoctorsContainer() {
   const fetchDoctors = async () => {
     try {
       setLoading(true);
-      // Fetch all doctors for filtering
+      // Fetch doctors filtered by contact type
       const { data, error, count } = await supabase
         .from('doctors')
         .select('*', { count: 'exact' })
+        .eq('contact_type', contactTypeFilter)
         .order('name');
 
       if (error) {
@@ -58,11 +63,10 @@ function DoctorsContainer() {
       setDoctors(data || []);
       setTotalCount(count || 0);
       
-      // Extract unique cities from addresses (assuming city is the last part after last comma)
+      // Extract unique cities from addresses
       const cities = [...new Set((data || [])
         .map(doctor => {
           if (!doctor.address || doctor.address.trim() === '') return null;
-          // Extract city from address - assuming it's the last part after comma
           const parts = doctor.address.split(',');
           return parts[parts.length - 1].trim();
         })
@@ -71,7 +75,7 @@ function DoctorsContainer() {
       setUniqueAddresses(cities);
     } catch (error) {
       console.error('Error fetching doctors:', error);
-      showError('Error loading doctors. Please try again.');
+      showError('Error loading contacts. Please try again.');
       setDoctors([]);
       setTotalCount(0);
       setUniqueAddresses([]);
@@ -81,7 +85,8 @@ function DoctorsContainer() {
   };
 
   const deleteDoctor = async (id) => {
-    if (window.confirm('Are you sure you want to delete this doctor?')) {
+    const contactLabel = contactTypeFilter === 'chemist' ? 'chemist' : 'doctor';
+    if (window.confirm(`Are you sure you want to delete this ${contactLabel}?`)) {
       try {
         const { error } = await supabase
           .from('doctors')
@@ -90,7 +95,7 @@ function DoctorsContainer() {
 
         if (error) throw error;
 
-        showSuccess('Doctor deleted successfully');
+        showSuccess(`${contactLabel.charAt(0).toUpperCase() + contactLabel.slice(1)} deleted successfully`);
         const newTotal = totalCount - 1;
         const maxPage = Math.max(1, Math.ceil(newTotal / pageSize));
         if (page > maxPage) {
@@ -99,8 +104,8 @@ function DoctorsContainer() {
           fetchDoctors();
         }
       } catch (error) {
-        console.error('Error deleting doctor:', error);
-        showError('Error deleting doctor: ' + (error.message || 'Unknown error'));
+        console.error('Error deleting contact:', error);
+        showError('Error deleting contact: ' + (error.message || 'Unknown error'));
       }
     }
   };
@@ -113,6 +118,8 @@ function DoctorsContainer() {
 
   const totalFilteredCount = filteredDoctors.length;
   const maxPage = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
+
+  const isChemistView = contactTypeFilter === 'chemist';
 
   return (
     <>
@@ -135,8 +142,7 @@ function DoctorsContainer() {
         paginatedDoctors={paginatedDoctors}
         totalFilteredCount={totalFilteredCount}
         maxPage={maxPage}
-        contactTypeFilter={contactTypeFilter}
-        setContactTypeFilter={setContactTypeFilter}
+        isChemistView={isChemistView}
       />
       <Toast
         message={toast.message}

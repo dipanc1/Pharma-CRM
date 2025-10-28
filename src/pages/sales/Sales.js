@@ -39,17 +39,18 @@ function Sales({
   totalRevenue,
   totalItems,
   companyData,
-  doctorData,
+  contactData,
   doctorSearch,
   setDoctorSearch,
   showDoctorDropdown,
   setShowDoctorDropdown,
   filteredDoctors,
-  handleDoctorSelect
+  handleDoctorSelect,
+  formatDoctorDisplay
 }) {
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
 
-  const tableHeaders = ['Date', 'Doctor', 'Product', 'Company Name', 'Quantity', 'Unit Price', 'Total Amount'];
+  const tableHeaders = ['Date', 'Contact', 'Type', 'Product', 'Company', 'Quantity', 'Unit Price', 'Total'];
   const productOptions = products.map(product => ({ value: product.id, label: product.name }));
   const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
   const hasActiveFilters = startDate || endDate || doctorFilter || productFilter;
@@ -125,8 +126,8 @@ function Sales({
 
           <div className="relative">
             <SearchInput
-              label="Filter by Doctor"
-              placeholder="Search for a doctor..."
+              label="Filter by Contact"
+              placeholder="Search for a contact..."
               value={doctorSearch}
               onChange={(e) => setDoctorSearch(e.target.value)}
               onFocus={() => setShowDoctorDropdown(true)}
@@ -136,20 +137,42 @@ function Sales({
             {showDoctorDropdown && doctorSearch && (
               <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                 {filteredDoctors.length > 0 ? (
-                  filteredDoctors.map(doctor => (
-                    <div
-                      key={doctor.id}
-                      className="px-4 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
-                      onClick={() => handleDoctorSelect(doctor)}
-                    >
-                      <div className="font-medium text-gray-900">{doctor.name}</div>
-                      <div className="text-sm text-gray-600">
-                        {doctor.specialization} • {doctor.doctor_type} • Class {doctor.doctor_class}
+                  filteredDoctors.map(doctor => {
+                    const isChemist = doctor.contact_type === 'chemist';
+                    return (
+                      <div
+                        key={doctor.id}
+                        className="px-4 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                        onClick={() => handleDoctorSelect(doctor)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium text-gray-900">{doctor.name}</div>
+                          <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                            isChemist 
+                              ? 'bg-teal-100 text-teal-800' 
+                              : 'bg-indigo-100 text-indigo-800'
+                          }`}>
+                            {isChemist ? 'Chemist' : 'Doctor'}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {isChemist ? (
+                            <>
+                              {doctor.hospital && `${doctor.hospital}`}
+                            </>
+                          ) : (
+                            <>
+                              {doctor.specialization && `${doctor.specialization} • `}
+                              {doctor.doctor_type && `${doctor.doctor_type} • `}
+                              {doctor.doctor_class && `Class ${doctor.doctor_class}`}
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
-                  <div className="px-4 py-2 text-gray-500">No doctors found</div>
+                  <div className="px-4 py-2 text-gray-500">No contacts found</div>
                 )}
               </div>
             )}
@@ -207,17 +230,47 @@ function Sales({
           </div>
         </div>
 
-        {/* Top Doctors by Sales */}
+        {/* Top Contacts by Sales */}
         <div className="card">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Top Doctors by Sales</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Top Contacts by Sales</h3>
           <div className="h-64">
-            {doctorData.length > 0 ? (
+            {contactData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={doctorData}>
+                <BarChart data={contactData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="doctor" angle={-45} textAnchor="end" height={80} />
+                  <XAxis 
+                    dataKey="name" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={80}
+                    tick={{ fontSize: 11 }}
+                  />
                   <YAxis />
-                  <Tooltip formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']} />
+                  <Tooltip 
+                    formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        const isChemist = data.contact_type === 'chemist';
+                        return (
+                          <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium">{data.name}</p>
+                              <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                                isChemist 
+                                  ? 'bg-teal-100 text-teal-800' 
+                                  : 'bg-indigo-100 text-indigo-800'
+                              }`}>
+                                {isChemist ? 'Chemist' : 'Doctor'}
+                              </span>
+                            </div>
+                            <p className="text-sm">₹{data.amount.toFixed(2)}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
                   <Bar dataKey="amount" fill="#3B82F6" />
                 </BarChart>
               </ResponsiveContainer>
@@ -250,24 +303,42 @@ function Sales({
 
         {filteredSales.length > 0 ? (
           <Table headers={tableHeaders}>
-            {filteredSales.map((sale) => (
-              <Table.Row key={sale.id}>
-                <Table.Cell>
-                  {sale.visits?.visit_date ? format(new Date(sale.visits.visit_date), 'MMM dd, yyyy') : 'N/A'}
-                </Table.Cell>
-                <Table.Cell>
-                  <div>
-                    <div className="font-medium text-gray-900">{sale.visits?.doctors?.name}</div>
-                    <div className="text-sm text-gray-500">{sale.visits?.doctors?.specialization}</div>
-                  </div>
-                </Table.Cell>
-                <Table.Cell className="font-medium">{sale.products?.name}</Table.Cell>
-                <Table.Cell>{sale.products?.company_name || 'N/A'}</Table.Cell>
-                <Table.Cell>{sale.quantity}</Table.Cell>
-                <Table.Cell>₹{parseFloat(sale.unit_price).toFixed(2)}</Table.Cell>
-                <Table.Cell className="font-medium">₹{parseFloat(sale.total_amount).toFixed(2)}</Table.Cell>
-              </Table.Row>
-            ))}
+            {filteredSales.map((sale) => {
+              const isChemist = sale.visits?.doctors?.contact_type === 'chemist';
+              return (
+                <Table.Row key={sale.id}>
+                  <Table.Cell>
+                    {sale.visits?.visit_date ? format(new Date(sale.visits.visit_date), 'MMM dd, yyyy') : 'N/A'}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <div>
+                      <div className="font-medium text-gray-900">{sale.visits?.doctors?.name}</div>
+                      <div className="text-sm text-gray-500">
+                        {isChemist ? (
+                          sale.visits?.doctors?.hospital || 'N/A'
+                        ) : (
+                          sale.visits?.doctors?.specialization || 'N/A'
+                        )}
+                      </div>
+                    </div>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      isChemist 
+                        ? 'bg-teal-100 text-teal-800' 
+                        : 'bg-indigo-100 text-indigo-800'
+                    }`}>
+                      {isChemist ? 'Chemist' : 'Doctor'}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell className="font-medium">{sale.products?.name}</Table.Cell>
+                  <Table.Cell>{sale.products?.company_name || 'N/A'}</Table.Cell>
+                  <Table.Cell>{sale.quantity}</Table.Cell>
+                  <Table.Cell>₹{parseFloat(sale.unit_price).toFixed(2)}</Table.Cell>
+                  <Table.Cell className="font-medium">₹{parseFloat(sale.total_amount).toFixed(2)}</Table.Cell>
+                </Table.Row>
+              );
+            })}
           </Table>
         ) : (
           <div className="text-center py-12">
