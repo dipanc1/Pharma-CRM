@@ -39,7 +39,7 @@ function Visits({
   totalFilteredCount,
   maxPage
 }) {
-  const tableHeaders = ['Doctor', 'Visit Date', 'Status', 'Total Sales', 'Notes', 'Actions'];
+  const tableHeaders = ['Contact', 'Type', 'Visit Date', 'Status', 'Total Sales', 'Notes', 'Actions'];
 
   const statusOptions = [
     { value: 'completed', label: 'Completed' },
@@ -63,7 +63,7 @@ function Visits({
     <Loader />
   ) : (
     <div className="space-y-6">
-      <Header title="Doctor Visits" buttons={[
+      <Header title="Visits" buttons={[
         { to: "/visits/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Visit" }
       ]} />
 
@@ -72,7 +72,7 @@ function Visits({
 
           <SearchInput
             label="Search Visits"
-            placeholder="Search by doctor name, specialization, status or notes..."
+            placeholder="Search by name, hospital, status or notes..."
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             id="visit_search"
@@ -115,7 +115,7 @@ function Visits({
             )}
           </div>
 
-          {/* Status Filter - Using FilterSelect component */}
+          {/* Status Filter */}
           <FilterSelect
             label="Status"
             id="statusFilter"
@@ -136,11 +136,12 @@ function Visits({
         </div>
       </div>
 
+      {/* Visit Frequency Section */}
       {(startDate && endDate && endDate >= startDate && doctorVisitCounts.length > 0) && (
         <div className="card">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-semibold text-gray-700">
-              Doctor Visit Frequency in Selected Period
+              Contact Visit Frequency in Selected Period
               {cityFilter && (
                 <span className="ml-2 text-xs text-blue-600 font-normal">
                   (City: {cityFilter})
@@ -167,25 +168,30 @@ function Visits({
                   (d.doctor?.hospital || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                   (d.doctor?.city || '').toLowerCase().includes(searchTerm.toLowerCase())
               )
-              .map(d => (
-                <span
-                  key={d.doctor_id}
-                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border ${d.count === 0
-                    ? 'bg-gray-50 text-gray-700 border-gray-200'
-                    : 'bg-blue-50 text-blue-700 border-blue-200'
-                    }`}
-                  title={`${d.doctor?.name || 'Unknown'} — ${d.count} visit(s) in period${d.doctor?.city ? ` • ${d.doctor.city}` : ''}`}
-                >
-                  {(d.doctor?.name || 'Unknown')}: {d.count}
-                  {d.doctor?.city && !cityFilter && (
-                    <span className="ml-1 text-gray-500">• {d.doctor.city}</span>
-                  )}
-                </span>
-              ))}
+              .map(d => {
+                const isChemist = d.doctor?.contact_type === 'chemist';
+                return (
+                  <span
+                    key={d.doctor_id}
+                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border ${d.count === 0
+                      ? 'bg-gray-50 text-gray-700 border-gray-200'
+                      : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}
+                    title={`${d.doctor?.name || 'Unknown'} — ${d.count} visit(s) in period${d.doctor?.city ? ` • ${d.doctor.city}` : ''}`}
+                  >
+                    {d.doctor?.name || 'Unknown'}: {d.count}
+                    {isChemist && <span className="ml-1 text-teal-600">💊</span>}
+                    {d.doctor?.city && !cityFilter && (
+                      <span className="ml-1 text-gray-500">• {d.doctor.city}</span>
+                    )}
+                  </span>
+                );
+              })}
           </div>
         </div>
       )}
 
+      {/* Visits List */}
       <div className="card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <div>
@@ -216,56 +222,76 @@ function Visits({
 
         {filteredVisits.length > 0 ? (
           <Table headers={tableHeaders}>
-            {filteredVisits.map((visit) => (
-              <Table.Row key={visit.id}>
-                <Table.Cell>
-                  <div>
-                    <div className="font-medium text-gray-900">{visit.doctors?.name}</div>
+            {filteredVisits.map((visit) => {
+              const isChemist = visit.doctors?.contact_type === 'chemist';
+              return (
+                <Table.Row key={visit.id}>
+                  <Table.Cell>
+                    <div>
+                      <div className="font-medium text-gray-900">{visit.doctors?.name}</div>
+                      <div className="text-sm text-gray-500">
+                        {isChemist ? (
+                          <>
+                            {visit.doctors?.hospital && visit.doctors.hospital}
+                            {visit.doctors?.hospital && visit.doctors?.address && ' • '}
+                            {visit.doctors?.address && visit.doctors.address}
+                          </>
+                        ) : (
+                          <>
+                            {visit.doctors?.specialization} • {visit.doctors?.hospital}
+                            {visit.doctors?.address && (
+                              <span className="ml-1">• {visit.doctors.address}</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      isChemist 
+                        ? 'bg-teal-100 text-teal-800' 
+                        : 'bg-indigo-100 text-indigo-800'
+                    }`}>
+                      {isChemist ? 'Chemist' : 'Doctor'}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell>
+                    {format(new Date(visit.visit_date), 'MMM dd, yyyy')}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <StatusBadge
+                      value={visit.status}
+                      getStyleFunction={getVisitStatusStyle}
+                    />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <div className="font-medium text-gray-900">
+                      ₹{calculateTotalSales(visit.sales).toFixed(2)}
+                    </div>
                     <div className="text-sm text-gray-500">
-                      {visit.doctors?.specialization} • {visit.doctors?.hospital}
-                      {visit.doctors?.address && (
-                        <span className="ml-1">• {visit.doctors.address}</span>
-                      )}
+                      {visit.sales?.length || 0} items
                     </div>
-                  </div>
-                </Table.Cell>
-                <Table.Cell>
-                  {format(new Date(visit.visit_date), 'MMM dd, yyyy')}
-                </Table.Cell>
-                <Table.Cell>
-                  {/* Using StatusBadge component */}
-                  <StatusBadge
-                    value={visit.status}
-                    getStyleFunction={getVisitStatusStyle}
-                  />
-                </Table.Cell>
-                <Table.Cell>
-                  <div className="font-medium text-gray-900">
-                    ₹{calculateTotalSales(visit.sales).toFixed(2)}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {visit.sales?.length || 0} items
-                  </div>
-                </Table.Cell>
-                <Table.Cell className="max-w-xs">
-                  {visit.notes ? (
-                    <div className="truncate" title={visit.notes}>
-                      {visit.notes}
-                    </div>
-                  ) : (
-                    'No notes'
-                  )}
-                </Table.Cell>
-                <Table.Cell>
-                  {/* Using ActionButtons component */}
-                  <ActionButtons
-                    viewPath={`/visits/${visit.id}`}
-                    editPath={`/visits/${visit.id}/edit`}
-                    onDelete={() => deleteVisit(visit.id)}
-                  />
-                </Table.Cell>
-              </Table.Row>
-            ))}
+                  </Table.Cell>
+                  <Table.Cell className="max-w-xs">
+                    {visit.notes ? (
+                      <div className="truncate" title={visit.notes}>
+                        {visit.notes}
+                      </div>
+                    ) : (
+                      'No notes'
+                    )}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <ActionButtons
+                      viewPath={`/visits/${visit.id}`}
+                      editPath={`/visits/${visit.id}/edit`}
+                      onDelete={() => deleteVisit(visit.id)}
+                    />
+                  </Table.Cell>
+                </Table.Row>
+              );
+            })}
           </Table>
         ) : (
           <div className="text-center py-12">

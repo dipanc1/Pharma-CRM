@@ -16,6 +16,21 @@ function DoctorsContainer() {
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const { toast, showSuccess, showError, hideToast } = useToast();
+  const [contactTypeFilter, setContactTypeFilter] = useState('');
+
+  const filteredDoctors = doctors.filter(doctor => {
+    const matchesSearch =
+      doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doctor.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doctor.hospital?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesClass = !classFilter || doctor.doctor_class === classFilter;
+    const matchesType = !typeFilter || doctor.doctor_type === typeFilter;
+    const matchesContactType = !contactTypeFilter || doctor.contact_type === contactTypeFilter;
+    const matchesAddress = !addressFilter || (doctor.address && doctor.address.toLowerCase().includes(addressFilter.toLowerCase()));
+
+    return matchesSearch && matchesClass && matchesType && matchesContactType && matchesAddress;
+  });
 
   useEffect(() => {
     fetchDoctors();
@@ -90,21 +105,6 @@ function DoctorsContainer() {
     }
   };
 
-  const filteredDoctors = doctors.filter(doctor => {
-    const matchesSearch =
-      doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doctor.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doctor.hospital?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesClass = !classFilter || doctor.doctor_class === classFilter;
-    const matchesType = !typeFilter || doctor.doctor_type === typeFilter;
-    
-    // Check if address contains the selected city
-    const matchesAddress = !addressFilter || (doctor.address && doctor.address.toLowerCase().includes(addressFilter.toLowerCase()));
-
-    return matchesSearch && matchesClass && matchesType && matchesAddress;
-  });
-
   // Apply pagination to filtered results
   const paginatedDoctors = filteredDoctors.slice(
     (page - 1) * pageSize,
@@ -135,6 +135,8 @@ function DoctorsContainer() {
         paginatedDoctors={paginatedDoctors}
         totalFilteredCount={totalFilteredCount}
         maxPage={maxPage}
+        contactTypeFilter={contactTypeFilter}
+        setContactTypeFilter={setContactTypeFilter}
       />
       <Toast
         message={toast.message}

@@ -82,15 +82,15 @@ function VisitsContainer() {
       let query = supabase
         .from('visits')
         .select(`
-        *,
-        doctors (name, specialization, hospital, address),
-        sales (
-          id,
-          quantity,
-          total_amount,
-          products (name)
-        )
-      `)
+          *,
+          doctors (name, specialization, hospital, address, contact_type),
+          sales (
+            id,
+            quantity,
+            total_amount,
+            products (name)
+          )
+        `)
         .order('visit_date', { ascending: false });
 
       if (startDate && endDate) {
@@ -150,7 +150,7 @@ function VisitsContainer() {
       // Step 1: Get ALL doctors first, then filter by city if needed
       let doctorsQuery = supabase
         .from('doctors')
-        .select('id, name, specialization, hospital, address')
+        .select('id, name, specialization, hospital, address, contact_type')
         .order('name');
 
       const { data: allDoctors, error: doctorsError } = await doctorsQuery;
@@ -207,7 +207,8 @@ function VisitsContainer() {
           name: doctor.name,
           specialization: doctor.specialization,
           hospital: doctor.hospital,
-          city: doctor.address // Using address as city
+          city: doctor.address,
+          contact_type: doctor.contact_type
         },
         count: visitCountMap.get(doctor.id) || 0
       }));
@@ -237,7 +238,7 @@ function VisitsContainer() {
           .from('visits')
           .select(`
             visit_date,
-            doctors (name),
+            doctors (name, contact_type),
             sales (id)
           `)
           .eq('id', id)
@@ -254,13 +255,14 @@ function VisitsContainer() {
         }
 
         // Show detailed success message
-        const doctorName = visitData?.doctors?.name || 'Unknown Doctor';
+        const isChemist = visitData?.doctors?.contact_type === 'chemist';
+        const contactName = visitData?.doctors?.name || 'Unknown Contact';
         const visitDate = visitData?.visit_date ? format(new Date(visitData.visit_date), 'MMM dd, yyyy') : '';
         const salesCount = visitData?.sales?.length || 0;
 
         let successMessage = `Visit deleted successfully`;
-        if (doctorName && visitDate) {
-          successMessage += ` (${doctorName} - ${visitDate})`;
+        if (contactName && visitDate) {
+          successMessage += ` (${contactName}${isChemist ? ' [Chemist]' : ''} - ${visitDate})`;
         }
         if (salesCount > 0) {
           successMessage += ` and ${salesCount} associated sale${salesCount !== 1 ? 's' : ''}`;
@@ -287,9 +289,11 @@ function VisitsContainer() {
     if (!searchTerm) return true;
 
     const searchLower = searchTerm.toLowerCase();
+    const isChemist = visit.doctors?.contact_type === 'chemist';
+    
     return (
       (visit.doctors?.name || '').toLowerCase().includes(searchLower) ||
-      (visit.doctors?.specialization || '').toLowerCase().includes(searchLower) ||
+      (!isChemist && (visit.doctors?.specialization || '').toLowerCase().includes(searchLower)) ||
       (visit.doctors?.hospital || '').toLowerCase().includes(searchLower) ||
       (visit.status || '').toLowerCase().includes(searchLower) ||
       (visit.notes || '').toLowerCase().includes(searchLower)

@@ -14,25 +14,38 @@ import {
 import NoRecordsAddButtonLayout from '../../common/NoRecordsAddButtonLayout';
 import { format } from 'date-fns';
 
-function DoctorDetail({ doctor, visits, loading, deleteDoctor, calculateTotalSales, getDoctorClassStyle, getDoctorTypeStyle, getVisitStatusStyle, formatCurrency }) {
+function DoctorDetail({ 
+  doctor, 
+  visits, 
+  loading, 
+  deleteDoctor, 
+  calculateTotalSales, 
+  getDoctorClassStyle, 
+  getDoctorTypeStyle, 
+  getVisitStatusStyle, 
+  formatCurrency 
+}) {
   const { id } = useParams();
   const visitTableHeaders = ['Visit Date', 'Status', 'Total Sales', 'Notes'];
+  
+  const isChemist = doctor?.contact_type === 'chemist';
+  const pageTitle = isChemist ? 'Chemist Details' : 'Doctor Details';
 
   return loading ? (
     <Loader />
   ) : !doctor ? (
     <div className="text-center py-12">
-      <div className="text-gray-500">Doctor not found</div>
+      <div className="text-gray-500">Contact not found</div>
       <Link to="/doctors" className="btn-primary mt-4 inline-flex">
         <ArrowLeftIcon className="h-4 w-4 mr-2" />
-        Back to Doctors
+        Back to Contacts
       </Link>
     </div>
   ) : (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <BackTitleAndButton title="Doctor Details" backButtonPath="/doctors" />
+        <BackTitleAndButton title={pageTitle} backButtonPath="/doctors" />
         <div className="flex space-x-3">
           <SecondaryButton
             link={`/doctors/${id}/edit`}
@@ -44,35 +57,68 @@ function DoctorDetail({ doctor, visits, loading, deleteDoctor, calculateTotalSal
         </div>
       </div>
 
+      {/* Contact Type Badge */}
+      {isChemist && (
+        <div className="card bg-teal-50 border border-teal-200">
+          <div className="flex items-center">
+            <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-teal-100 text-teal-800">
+              Chemist/Pharmacy
+            </span>
+            <p className="ml-3 text-sm text-teal-700">
+              This is a chemist contact. Doctor-specific fields are not applicable.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Personal Information */}
       <div className="card">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Personal Information</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">
+          {isChemist ? 'Business Information' : 'Personal Information'}
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <InfoField label="Name" value={doctor.name} />
-          <InfoField label="Specialization" value={doctor.specialization} />
-          <InfoField label="Hospital/Clinic" value={doctor.hospital} />
-          <div>
-            <label className="block text-sm font-medium text-gray-500">Doctor Class</label>
-            <p className="mt-1 text-sm text-gray-900">
-              <StatusBadge
-                value={doctor.doctor_class}
-                getStyleFunction={getDoctorClassStyle}
-                prefix="Class "
-              />
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-500">Doctor Type</label>
-            <p className="mt-1 text-sm text-gray-900">
-              <StatusBadge
-                value={doctor.doctor_type}
-                getStyleFunction={getDoctorTypeStyle}
-              />
-            </p>
-          </div>
-          <InfoField label="Contact Number" value={doctor.contact_number} />
-          <InfoField label="Email" value={doctor.email} />
-          <InfoField label="Address" value={doctor.address} />
+          <InfoField 
+            label={isChemist ? 'Business Name' : 'Name'} 
+            value={doctor.name} 
+          />
+          
+          {!isChemist && doctor.specialization && (
+            <InfoField label="Specialization" value={doctor.specialization} />
+          )}
+          
+          <InfoField 
+            label={isChemist ? 'Location' : 'Hospital/Clinic'} 
+            value={doctor.hospital || 'N/A'} 
+          />
+          
+          {!isChemist && doctor.doctor_class && (
+            <div>
+              <label className="block text-sm font-medium text-gray-500">Doctor Class</label>
+              <p className="mt-1 text-sm text-gray-900">
+                <StatusBadge
+                  value={doctor.doctor_class}
+                  getStyleFunction={getDoctorClassStyle}
+                  prefix="Class "
+                />
+              </p>
+            </div>
+          )}
+          
+          {!isChemist && doctor.doctor_type && (
+            <div>
+              <label className="block text-sm font-medium text-gray-500">Doctor Type</label>
+              <p className="mt-1 text-sm text-gray-900">
+                <StatusBadge
+                  value={doctor.doctor_type}
+                  getStyleFunction={getDoctorTypeStyle}
+                />
+              </p>
+            </div>
+          )}
+          
+          <InfoField label="Contact Number" value={doctor.contact_number || 'N/A'} />
+          <InfoField label="Email" value={doctor.email || 'N/A'} />
+          <InfoField label="Address" value={doctor.address || 'N/A'} />
         </div>
       </div>
 

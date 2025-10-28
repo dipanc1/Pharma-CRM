@@ -25,7 +25,7 @@ function VisitDetailContainer() {
         .from('visits')
         .select(`
           *,
-          doctors (name, specialization, hospital),
+          doctors (name, specialization, hospital, address, contact_type),
           sales (
             id,
             quantity,

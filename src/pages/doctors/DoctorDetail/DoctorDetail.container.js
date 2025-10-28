@@ -52,14 +52,17 @@ function DoctorDetailContainer() {
 
     } catch (error) {
       console.error('Error fetching doctor data:', error);
-      showError('Error loading doctor details');
+      showError('Error loading contact details');
     } finally {
       setLoading(false);
     }
   };
 
   const deleteDoctor = async () => {
-    if (window.confirm('Are you sure you want to delete this doctor? This will also delete all associated visits and sales.')) {
+    const contactType = doctor?.contact_type === 'chemist' ? 'chemist' : 'doctor';
+    const confirmMessage = `Are you sure you want to delete this ${contactType}? This will also delete all associated visits and sales.`;
+    
+    if (window.confirm(confirmMessage)) {
       try {
         const { error } = await supabase
           .from('doctors')
@@ -68,11 +71,11 @@ function DoctorDetailContainer() {
 
         if (error) throw error;
 
-        showSuccess('Doctor deleted successfully');
+        showSuccess(`${contactType === 'chemist' ? 'Chemist' : 'Doctor'} deleted successfully`);
         navigate('/doctors');
       } catch (error) {
-        console.error('Error deleting doctor:', error);
-        showError('Error deleting doctor');
+        console.error('Error deleting contact:', error);
+        showError(`Error deleting ${contactType}`);
       }
     }
   };
@@ -81,8 +84,8 @@ function DoctorDetailContainer() {
     return sales?.reduce((total, sale) => total + parseFloat(sale.total_amount), 0) || 0;
   };
 
-
   const getDoctorClassStyle = (doctorClass) => {
+    if (!doctorClass) return 'bg-gray-100 text-gray-800';
     const styles = {
       A: 'bg-green-100 text-green-800',
       B: 'bg-blue-100 text-blue-800',
@@ -92,6 +95,7 @@ function DoctorDetailContainer() {
   };
 
   const getDoctorTypeStyle = (doctorType) => {
+    if (!doctorType) return 'bg-gray-100 text-gray-800';
     return doctorType === 'prescriber'
       ? 'bg-purple-100 text-purple-800'
       : 'bg-orange-100 text-orange-800';
@@ -104,7 +108,6 @@ function DoctorDetailContainer() {
   };
 
   const formatCurrency = (amount) => `₹${amount.toFixed(2)}`;
-
 
   return (
     <>

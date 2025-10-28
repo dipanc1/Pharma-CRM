@@ -14,6 +14,7 @@ function EditDoctorContainer() {
   const [formData, setFormData] = useState({
     id: '',
     name: '',
+    contact_type: 'doctor',
     specialization: '',
     hospital: '',
     contact_number: '',
@@ -22,6 +23,11 @@ function EditDoctorContainer() {
     doctor_class: '',
     doctor_type: ''
   });
+
+  const contactTypeOptions = [
+    { value: 'doctor', label: 'Doctor' },
+    { value: 'chemist', label: 'Chemist' }
+  ];
 
   const classOptions = [
     { value: 'A', label: 'Class A' },
@@ -37,36 +43,50 @@ function EditDoctorContainer() {
   const FORM_FIELDS = [
     {
       name: 'name',
-      label: 'Doctor Name',
+      label: formData.contact_type === 'chemist' ? 'Chemist/Shop Name' : 'Doctor Name',
       type: 'text',
       required: true,
-      placeholder: "Enter doctor's full name",
+      placeholder: formData.contact_type === 'chemist' 
+        ? 'Enter chemist or shop name' 
+        : "Enter doctor's full name",
       colSpan: 'md:col-span-2'
     },
     {
-      name: 'specialization',
-      label: 'Specialization',
-      type: 'text',
-      placeholder: 'e.g., Cardiology, Neurology'
+      name: 'contact_type',
+      label: 'Contact Type',
+      type: 'select',
+      required: true,
+      options: contactTypeOptions
     },
     {
       name: 'hospital',
-      label: 'Hospital/Clinic',
+      label: formData.contact_type === 'chemist' ? 'Shop Location' : 'Hospital/Clinic',
       type: 'text',
-      placeholder: 'Hospital or clinic name'
+      placeholder: formData.contact_type === 'chemist' 
+        ? 'Shop or pharmacy location' 
+        : 'Hospital or clinic name'
     },
-    {
-      name: 'doctor_class',
-      label: 'Doctor Class',
-      type: 'select',
-      options: classOptions
-    },
-    {
-      name: 'doctor_type',
-      label: 'Doctor Type',
-      type: 'select',
-      options: typeOptions
-    },
+    // Conditional fields
+    ...(formData.contact_type === 'doctor' ? [
+      {
+        name: 'specialization',
+        label: 'Specialization',
+        type: 'text',
+        placeholder: 'e.g., Cardiology, Neurology'
+      },
+      {
+        name: 'doctor_class',
+        label: 'Doctor Class',
+        type: 'select',
+        options: classOptions
+      },
+      {
+        name: 'doctor_type',
+        label: 'Doctor Type',
+        type: 'select',
+        options: typeOptions
+      }
+    ] : []),
     {
       name: 'contact_number',
       label: 'Contact Number',
@@ -108,6 +128,7 @@ function EditDoctorContainer() {
       setFormData({
         id: data.id,
         name: data.name || '',
+        contact_type: data.contact_type || 'doctor',
         specialization: data.specialization || '',
         hospital: data.hospital || '',
         contact_number: data.contact_number || '',
@@ -118,7 +139,7 @@ function EditDoctorContainer() {
       });
     } catch (error) {
       console.error('Error fetching doctor:', error);
-      showError('Error loading doctor details');
+      showError('Error loading contact details');
       setTimeout(() => {
         navigate('/doctors');
       }, 2000);
@@ -129,10 +150,22 @@ function EditDoctorContainer() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // If contact_type changes to chemist, clear doctor-specific fields
+    if (name === 'contact_type' && value === 'chemist') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        specialization: '',
+        doctor_class: '',
+        doctor_type: ''
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -140,26 +173,34 @@ function EditDoctorContainer() {
     setSaving(true);
 
     try {
+      // Prepare data - set doctor-specific fields to null for chemists
+      const dataToUpdate = {
+        ...formData,
+        specialization: formData.contact_type === 'chemist' ? null : formData.specialization,
+        doctor_class: formData.contact_type === 'chemist' ? null : formData.doctor_class,
+        doctor_type: formData.contact_type === 'chemist' ? null : formData.doctor_type
+      };
+
       const { error } = await supabase
         .from('doctors')
-        .update(formData)
+        .update(dataToUpdate)
         .eq('id', id);
 
       if (error) throw error;
 
-      showSuccess('Doctor updated successfully!');
+      showSuccess(`${formData.contact_type === 'chemist' ? 'Chemist' : 'Doctor'} updated successfully!`);
       setTimeout(() => {
         navigate(`/doctors/${id}`);
       }, 1500);
     } catch (error) {
-      console.error('Error updating doctor:', error);
-      showError('Error updating doctor. Please try again.');
+      console.error('Error updating contact:', error);
+      showError('Error updating contact');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleCancel = () => {
+  const onCancel = () => {
     navigate(`/doctors/${id}`);
   };
 
@@ -171,7 +212,7 @@ function EditDoctorContainer() {
         handleSubmit={handleSubmit}
         loading={loading}
         saving={saving}
-        onCancel={handleCancel}
+        onCancel={onCancel}
         FORM_FIELDS={FORM_FIELDS}
       />
       <Toast

@@ -42,7 +42,7 @@ function AddVisit({
 
   return (
     <div className="space-y-6">
-      {/* Header - Using BackTitleAndButton component */}
+      {/* Header */}
       <BackTitleAndButton title="Add New Visit" backButtonPath="/visits" />
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -51,11 +51,11 @@ function AddVisit({
           <h3 className="text-lg font-medium text-gray-900 mb-4">Visit Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            {/* Doctor Search - Using SearchInput component */}
+            {/* Doctor/Chemist Search */}
             <div className="md:col-span-2 relative">
               <SearchInput
-                label="Doctor *"
-                placeholder="Search for a doctor..."
+                label="Doctor / Chemist *"
+                placeholder="Search for a doctor or chemist..."
                 value={doctorSearch}
                 onChange={handleDoctorSearchChange}
                 onFocus={() => setShowDoctorDropdown(true)}
@@ -65,20 +65,42 @@ function AddVisit({
               {showDoctorDropdown && doctorSearch && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                   {filteredDoctors.length > 0 ? (
-                    filteredDoctors.map(doctor => (
-                      <div
-                        key={doctor.id}
-                        className="px-4 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
-                        onClick={() => handleDoctorSelect(doctor)}
-                      >
-                        <div className="font-medium text-gray-900">{doctor.name}</div>
-                        <div className="text-sm text-gray-600">
-                          {doctor.specialization} • {doctor.doctor_type} • Class {doctor.doctor_class}
+                    filteredDoctors.map(doctor => {
+                      const isChemist = doctor.contact_type === 'chemist';
+                      return (
+                        <div
+                          key={doctor.id}
+                          className="px-4 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                          onClick={() => handleDoctorSelect(doctor)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium text-gray-900">{doctor.name}</div>
+                            <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                              isChemist 
+                                ? 'bg-teal-100 text-teal-800' 
+                                : 'bg-indigo-100 text-indigo-800'
+                            }`}>
+                              {isChemist ? 'Chemist' : 'Doctor'}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {isChemist ? (
+                              <>
+                                {doctor.hospital && `${doctor.hospital}`}
+                              </>
+                            ) : (
+                              <>
+                                {doctor.specialization && `${doctor.specialization} • `}
+                                {doctor.doctor_type && `${doctor.doctor_type} • `}
+                                {doctor.doctor_class && `Class ${doctor.doctor_class}`}
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
-                    <div className="px-4 py-2 text-gray-500">No doctors found</div>
+                    <div className="px-4 py-2 text-gray-500">No contacts found</div>
                   )}
                 </div>
               )}
@@ -108,7 +130,7 @@ function AddVisit({
               />
             </div>
 
-            {/* Status - Using FilterSelect component */}
+            {/* Status */}
             <div>
               <FilterSelect
                 label="Status"
@@ -146,7 +168,7 @@ function AddVisit({
           {/* Add Sale Form */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
 
-            {/* Product Selection - Using FilterSelect component */}
+            {/* Product Selection */}
             <div>
               <FilterSelect
                 label="Product"
@@ -217,7 +239,7 @@ function AddVisit({
             </div>
           </div>
 
-          {/* Sales List - Using Table component */}
+          {/* Sales List */}
           {sales.length > 0 && (
             <div className="space-y-4">
               <Table headers={tableHeaders}>
@@ -264,7 +286,7 @@ function AddVisit({
           )}
         </div>
 
-        {/* Submit Buttons - Using SecondaryButton component */}
+        {/* Submit Buttons */}
         <div className="flex justify-end space-x-3">
           <SecondaryButton link="/visits">
             Cancel

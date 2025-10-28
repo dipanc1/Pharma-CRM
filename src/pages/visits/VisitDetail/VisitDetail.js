@@ -22,6 +22,9 @@ function VisitDetail({
 }) {
   const { id } = useParams();
   const salesTableHeaders = ['Product', 'Company Name', 'Quantity', 'Unit Price', 'Total'];
+  
+  const isChemist = visit?.doctors?.contact_type === 'chemist';
+  const contactLabel = isChemist ? 'Chemist' : 'Doctor';
 
   return loading ? (
     <Loader />
@@ -54,9 +57,19 @@ function VisitDetail({
         <h2 className="text-lg font-medium text-gray-900 mb-4">Visit Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <InfoField label="Doctor" value={visit.doctors?.name} />
+            <InfoField label={contactLabel} value={visit.doctors?.name} />
             <p className="text-xs text-gray-500 mt-1">
-              {visit.doctors?.specialization} • {visit.doctors?.hospital}
+              {isChemist ? (
+                <>
+                  {visit.doctors?.hospital && `${visit.doctors.hospital}`}
+                  {visit.doctors?.hospital && visit.doctors?.address && ' • '}
+                  {visit.doctors?.address && visit.doctors.address}
+                </>
+              ) : (
+                <>
+                  {visit.doctors?.specialization} • {visit.doctors?.hospital}
+                </>
+              )}
             </p>
           </div>
           <InfoField

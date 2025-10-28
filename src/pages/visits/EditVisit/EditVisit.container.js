@@ -43,10 +43,18 @@ function EditVisitContainer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doctors, id]);
 
+  const formatDoctorDisplay = (doctor) => {
+    const isChemist = doctor.contact_type === 'chemist';
+    if (isChemist) {
+      return `${doctor.name}${doctor.hospital ? ` - ${doctor.hospital}` : ''} [Chemist]`;
+    }
+    return `${doctor.name}${doctor.specialization ? ` - ${doctor.specialization}` : ''}${doctor.doctor_type ? ` (${doctor.doctor_type}` : ''}${doctor.doctor_class ? ` - ${doctor.doctor_class})` : doctor.doctor_type ? ')' : ''}`;
+  };
+
   const setInitialDoctorSearch = (doctorId) => {
     const doctor = doctors.find(d => d.id === doctorId);
     if (doctor) {
-      setDoctorSearch(`${doctor.name} - ${doctor.specialization} (${doctor.doctor_type} - ${doctor.doctor_class})`);
+      setDoctorSearch(formatDoctorDisplay(doctor));
     }
   };
 
@@ -109,28 +117,33 @@ function EditVisitContainer() {
     try {
       const { data, error } = await supabase
         .from('doctors')
-        .select('id, name, specialization, doctor_type, doctor_class')
+        .select('id, name, specialization, hospital, doctor_type, doctor_class, contact_type')
         .order('name');
 
       if (error) throw error;
       setDoctors(data || []);
     } catch (error) {
       console.error('Error fetching doctors:', error);
-      showError('Error loading doctors');
+      showError('Error loading contacts');
     }
   };
 
-  // Add these new functions
-  const filteredDoctors = doctors.filter(doctor =>
-    doctor.name.toLowerCase().includes(doctorSearch.toLowerCase()) ||
-    doctor.specialization?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
-    doctor.doctor_type?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
-    doctor.doctor_class?.toLowerCase().includes(doctorSearch.toLowerCase())
-  );
+  const filteredDoctors = doctors.filter(doctor => {
+    const searchLower = doctorSearch.toLowerCase();
+    const isChemist = doctor.contact_type === 'chemist';
+    
+    return (
+      doctor.name.toLowerCase().includes(searchLower) ||
+      doctor.hospital?.toLowerCase().includes(searchLower) ||
+      (!isChemist && doctor.specialization?.toLowerCase().includes(searchLower)) ||
+      (!isChemist && doctor.doctor_type?.toLowerCase().includes(searchLower)) ||
+      (!isChemist && doctor.doctor_class?.toLowerCase().includes(searchLower))
+    );
+  });
 
   const handleDoctorSelect = (doctor) => {
     setFormData(prev => ({ ...prev, doctor_id: doctor.id }));
-    setDoctorSearch(`${doctor.name} - ${doctor.specialization} (${doctor.doctor_type} - ${doctor.doctor_class})`);
+    setDoctorSearch(formatDoctorDisplay(doctor));
     setShowDoctorDropdown(false);
   };
 
@@ -170,11 +183,10 @@ function EditVisitContainer() {
     setNewSale(prev => ({
       ...prev,
       [name]: name === 'quantity' || name === 'unit_price'
-        ? value // Keep raw value, don't convert to number yet
+        ? value
         : value
     }));
 
-    // Check stock when product is selected
     if (name === 'product_id' && value) {
       try {
         const today = new Date().toISOString().split('T')[0];
@@ -188,7 +200,6 @@ function EditVisitContainer() {
   };
 
   const addSale = () => {
-    // Parse values for validation
     const quantity = parseFloat(newSale.quantity);
     const unit_price = parseFloat(newSale.unit_price);
 
@@ -229,7 +240,7 @@ function EditVisitContainer() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.doctor_id) {
-      showError('Please select a doctor');
+      showError('Please select a contact');
       return;
     }
 
@@ -257,7 +268,7 @@ function EditVisitContainer() {
         await addStockTransaction({
           product_id: originalSale.product_id,
           transaction_type: TRANSACTION_TYPES.ADJUSTMENT,
-          quantity: originalSale.quantity, // Positive to reverse the sale
+          quantity: originalSale.quantity,
           transaction_date: formData.visit_date,
           reference_type: 'visit_edit_reversal',
           reference_id: id,
@@ -294,11 +305,11 @@ function EditVisitContainer() {
           await addStockTransaction({
             product_id: sale.product_id,
             transaction_type: TRANSACTION_TYPES.SALE,
-            quantity: -sale.quantity, // Negative for sale
+            quantity: -sale.quantity,
             transaction_date: formData.visit_date,
             reference_type: 'visit',
             reference_id: id,
-            notes: `Updated sale via visit edit to doctor ID: ${formData.doctor_id}`
+            notes: `Updated sale via visit edit to contact ID: ${formData.doctor_id}`
           });
         }
       }

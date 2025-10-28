@@ -38,14 +38,14 @@ function AddVisitContainer() {
     try {
       const { data, error } = await supabase
         .from('doctors')
-        .select('id, name, specialization, doctor_type, doctor_class')
+        .select('id, name, specialization, hospital, doctor_type, doctor_class, contact_type')
         .order('name');
 
       if (error) throw error;
       setDoctors(data || []);
     } catch (error) {
       console.error('Error fetching doctors:', error);
-      showError('Error loading doctors');
+      showError('Error loading contacts');
     }
   };
 
@@ -71,7 +71,6 @@ function AddVisitContainer() {
       [name]: value
     }));
   };
-
 
   const handleSaleChange = async (e) => {
     const { name, value } = e.target;
@@ -135,7 +134,7 @@ function AddVisitContainer() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.doctor_id) {
-      showError('Please select a doctor');
+      showError('Please select a contact');
       return;
     }
 
@@ -176,7 +175,7 @@ function AddVisitContainer() {
             transaction_date: formData.visit_date,
             reference_type: 'visit',
             reference_id: visit.id,
-            notes: `Sale via visit to doctor ID: ${formData.doctor_id}`
+            notes: `Sale via visit to contact ID: ${formData.doctor_id}`
           });
 
           // Update current stock in products table
@@ -196,16 +195,30 @@ function AddVisitContainer() {
 
   const totalSalesAmount = sales.reduce((total, sale) => total + sale.total_amount, 0);
 
-  const filteredDoctors = doctors.filter(doctor =>
-    doctor.name.toLowerCase().includes(doctorSearch.toLowerCase()) ||
-    doctor.specialization?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
-    doctor.doctor_type?.toLowerCase().includes(doctorSearch.toLowerCase()) ||
-    doctor.doctor_class?.toLowerCase().includes(doctorSearch.toLowerCase())
-  );
+  const filteredDoctors = doctors.filter(doctor => {
+    const searchLower = doctorSearch.toLowerCase();
+    const isChemist = doctor.contact_type === 'chemist';
+    
+    return (
+      doctor.name.toLowerCase().includes(searchLower) ||
+      doctor.hospital?.toLowerCase().includes(searchLower) ||
+      (!isChemist && doctor.specialization?.toLowerCase().includes(searchLower)) ||
+      (!isChemist && doctor.doctor_type?.toLowerCase().includes(searchLower)) ||
+      (!isChemist && doctor.doctor_class?.toLowerCase().includes(searchLower))
+    );
+  });
+
+  const formatDoctorDisplay = (doctor) => {
+    const isChemist = doctor.contact_type === 'chemist';
+    if (isChemist) {
+      return `${doctor.name}${doctor.hospital ? ` - ${doctor.hospital}` : ''} [Chemist]`;
+    }
+    return `${doctor.name}${doctor.specialization ? ` - ${doctor.specialization}` : ''}${doctor.doctor_type ? ` (${doctor.doctor_type}` : ''}${doctor.doctor_class ? ` - ${doctor.doctor_class})` : doctor.doctor_type ? ')' : ''}`;
+  };
 
   const handleDoctorSelect = (doctor) => {
     setFormData(prev => ({ ...prev, doctor_id: doctor.id }));
-    setDoctorSearch(`${doctor.name} - ${doctor.specialization} (${doctor.doctor_type} - ${doctor.doctor_class})`);
+    setDoctorSearch(formatDoctorDisplay(doctor));
     setShowDoctorDropdown(false);
   };
 
