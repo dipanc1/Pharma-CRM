@@ -105,7 +105,7 @@ function Dashboard({ stats, recentVisits, salesData, topContacts, COLORS, select
 
         <DashboardCard
           title={selectedMonth === 'overall' ? 'Contacts Visited (All Time)' : 'Contacts Visited'}
-          value={`${stats.visitedDoctors} / ${stats.totalContacts}`}
+          value={`${stats.visitedDoctors} / ${stats.totalDoctors}`}
           subtitle={`${stats.visitPercentage}% Coverage`}
           icon={<ChartBarIcon className="h-8 w-8 text-secondary-600" />}
         />

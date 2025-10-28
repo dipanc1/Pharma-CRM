@@ -58,11 +58,13 @@ const DashboardContainer = () => {
             const totalChemists = allContacts?.filter(c => c.contact_type === 'chemist').length || 0;
             const totalContacts = allContacts?.length || 0;
 
+            const doctorIds = allContacts?.filter(c => c.contact_type === 'doctor').map(c => c.id) || [];
+
             const { count: totalProductsCount } = await supabase
                 .from('products')
                 .select('*', { count: 'exact' });
 
-            // Fetch visits for the selected period
+            // Fetch visits for the selected period (for all contacts)
             let visitsQuery = supabase
                 .from('visits')
                 .select('doctor_id, status');
@@ -75,13 +77,13 @@ const DashboardContainer = () => {
 
             const { data: visits } = await visitsQuery;
 
-            // Calculate unique contacts visited
-            const uniqueContactIds = new Set(visits?.map(v => v.doctor_id) || []);
-            const visitedContactsCount = uniqueContactIds.size;
+            const uniqueDoctorIds = new Set(
+                visits?.filter(v => doctorIds.includes(v.doctor_id)).map(v => v.doctor_id) || []
+            );
+            const visitedDoctorsCount = uniqueDoctorIds.size;
 
-            // Calculate visit percentage
-            const visitPercentage = totalContacts > 0 
-                ? ((visitedContactsCount / totalContacts) * 100).toFixed(1)
+            const visitPercentage = totalDoctors > 0 
+                ? ((visitedDoctorsCount / totalDoctors) * 100).toFixed(1)
                 : 0;
 
             // Fetch sales count
@@ -101,7 +103,7 @@ const DashboardContainer = () => {
                 totalDoctors,
                 totalChemists,
                 totalContacts,
-                visitedDoctors: visitedContactsCount,
+                visitedDoctors: visitedDoctorsCount,
                 visitPercentage: parseFloat(visitPercentage),
                 totalSales: salesCount || 0,
                 totalProducts: totalProductsCount || 0
