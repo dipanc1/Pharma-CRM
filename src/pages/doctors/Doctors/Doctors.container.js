@@ -8,7 +8,7 @@ import Doctors from './Doctors';
 function DoctorsContainer() {
   const [searchParams] = useSearchParams();
   const typeFromUrl = searchParams.get('type') || 'doctor'; // Default to 'doctor'
-  
+
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +20,16 @@ function DoctorsContainer() {
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const { toast, showSuccess, showError, hideToast } = useToast();
-  const [contactTypeFilter] = useState(typeFromUrl); // Set from URL, don't allow change
+  const [contactTypeFilter, setContactTypeFilter] = useState(typeFromUrl);
+
+  useEffect(() => {
+    setContactTypeFilter(typeFromUrl);
+    setSearchTerm('');
+    setClassFilter('');
+    setTypeFilter('');
+    setAddressFilter('');
+    setPage(1);
+  }, [typeFromUrl]);
 
   const filteredDoctors = doctors.filter(doctor => {
     const matchesSearch =
@@ -30,7 +39,7 @@ function DoctorsContainer() {
 
     const matchesClass = !classFilter || doctor.doctor_class === classFilter;
     const matchesType = !typeFilter || doctor.doctor_type === typeFilter;
-    const matchesContactType = doctor.contact_type === contactTypeFilter; // Always filter by URL type
+    const matchesContactType = doctor.contact_type === contactTypeFilter;
     const matchesAddress = !addressFilter || (doctor.address && doctor.address.toLowerCase().includes(addressFilter.toLowerCase()));
 
     return matchesSearch && matchesClass && matchesType && matchesContactType && matchesAddress;
@@ -62,7 +71,7 @@ function DoctorsContainer() {
 
       setDoctors(data || []);
       setTotalCount(count || 0);
-      
+
       // Extract unique cities from addresses
       const cities = [...new Set((data || [])
         .map(doctor => {
