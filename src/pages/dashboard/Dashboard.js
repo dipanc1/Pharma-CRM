@@ -104,7 +104,7 @@ function Dashboard({ stats, recentVisits, salesData, topContacts, COLORS, select
         />
 
         <DashboardCard
-          title={selectedMonth === 'overall' ? 'Contacts Visited (All Time)' : 'Contacts Visited'}
+          title={selectedMonth === 'overall' ? 'Doctors Visited (All Time)' : 'Doctors Visited'}
           value={`${stats.visitedDoctors} / ${stats.totalDoctors}`}
           subtitle={`${stats.visitPercentage}% Coverage`}
           icon={<ChartBarIcon className="h-8 w-8 text-secondary-600" />}
@@ -224,11 +224,10 @@ function Dashboard({ stats, recentVisits, salesData, topContacts, COLORS, select
                     <tr key={visit.id}>
                       <td className="table-cell font-medium">{visit.doctors?.name}</td>
                       <td className="table-cell">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          isChemist 
-                            ? 'bg-teal-100 text-teal-800' 
-                            : 'bg-indigo-100 text-indigo-800'
-                        }`}>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${isChemist
+                          ? 'bg-teal-100 text-teal-800'
+                          : 'bg-indigo-100 text-indigo-800'
+                          }`}>
                           {isChemist ? 'Chemist' : 'Doctor'}
                         </span>
                       </td>
