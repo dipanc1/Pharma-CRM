@@ -38,6 +38,7 @@ function Sales({
   filteredSales,
   totalRevenue,
   totalItems,
+  totalTransactions,
   companyData,
   contactData,
   doctorSearch,
@@ -45,8 +46,7 @@ function Sales({
   showDoctorDropdown,
   setShowDoctorDropdown,
   filteredDoctors,
-  handleDoctorSelect,
-  formatDoctorDisplay
+  handleDoctorSelect
 }) {
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
 
@@ -67,18 +67,33 @@ function Sales({
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500">Total Revenue</p>
             <p className="text-3xl font-bold text-gray-900">₹{totalRevenue.toFixed(2)}</p>
+            {(startDate && endDate) && (
+              <p className="text-xs text-gray-500 mt-1">
+                {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}
+              </p>
+            )}
           </div>
         </div>
         <div className="card">
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500">Total Items Sold</p>
             <p className="text-3xl font-bold text-gray-900">{totalItems}</p>
+            {(startDate && endDate) && (
+              <p className="text-xs text-gray-500 mt-1">
+                {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}
+              </p>
+            )}
           </div>
         </div>
         <div className="card">
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500">Total Transactions</p>
-            <p className="text-3xl font-bold text-gray-900">{filteredSales.length}</p>
+            <p className="text-3xl font-bold text-gray-900">{totalTransactions}</p>
+            {(startDate && endDate) && (
+              <p className="text-xs text-gray-500 mt-1">
+                {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}
+              </p>
+            )}
           </div>
         </div>
       </div>

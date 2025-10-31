@@ -21,6 +21,12 @@ function SalesContainer() {
 
   const [doctorSearch, setDoctorSearch] = useState('');
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
+  
+  const [dateRangeStats, setDateRangeStats] = useState({
+    totalRevenue: 0,
+    totalItems: 0,
+    totalTransactions: 0
+  });
 
   useEffect(() => {
     fetchSales();
@@ -36,6 +42,58 @@ function SalesContainer() {
     fetchDoctors();
     fetchProducts();
   }, []);
+
+  useEffect(() => {
+    fetchDateRangeStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
+
+  const fetchDateRangeStats = async () => {
+    try {
+      // Date validation
+      const justStart = !!(startDate && !endDate);
+      const justEnd = !!(!startDate && endDate);
+      const invalidRange = !!(startDate && endDate && endDate < startDate);
+
+      if (justStart || justEnd || invalidRange) {
+        setDateRangeStats({
+          totalRevenue: 0,
+          totalItems: 0,
+          totalTransactions: 0
+        });
+        return;
+      }
+
+      let query = supabase
+        .from('sales')
+        .select(`
+          total_amount,
+          quantity,
+          visits!inner (visit_date)
+        `);
+
+      // Apply date filters only
+      if (startDate && endDate) {
+        query = query
+          .gte('visits.visit_date', startDate)
+          .lte('visits.visit_date', endDate);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      const stats = {
+        totalRevenue: data?.reduce((total, sale) => total + parseFloat(sale.total_amount), 0) || 0,
+        totalItems: data?.reduce((total, sale) => total + sale.quantity, 0) || 0,
+        totalTransactions: data?.length || 0
+      };
+
+      setDateRangeStats(stats);
+    } catch (error) {
+      console.error('Error fetching date range stats:', error);
+    }
+  };
 
   const fetchSales = async () => {
     try {
@@ -125,41 +183,92 @@ function SalesContainer() {
 
   const filteredSales = salesState;
 
-  const totalRevenue = filteredSales.reduce((total, sale) => total + parseFloat(sale.total_amount), 0);
-  const totalItems = filteredSales.reduce((total, sale) => total + sale.quantity, 0);
+  const totalRevenue = dateRangeStats.totalRevenue;
+  const totalItems = dateRangeStats.totalItems;
+  const totalTransactions = dateRangeStats.totalTransactions;
 
-  // Sales by product company
-  const salesByCompany = filteredSales.reduce((acc, sale) => {
-    const company = sale.products?.company_name || 'Other';
-    acc[company] = (acc[company] || 0) + parseFloat(sale.total_amount);
-    return acc;
-  }, {});
+  const [companyData, setCompanyData] = useState([]);
+  const [contactData, setContactData] = useState([]);
 
-  const companyData = Object.entries(salesByCompany).map(([company, amount]) => ({
-    company,
-    amount: parseFloat(amount)
-  }));
+  useEffect(() => {
+    fetchChartData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
 
-  // Sales by contact (doctors and chemists)
-  const salesByContact = filteredSales.reduce((acc, sale) => {
-    const contactName = sale.visits?.doctors?.name || 'Unknown';
-    const contactType = sale.visits?.doctors?.contact_type || 'doctor';
-    const key = `${contactName}|${contactType}`;
-    
-    if (!acc[key]) {
-      acc[key] = {
-        name: contactName,
-        contact_type: contactType,
-        amount: 0
-      };
+  const fetchChartData = async () => {
+    try {
+      const justStart = !!(startDate && !endDate);
+      const justEnd = !!(!startDate && endDate);
+      const invalidRange = !!(startDate && endDate && endDate < startDate);
+
+      if (justStart || justEnd || invalidRange) {
+        setCompanyData([]);
+        setContactData([]);
+        return;
+      }
+
+      let query = supabase
+        .from('sales')
+        .select(`
+          total_amount,
+          visits!inner (
+            visit_date,
+            doctors (name, contact_type)
+          ),
+          products (company_name)
+        `);
+
+      if (startDate && endDate) {
+        query = query
+          .gte('visits.visit_date', startDate)
+          .lte('visits.visit_date', endDate);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      // Sales by company
+      const salesByCompany = (data || []).reduce((acc, sale) => {
+        const company = sale.products?.company_name || 'Other';
+        acc[company] = (acc[company] || 0) + parseFloat(sale.total_amount);
+        return acc;
+      }, {});
+
+      const processedCompanyData = Object.entries(salesByCompany).map(([company, amount]) => ({
+        company,
+        amount: parseFloat(amount)
+      }));
+
+      setCompanyData(processedCompanyData);
+
+      // Sales by contact
+      const salesByContact = (data || []).reduce((acc, sale) => {
+        const contactName = sale.visits?.doctors?.name || 'Unknown';
+        const contactType = sale.visits?.doctors?.contact_type || 'doctor';
+        const key = `${contactName}|${contactType}`;
+        
+        if (!acc[key]) {
+          acc[key] = {
+            name: contactName,
+            contact_type: contactType,
+            amount: 0
+          };
+        }
+        acc[key].amount += parseFloat(sale.total_amount);
+        return acc;
+      }, {});
+
+      const processedContactData = Object.values(salesByContact)
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 10);
+
+      setContactData(processedContactData);
+
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
     }
-    acc[key].amount += parseFloat(sale.total_amount);
-    return acc;
-  }, {});
-
-  const contactData = Object.values(salesByContact)
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 10);
+  };
 
   // Contact search functionality
   const filteredDoctors = doctors.filter(doctor => {
@@ -218,6 +327,7 @@ function SalesContainer() {
         filteredSales={filteredSales}
         totalRevenue={totalRevenue}
         totalItems={totalItems}
+        totalTransactions={totalTransactions}
         companyData={companyData}
         contactData={contactData}
         doctorSearch={doctorSearch}
@@ -226,7 +336,6 @@ function SalesContainer() {
         setShowDoctorDropdown={setShowDoctorDropdown}
         filteredDoctors={filteredDoctors}
         handleDoctorSelect={handleDoctorSelect}
-        formatDoctorDisplay={formatDoctorDisplay}
       />
       <Toast
         message={toast.message}
