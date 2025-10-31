@@ -25,7 +25,8 @@ function SalesContainer() {
   const [dateRangeStats, setDateRangeStats] = useState({
     totalRevenue: 0,
     totalItems: 0,
-    totalTransactions: 0
+    totalTransactions: 0,
+    totalGrossProfit: 0
   });
 
   useEffect(() => {
@@ -59,7 +60,8 @@ function SalesContainer() {
         setDateRangeStats({
           totalRevenue: 0,
           totalItems: 0,
-          totalTransactions: 0
+          totalTransactions: 0,
+          totalGrossProfit: 0
         });
         return;
       }
@@ -69,7 +71,9 @@ function SalesContainer() {
         .select(`
           total_amount,
           quantity,
-          visits!inner (visit_date)
+          unit_price,
+          visits!inner (visit_date),
+          products (price)
         `);
 
       // Apply date filters only
@@ -83,10 +87,18 @@ function SalesContainer() {
 
       if (error) throw error;
 
+      const totalGrossProfit = data?.reduce((total, sale) => {
+        const costPrice = parseFloat(sale.products?.price || 0);
+        const sellingPrice = parseFloat(sale.unit_price);
+        const profitPerUnit = sellingPrice - costPrice;
+        return total + (profitPerUnit * sale.quantity);
+      }, 0) || 0;
+
       const stats = {
         totalRevenue: data?.reduce((total, sale) => total + parseFloat(sale.total_amount), 0) || 0,
         totalItems: data?.reduce((total, sale) => total + sale.quantity, 0) || 0,
-        totalTransactions: data?.length || 0
+        totalTransactions: data?.length || 0,
+        totalGrossProfit
       };
 
       setDateRangeStats(stats);
@@ -119,7 +131,7 @@ function SalesContainer() {
             visit_date,
             doctors (id, name, specialization, hospital, contact_type)
           ),
-          products (name, company_name)
+          products (name, company_name, price)
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
 
@@ -186,6 +198,7 @@ function SalesContainer() {
   const totalRevenue = dateRangeStats.totalRevenue;
   const totalItems = dateRangeStats.totalItems;
   const totalTransactions = dateRangeStats.totalTransactions;
+  const totalGrossProfit = dateRangeStats.totalGrossProfit;
 
   const [companyData, setCompanyData] = useState([]);
   const [contactData, setContactData] = useState([]);
@@ -328,6 +341,7 @@ function SalesContainer() {
         totalRevenue={totalRevenue}
         totalItems={totalItems}
         totalTransactions={totalTransactions}
+        totalGrossProfit={totalGrossProfit}
         companyData={companyData}
         contactData={contactData}
         doctorSearch={doctorSearch}

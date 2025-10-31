@@ -39,6 +39,7 @@ function Sales({
   totalRevenue,
   totalItems,
   totalTransactions,
+  totalGrossProfit,
   companyData,
   contactData,
   doctorSearch,
@@ -50,7 +51,7 @@ function Sales({
 }) {
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
 
-  const tableHeaders = ['Date', 'Contact', 'Type', 'Product', 'Company', 'Quantity', 'Unit Price', 'Total'];
+  const tableHeaders = ['Date', 'Contact', 'Type', 'Product', 'Company', 'Quantity', 'Unit Price', 'Total', 'Margin'];
   const productOptions = products.map(product => ({ value: product.id, label: product.name }));
   const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
   const hasActiveFilters = startDate || endDate || doctorFilter || productFilter;
@@ -62,11 +63,22 @@ function Sales({
       <Header title="Sales Analytics" buttons={[]} />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="card">
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500">Total Revenue</p>
             <p className="text-3xl font-bold text-gray-900">₹{totalRevenue.toFixed(2)}</p>
+            {(startDate && endDate) && (
+              <p className="text-xs text-gray-500 mt-1">
+                {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="card">
+          <div className="text-center">
+            <p className="text-sm font-medium text-gray-500">Total Margin</p>
+            <p className="text-3xl font-bold text-green-600">₹{totalGrossProfit.toFixed(2)}</p>
             {(startDate && endDate) && (
               <p className="text-xs text-gray-500 mt-1">
                 {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}
@@ -320,6 +332,11 @@ function Sales({
           <Table headers={tableHeaders}>
             {filteredSales.map((sale) => {
               const isChemist = sale.visits?.doctors?.contact_type === 'chemist';
+              const costPrice = parseFloat(sale.products?.price || 0);
+              const sellingPrice = parseFloat(sale.unit_price);
+              const profitPerUnit = sellingPrice - costPrice;
+              const totalProfit = profitPerUnit * sale.quantity;
+              
               return (
                 <Table.Row key={sale.id}>
                   <Table.Cell>
@@ -351,6 +368,9 @@ function Sales({
                   <Table.Cell>{sale.quantity}</Table.Cell>
                   <Table.Cell>₹{parseFloat(sale.unit_price).toFixed(2)}</Table.Cell>
                   <Table.Cell className="font-medium">₹{parseFloat(sale.total_amount).toFixed(2)}</Table.Cell>
+                  <Table.Cell className={`font-medium ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ₹{totalProfit.toFixed(2)}
+                  </Table.Cell>
                 </Table.Row>
               );
             })}
