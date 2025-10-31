@@ -113,6 +113,7 @@ function Dashboard({ stats, recentVisits, salesData, topContacts, COLORS, select
         <DashboardCard
           title={selectedMonth === 'overall' ? 'Total Sales' : 'Sales This Period'}
           value={stats.totalSales}
+          subtitle={`₹${stats.totalRevenue.toFixed(2)} Revenue`}
           icon={<CurrencyRupeeIcon className="h-8 w-8 text-green-600" />}
         />
 

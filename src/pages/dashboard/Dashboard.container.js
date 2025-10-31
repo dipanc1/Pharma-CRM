@@ -13,6 +13,7 @@ const DashboardContainer = () => {
         visitedDoctors: 0,
         visitPercentage: 0,
         totalSales: 0,
+        totalRevenue: 0,
         totalProducts: 0
     });
     const [recentVisits, setRecentVisits] = useState([]);
@@ -97,7 +98,10 @@ const DashboardContainer = () => {
                     .lte('visits.visit_date', endDate);
             }
 
-            const { count: salesCount } = await salesQuery;
+            const { data: salesData, count: salesCount } = await salesQuery;
+
+            // Calculate total revenue
+            const totalRevenue = salesData?.reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0) || 0;
 
             setStats({
                 totalDoctors,
@@ -106,6 +110,7 @@ const DashboardContainer = () => {
                 visitedDoctors: visitedDoctorsCount,
                 visitPercentage: parseFloat(visitPercentage),
                 totalSales: salesCount || 0,
+                totalRevenue,
                 totalProducts: totalProductsCount || 0
             });
 
