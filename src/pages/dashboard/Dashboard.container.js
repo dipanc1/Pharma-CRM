@@ -31,16 +31,16 @@ const DashboardContainer = () => {
         } else if (selectedMonth === 'current') {
             const now = new Date();
             return {
-                startDate: startOfMonth(now).toISOString().split('T')[0],
-                endDate: endOfMonth(now).toISOString().split('T')[0]
+                startDate: format(startOfMonth(now), 'yyyy-MM-dd'),
+                endDate: format(now, 'yyyy-MM-dd')
             };
         } else {
             const year = parseInt(selectedMonth.split('-')[0]);
             const month = parseInt(selectedMonth.split('-')[1]) - 1;
             const date = new Date(year, month);
             return {
-                startDate: startOfMonth(date).toISOString().split('T')[0],
-                endDate: endOfMonth(date).toISOString().split('T')[0]
+                startDate: format(startOfMonth(date), 'yyyy-MM-dd'),
+                endDate: format(endOfMonth(date), 'yyyy-MM-dd')
             };
         }
     };
