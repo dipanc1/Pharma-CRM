@@ -33,6 +33,9 @@ import AddVisit from './pages/visits/AddVisit';
 import VisitDetail from './pages/visits/VisitDetail';
 import EditVisit from './pages/visits/EditVisit';
 
+// Cash Flow pages
+import CashFlow from './pages/cashflow';
+
 function App() {
   return (
     <AuthProvider>
@@ -68,6 +71,10 @@ function App() {
 
             {/* Inventory Route */}
             <Route path="/inventory" element={<InventoryDashboard />} />
+
+
+            {/* Cash Flow Route */}
+            <Route path="/cash-flow" element={<CashFlow />} />
           </Route>
         </Routes>
       </div>
