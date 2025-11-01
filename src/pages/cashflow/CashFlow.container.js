@@ -6,6 +6,7 @@ import { Toast } from '../../components';
 
 const CashFlowContainer = () => {
   const [cashFlowData, setCashFlowData] = useState([]);
+  const [allCashFlowData, setAllCashFlowData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
@@ -24,8 +25,13 @@ const CashFlowContainer = () => {
 
   useEffect(() => {
     fetchCashFlow();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, currentPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.cashType, filters.type, filters.purpose]);
+
+  useEffect(() => {
+    applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allCashFlowData, filters.searchTerm, currentPage]);
 
   const fetchCashFlow = async () => {
     try {
@@ -36,7 +42,7 @@ const CashFlowContainer = () => {
         .order('transaction_date', { ascending: false })
         .order('created_at', { ascending: false });
 
-      // Apply filters
+      // Apply non-search filters
       if (filters.cashType) {
         query = query.eq('cash_type', filters.cashType);
       }
@@ -46,27 +52,42 @@ const CashFlowContainer = () => {
       if (filters.purpose) {
         query = query.eq('purpose', filters.purpose);
       }
-      if (filters.searchTerm) {
-        query = query.ilike('name', `%${filters.searchTerm}%`);
-      }
-
-      // Pagination
-      const from = (currentPage - 1) * recordsPerPage;
-      const to = from + recordsPerPage - 1;
-      query = query.range(from, to);
 
       const { data, error, count } = await query;
 
       if (error) throw error;
 
-      setCashFlowData(data || []);
-      setTotalRecords(count || 0);
+      setAllCashFlowData(data || []);
+      // Add this line to set the total count for unfiltered data
+      if (!filters.searchTerm) {
+        setTotalRecords(count || 0);
+      }
     } catch (error) {
       console.error('Error fetching cash flow:', error);
       showError('Failed to fetch cash flow records');
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyFilters = () => {
+    let filteredData = allCashFlowData;
+
+    // Apply search filter
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase();
+      filteredData = filteredData.filter(record =>
+        (record.name || '').toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Apply pagination
+    const startIndex = (currentPage - 1) * recordsPerPage;
+    const endIndex = startIndex + recordsPerPage;
+    const paginatedData = filteredData.slice(startIndex, endIndex);
+
+    setCashFlowData(paginatedData);
+    setTotalRecords(filteredData.length);
   };
 
   const handleAdd = () => {
@@ -78,49 +99,20 @@ const CashFlowContainer = () => {
     // Ensure proper date format for editing
     const formattedRecord = {
       ...record,
-      transaction_date: record.transaction_date ? 
-        new Date(record.transaction_date).toISOString().split('T')[0] : 
+      transaction_date: record.transaction_date ?
+        new Date(record.transaction_date).toISOString().split('T')[0] :
         new Date().toISOString().split('T')[0]
     };
     setEditingRecord(formattedRecord);
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this record?')) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('cash_flow')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      showSuccess('Record deleted successfully');
-      
-      // Check if current page becomes empty after deletion
-      const newTotal = totalRecords - 1;
-      const maxPage = Math.ceil(newTotal / recordsPerPage);
-      if (currentPage > maxPage && maxPage > 0) {
-        setCurrentPage(maxPage);
-      } else {
-        fetchCashFlow();
-      }
-    } catch (error) {
-      console.error('Error deleting record:', error);
-      showError('Failed to delete record');
-    }
-  };
-
   const handleSubmit = async (formData) => {
     if (submitting) return;
-    
+
     try {
       setSubmitting(true);
-      
+
       // Validate required fields
       if (!formData.name?.trim()) {
         throw new Error('Name is required');
@@ -157,16 +149,52 @@ const CashFlowContainer = () => {
 
         if (error) throw error;
         showSuccess('Record added successfully');
+        // Reset to first page when adding new record
+        setCurrentPage(1);
       }
 
       setIsModalOpen(false);
       setEditingRecord(null);
-      fetchCashFlow();
+
+      // Refetch data to get updated records
+      await fetchCashFlow();
     } catch (error) {
       console.error('Error saving record:', error);
       showError(error.message || 'Failed to save record');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this record?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('cash_flow')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      showSuccess('Record deleted successfully');
+
+      // Refetch data after deletion
+      await fetchCashFlow();
+
+      // Check if current page becomes empty after deletion and adjust if needed
+      setTimeout(() => {
+        const newTotalRecords = totalRecords - 1;
+        const maxPage = Math.ceil(newTotalRecords / recordsPerPage);
+        if (currentPage > maxPage && maxPage > 0) {
+          setCurrentPage(maxPage);
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Error deleting record:', error);
+      showError('Failed to delete record');
     }
   };
 

@@ -76,19 +76,19 @@ const CashFlow = ({
 
   const validateForm = () => {
     const errors = {};
-    
+
     if (!formData.name?.trim()) {
       errors.name = 'Name is required';
     }
-    
+
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
       errors.amount = 'Valid amount is required';
     }
-    
+
     if (!formData.transaction_date) {
       errors.transaction_date = 'Transaction date is required';
     }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -96,7 +96,7 @@ const CashFlow = ({
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     // Clear error when user starts typing
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
@@ -128,10 +128,32 @@ const CashFlow = ({
     }
   };
 
+  const getCashTypeStyle = (value) => {
+    switch (value) {
+      case 'in_flow':
+        return 'bg-green-100 text-green-800';
+      case 'out_flow':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getCashTypeLabel = (value) => {
+    switch (value) {
+      case 'in_flow':
+        return 'In Flow';
+      case 'out_flow':
+        return 'Out Flow';
+      default:
+        return value;
+    }
+  };
+
   const columns = [
-    { 
-      key: 'transaction_date', 
-      label: 'Date', 
+    {
+      key: 'transaction_date',
+      label: 'Date',
       format: formatDate
     },
     {
@@ -139,30 +161,32 @@ const CashFlow = ({
       label: 'Flow Type',
       format: (value) => (
         <StatusBadge
-          status={value === 'in_flow' ? 'active' : 'inactive'}
-          label={value === 'in_flow' ? 'In Flow' : 'Out Flow'}
+          value={getCashTypeLabel(value)}
+          getStyleFunction={() => getCashTypeStyle(value)}
+          prefix=""
+          suffix=""
         />
       )
     },
     { key: 'name', label: 'Name' },
-    { 
-      key: 'type', 
-      label: 'Type', 
+    {
+      key: 'type',
+      label: 'Type',
       format: (value) => value ? value.charAt(0).toUpperCase() + value.slice(1) : '-'
     },
-    { 
-      key: 'purpose', 
-      label: 'Purpose', 
+    {
+      key: 'purpose',
+      label: 'Purpose',
       format: (value) => value ? value.charAt(0).toUpperCase() + value.slice(1).replace('_', ' ') : '-'
     },
-    { 
-      key: 'amount', 
-      label: 'Amount', 
+    {
+      key: 'amount',
+      label: 'Amount',
       format: formatCurrency
     },
-    { 
-      key: 'notes', 
-      label: 'Notes', 
+    {
+      key: 'notes',
+      label: 'Notes',
       format: (value) => value || '-'
     }
   ];
@@ -186,17 +210,17 @@ const CashFlow = ({
   ];
 
   const activeFilters = [
-    filters.cashType && { 
-      key: 'cashType', 
-      label: `Flow: ${cashTypeOptions.find(o => o.value === filters.cashType)?.label}` 
+    filters.cashType && {
+      key: 'cashType',
+      label: `Flow: ${cashTypeOptions.find(o => o.value === filters.cashType)?.label}`
     },
-    filters.type && { 
-      key: 'type', 
-      label: `Type: ${typeOptions.find(o => o.value === filters.type)?.label}` 
+    filters.type && {
+      key: 'type',
+      label: `Type: ${typeOptions.find(o => o.value === filters.type)?.label}`
     },
-    filters.purpose && { 
-      key: 'purpose', 
-      label: `Purpose: ${purposeOptions.find(o => o.value === filters.purpose)?.label}` 
+    filters.purpose && {
+      key: 'purpose',
+      label: `Purpose: ${purposeOptions.find(o => o.value === filters.purpose)?.label}`
     }
   ].filter(Boolean);
 
@@ -210,16 +234,16 @@ const CashFlow = ({
 
   return (
     <div className="space-y-6">
-      <Header 
-        title="Cash Flow Management" 
+      <Header
+        title="Cash Flow Management"
         description="Track all cash inflows and outflows"
         buttons={[
-          { 
-            onClick: onAdd, 
-            icon: <PlusIcon className="h-4 w-4 mr-2" />, 
-            title: "Add Transaction" 
+          {
+            onClick: onAdd,
+            icon: <PlusIcon className="h-4 w-4 mr-2" />,
+            title: "Add Transaction"
           }
-        ]} 
+        ]}
       />
 
       {/* Filters */}
@@ -232,7 +256,7 @@ const CashFlow = ({
             onChange={(e) => onFilterChange('searchTerm', e.target.value)}
             id="transaction_search"
           />
-          
+
           <FilterSelect
             label="Flow Type"
             id="cashTypeFilter"
@@ -241,7 +265,7 @@ const CashFlow = ({
             options={cashTypeOptions}
             placeholder="All Flow Types"
           />
-          
+
           <FilterSelect
             label="Type"
             id="typeFilter"
@@ -250,7 +274,7 @@ const CashFlow = ({
             options={typeOptions}
             placeholder="All Types"
           />
-          
+
           <FilterSelect
             label="Purpose"
             id="purposeFilter"
@@ -305,16 +329,16 @@ const CashFlow = ({
         {!hasData ? (
           <div className="text-center py-12">
             <div className="text-gray-500 mb-4">
-              {hasFilters 
-                ? 'No transactions found matching your filters' 
+              {hasFilters
+                ? 'No transactions found matching your filters'
                 : 'No cash flow records added yet.'}
             </div>
             {!hasFilters && (
               <NoRecordsAddButtonLayout>
-                <AddButton 
-                  title="Add First Transaction" 
+                <AddButton
+                  title="Add First Transaction"
                   onClick={onAdd}
-                  icon={<PlusIcon className="h-4 w-4 mr-2" />} 
+                  icon={<PlusIcon className="h-4 w-4 mr-2" />}
                 />
               </NoRecordsAddButtonLayout>
             )}
@@ -334,6 +358,8 @@ const CashFlow = ({
                   <ActionButtons
                     onEdit={() => onEdit(record)}
                     onDelete={() => onDelete(record.id)}
+                    editTitle="Edit Transaction"
+                    deleteTitle="Delete Transaction"
                   />
                 </Table.Cell>
               </Table.Row>
@@ -364,9 +390,8 @@ const CashFlow = ({
                 onChange={handleInputChange}
                 required
                 max={new Date().toISOString().split('T')[0]}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  formErrors.transaction_date ? 'border-red-300' : 'border-gray-300'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${formErrors.transaction_date ? 'border-red-300' : 'border-gray-300'
+                  }`}
               />
               {formErrors.transaction_date && (
                 <p className="mt-1 text-sm text-red-600">{formErrors.transaction_date}</p>
@@ -436,9 +461,8 @@ const CashFlow = ({
               onChange={handleInputChange}
               required
               placeholder="Person name or sundry item description"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                formErrors.name ? 'border-red-300' : 'border-gray-300'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${formErrors.name ? 'border-red-300' : 'border-gray-300'
+                }`}
             />
             {formErrors.name && (
               <p className="mt-1 text-sm text-red-600">{formErrors.name}</p>
@@ -458,9 +482,8 @@ const CashFlow = ({
               min="0.01"
               step="0.01"
               placeholder="0.00"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                formErrors.amount ? 'border-red-300' : 'border-gray-300'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${formErrors.amount ? 'border-red-300' : 'border-gray-300'
+                }`}
             />
             {formErrors.amount && (
               <p className="mt-1 text-sm text-red-600">{formErrors.amount}</p>
@@ -493,14 +516,13 @@ const CashFlow = ({
             <button
               type="submit"
               disabled={submitting}
-              className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${
-                editingRecord
+              className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${editingRecord
                   ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
                   : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
-              }`}
+                }`}
             >
-              {submitting 
-                ? 'Saving...' 
+              {submitting
+                ? 'Saving...'
                 : `${editingRecord ? 'Update' : 'Add'} Transaction`}
             </button>
           </div>
