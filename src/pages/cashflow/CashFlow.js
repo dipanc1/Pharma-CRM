@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { BanknotesIcon } from '@heroicons/react/24/outline';
 import {
   SearchInput,
   FilterSelect,
@@ -8,7 +9,8 @@ import {
   Pagination,
   Loader,
   ActionButtons,
-  StatusBadge
+  StatusBadge,
+  Modal
 } from '../../components/common';
 import { NoRecordsAddButtonLayout } from '../common/NoRecordsAddButtonLayout';
 
@@ -71,7 +73,7 @@ const CashFlow = ({
   };
 
   const columns = [
-    { key: 'transaction_date', label: 'Date', format: (value) => new Date(value).toLocaleDateString() },
+    { key: 'transaction_date', label: 'Date', format: (value) => new Date(value).toLocaleDateString('en-IN') },
     {
       key: 'cash_type',
       label: 'Flow Type',
@@ -217,156 +219,149 @@ const CashFlow = ({
       )}
 
       {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {editingRecord ? 'Edit Transaction' : 'Add Transaction'}
-                </h2>
-                <button
-                  onClick={onModalClose}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X size={24} />
-                </button>
-              </div>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={onModalClose}
+        title={editingRecord ? 'Edit Transaction' : 'Add Transaction'}
+        icon={BanknotesIcon}
+        iconBgColor={editingRecord ? 'bg-green-100' : 'bg-blue-100'}
+        iconColor={editingRecord ? 'text-green-600' : 'text-blue-600'}
+      >
+        <form onSubmit={handleFormSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Transaction Date *
+              </label>
+              <input
+                type="date"
+                name="transaction_date"
+                value={formData.transaction_date}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
 
-              <form onSubmit={handleFormSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Transaction Date *
-                    </label>
-                    <input
-                      type="date"
-                      name="transaction_date"
-                      value={formData.transaction_date}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Flow Type *
+              </label>
+              <select
+                name="cash_type"
+                value={formData.cash_type}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="in_flow">In Flow</option>
+                <option value="out_flow">Out Flow</option>
+              </select>
+            </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Flow Type *
-                    </label>
-                    <select
-                      name="cash_type"
-                      value={formData.cash_type}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="in_flow">In Flow</option>
-                      <option value="out_flow">Out Flow</option>
-                    </select>
-                  </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Type *
+              </label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="sundry">Sundry</option>
+                <option value="person">Person</option>
+              </select>
+            </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Type *
-                    </label>
-                    <select
-                      name="type"
-                      value={formData.type}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="sundry">Sundry</option>
-                      <option value="person">Person</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Purpose
-                    </label>
-                    <select
-                      name="purpose"
-                      value={formData.purpose}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">Select Purpose</option>
-                      <option value="expense">Expense</option>
-                      <option value="gift">Gift</option>
-                      <option value="payment">Payment</option>
-                      <option value="advance">Advance</option>
-                      <option value="debt_recovery">Debt Recovery</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="Person name or sundry item description"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Amount *
-                  </label>
-                  <input
-                    type="number"
-                    name="amount"
-                    value={formData.amount}
-                    onChange={handleInputChange}
-                    required
-                    min="0.01"
-                    step="0.01"
-                    placeholder="0.00"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
-                  </label>
-                  <textarea
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleInputChange}
-                    rows="3"
-                    placeholder="Additional notes..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={onModalClose}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    {editingRecord ? 'Update' : 'Add'} Transaction
-                  </button>
-                </div>
-              </form>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Purpose
+              </label>
+              <select
+                name="purpose"
+                value={formData.purpose}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select Purpose</option>
+                <option value="expense">Expense</option>
+                <option value="gift">Gift</option>
+                <option value="payment">Payment</option>
+                <option value="advance">Advance</option>
+                <option value="debt_recovery">Debt Recovery</option>
+              </select>
             </div>
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Name *
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              required
+              placeholder="Person name or sundry item description"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Amount *
+            </label>
+            <input
+              type="number"
+              name="amount"
+              value={formData.amount}
+              onChange={handleInputChange}
+              required
+              min="0.01"
+              step="0.01"
+              placeholder="0.00"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Notes
+            </label>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleInputChange}
+              rows="3"
+              placeholder="Additional notes..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={onModalClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                editingRecord 
+                  ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500' 
+                  : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+              }`}
+            >
+              {editingRecord ? 'Update' : 'Add'} Transaction
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
