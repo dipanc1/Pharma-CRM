@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { PlusIcon } from '@heroicons/react/24/outline';
 import { BanknotesIcon } from '@heroicons/react/24/outline';
 import {
+  Header,
   SearchInput,
   FilterSelect,
   FilterBadge,
@@ -10,13 +11,15 @@ import {
   Loader,
   ActionButtons,
   StatusBadge,
-  Modal
+  Modal,
+  NoRecordsAddButtonLayout,
+  AddButton
 } from '../../components/common';
-import { NoRecordsAddButtonLayout } from '../common/NoRecordsAddButtonLayout';
 
 const CashFlow = ({
   cashFlowData,
   loading,
+  submitting,
   isModalOpen,
   editingRecord,
   filters,
@@ -31,49 +34,106 @@ const CashFlow = ({
   onFilterChange,
   onPageChange
 }) => {
-  const [formData, setFormData] = useState(
-    editingRecord || {
-      transaction_date: new Date().toISOString().split('T')[0],
-      cash_type: 'out_flow',
-      name: '',
-      type: 'sundry',
-      amount: '',
-      purpose: 'expense',
-      notes: ''
-    }
-  );
+  const [formData, setFormData] = useState({
+    transaction_date: new Date().toISOString().split('T')[0],
+    cash_type: 'out_flow',
+    name: '',
+    type: 'sundry',
+    amount: '',
+    purpose: 'expense',
+    notes: ''
+  });
 
-  React.useEffect(() => {
-    if (editingRecord) {
-      setFormData(editingRecord);
-    } else {
-      setFormData({
-        transaction_date: new Date().toISOString().split('T')[0],
-        cash_type: 'out_flow',
-        name: '',
-        type: 'sundry',
-        amount: '',
-        purpose: 'expense',
-        notes: ''
-      });
+  const [formErrors, setFormErrors] = useState({});
+
+  // Initialize form data when modal opens or editing record changes
+  useEffect(() => {
+    if (isModalOpen) {
+      if (editingRecord) {
+        setFormData({
+          transaction_date: editingRecord.transaction_date || new Date().toISOString().split('T')[0],
+          cash_type: editingRecord.cash_type || 'out_flow',
+          name: editingRecord.name || '',
+          type: editingRecord.type || 'sundry',
+          amount: editingRecord.amount ? editingRecord.amount.toString() : '',
+          purpose: editingRecord.purpose || '',
+          notes: editingRecord.notes || ''
+        });
+      } else {
+        setFormData({
+          transaction_date: new Date().toISOString().split('T')[0],
+          cash_type: 'out_flow',
+          name: '',
+          type: 'sundry',
+          amount: '',
+          purpose: 'expense',
+          notes: ''
+        });
+      }
+      setFormErrors({});
     }
   }, [editingRecord, isModalOpen]);
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.name?.trim()) {
+      errors.name = 'Name is required';
+    }
+    
+    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+      errors.amount = 'Valid amount is required';
+    }
+    
+    if (!formData.transaction_date) {
+      errors.transaction_date = 'Transaction date is required';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error when user starts typing
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    onSubmit({
-      ...formData,
-      amount: parseFloat(formData.amount)
-    });
+    if (validateForm() && !submitting) {
+      onSubmit(formData);
+    }
+  };
+
+  const formatCurrency = (value) => {
+    if (!value) return '₹0.00';
+    return `₹${parseFloat(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      return new Date(dateString).toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return '-';
+    }
   };
 
   const columns = [
-    { key: 'transaction_date', label: 'Date', format: (value) => new Date(value).toLocaleDateString('en-IN') },
+    { 
+      key: 'transaction_date', 
+      label: 'Date', 
+      format: formatDate
+    },
     {
       key: 'cash_type',
       label: 'Flow Type',
@@ -85,26 +145,39 @@ const CashFlow = ({
       )
     },
     { key: 'name', label: 'Name' },
-    { key: 'type', label: 'Type', format: (value) => value.charAt(0).toUpperCase() + value.slice(1) },
-    { key: 'purpose', label: 'Purpose', format: (value) => value?.charAt(0).toUpperCase() + value?.slice(1) || '-' },
-    { key: 'amount', label: 'Amount', format: (value) => `₹${parseFloat(value).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
-    { key: 'notes', label: 'Notes', format: (value) => value || '-' }
+    { 
+      key: 'type', 
+      label: 'Type', 
+      format: (value) => value ? value.charAt(0).toUpperCase() + value.slice(1) : '-'
+    },
+    { 
+      key: 'purpose', 
+      label: 'Purpose', 
+      format: (value) => value ? value.charAt(0).toUpperCase() + value.slice(1).replace('_', ' ') : '-'
+    },
+    { 
+      key: 'amount', 
+      label: 'Amount', 
+      format: formatCurrency
+    },
+    { 
+      key: 'notes', 
+      label: 'Notes', 
+      format: (value) => value || '-'
+    }
   ];
 
   const cashTypeOptions = [
-    { value: '', label: 'All Flow Types' },
     { value: 'in_flow', label: 'In Flow' },
     { value: 'out_flow', label: 'Out Flow' }
   ];
 
   const typeOptions = [
-    { value: '', label: 'All Types' },
     { value: 'sundry', label: 'Sundry' },
     { value: 'person', label: 'Person' }
   ];
 
   const purposeOptions = [
-    { value: '', label: 'All Purposes' },
     { value: 'expense', label: 'Expense' },
     { value: 'gift', label: 'Gift' },
     { value: 'payment', label: 'Payment' },
@@ -113,70 +186,84 @@ const CashFlow = ({
   ];
 
   const activeFilters = [
-    filters.cashType && { key: 'cashType', label: `Flow: ${cashTypeOptions.find(o => o.value === filters.cashType)?.label}` },
-    filters.type && { key: 'type', label: `Type: ${typeOptions.find(o => o.value === filters.type)?.label}` },
-    filters.purpose && { key: 'purpose', label: `Purpose: ${purposeOptions.find(o => o.value === filters.purpose)?.label}` }
+    filters.cashType && { 
+      key: 'cashType', 
+      label: `Flow: ${cashTypeOptions.find(o => o.value === filters.cashType)?.label}` 
+    },
+    filters.type && { 
+      key: 'type', 
+      label: `Type: ${typeOptions.find(o => o.value === filters.type)?.label}` 
+    },
+    filters.purpose && { 
+      key: 'purpose', 
+      label: `Purpose: ${purposeOptions.find(o => o.value === filters.purpose)?.label}` 
+    }
   ].filter(Boolean);
 
   if (loading) {
     return <Loader />;
   }
 
-  if (cashFlowData.length === 0 && !filters.searchTerm && !filters.cashType && !filters.type && !filters.purpose) {
-    return (
-      <NoRecordsAddButtonLayout
-        title="Cash Flow"
-        message="No cash flow records found. Start by adding your first transaction."
-        buttonText="Add Transaction"
-        onAdd={onAdd}
-      />
-    );
-  }
+  const hasData = cashFlowData.length > 0;
+  const hasFilters = activeFilters.length > 0 || filters.searchTerm;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Cash Flow Management</h1>
-        <p className="text-gray-600 mt-1">Track all cash inflows and outflows</p>
-      </div>
+    <div className="space-y-6">
+      <Header 
+        title="Cash Flow Management" 
+        description="Track all cash inflows and outflows"
+        buttons={[
+          { 
+            onClick: onAdd, 
+            icon: <PlusIcon className="h-4 w-4 mr-2" />, 
+            title: "Add Transaction" 
+          }
+        ]} 
+      />
 
-      {/* Filters and Search */}
-      <div className="mb-6 space-y-4">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <SearchInput
-              value={filters.searchTerm}
-              onChange={(value) => onFilterChange('searchTerm', value)}
-              placeholder="Search by name..."
-            />
-          </div>
+      {/* Filters */}
+      <div className="card">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <SearchInput
+            label="Search Transactions"
+            placeholder="Search by name..."
+            value={filters.searchTerm}
+            onChange={(e) => onFilterChange('searchTerm', e.target.value)}
+            id="transaction_search"
+          />
+          
           <FilterSelect
+            label="Flow Type"
+            id="cashTypeFilter"
             value={filters.cashType}
-            onChange={(value) => onFilterChange('cashType', value)}
+            onChange={(e) => onFilterChange('cashType', e.target.value)}
             options={cashTypeOptions}
+            placeholder="All Flow Types"
           />
+          
           <FilterSelect
+            label="Type"
+            id="typeFilter"
             value={filters.type}
-            onChange={(value) => onFilterChange('type', value)}
+            onChange={(e) => onFilterChange('type', e.target.value)}
             options={typeOptions}
+            placeholder="All Types"
           />
+          
           <FilterSelect
+            label="Purpose"
+            id="purposeFilter"
             value={filters.purpose}
-            onChange={(value) => onFilterChange('purpose', value)}
+            onChange={(e) => onFilterChange('purpose', e.target.value)}
             options={purposeOptions}
+            placeholder="All Purposes"
           />
-          <button
-            onClick={onAdd}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            <Plus size={20} />
-            Add Transaction
-          </button>
         </div>
 
         {/* Active Filters */}
         {activeFilters.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200">
             {activeFilters.map((filter) => (
               <FilterBadge
                 key={filter.key}
@@ -188,35 +275,72 @@ const CashFlow = ({
         )}
       </div>
 
-      {/* Table */}
-      {cashFlowData.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <p className="text-gray-500">No records found matching your filters</p>
-        </div>
-      ) : (
-        <>
-          <Table
-            columns={columns}
-            data={cashFlowData}
-            actions={(record) => (
-              <ActionButtons
-                onEdit={() => onEdit(record)}
-                onDelete={() => onDelete(record.id)}
-              />
-            )}
-          />
+      {/* Transactions List */}
+      <div className="card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">
+              Transactions List
+              {hasFilters && (
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                  ({totalRecords} filtered)
+                </span>
+              )}
+            </h3>
+            <div className="text-sm text-gray-600 mt-1">
+              Showing {Math.min(recordsPerPage, Math.max(0, totalRecords - (currentPage - 1) * recordsPerPage))} of {totalRecords} transactions
+            </div>
+          </div>
 
-          {/* Pagination */}
-          <div className="mt-6">
+          {hasData && (
             <Pagination
               currentPage={currentPage}
-              totalRecords={totalRecords}
-              recordsPerPage={recordsPerPage}
+              totalPages={totalPages}
               onPageChange={onPageChange}
+              showInfo={false}
             />
+          )}
+        </div>
+
+        {!hasData ? (
+          <div className="text-center py-12">
+            <div className="text-gray-500 mb-4">
+              {hasFilters 
+                ? 'No transactions found matching your filters' 
+                : 'No cash flow records added yet.'}
+            </div>
+            {!hasFilters && (
+              <NoRecordsAddButtonLayout>
+                <AddButton 
+                  title="Add First Transaction" 
+                  onClick={onAdd}
+                  icon={<PlusIcon className="h-4 w-4 mr-2" />} 
+                />
+              </NoRecordsAddButtonLayout>
+            )}
           </div>
-        </>
-      )}
+        ) : (
+          <Table headers={[...columns.map(col => col.label), 'Actions']}>
+            {cashFlowData.map((record) => (
+              <Table.Row key={record.id}>
+                {columns.map((column) => (
+                  <Table.Cell key={`${record.id}-${column.key}`}>
+                    {column.format
+                      ? column.format(record[column.key])
+                      : record[column.key] || '-'}
+                  </Table.Cell>
+                ))}
+                <Table.Cell>
+                  <ActionButtons
+                    onEdit={() => onEdit(record)}
+                    onDelete={() => onDelete(record.id)}
+                  />
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table>
+        )}
+      </div>
 
       {/* Modal */}
       <Modal
@@ -239,8 +363,14 @@ const CashFlow = ({
                 value={formData.transaction_date}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                max={new Date().toISOString().split('T')[0]}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  formErrors.transaction_date ? 'border-red-300' : 'border-gray-300'
+                }`}
               />
+              {formErrors.transaction_date && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.transaction_date}</p>
+              )}
             </div>
 
             <div>
@@ -306,8 +436,13 @@ const CashFlow = ({
               onChange={handleInputChange}
               required
               placeholder="Person name or sundry item description"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                formErrors.name ? 'border-red-300' : 'border-gray-300'
+              }`}
             />
+            {formErrors.name && (
+              <p className="mt-1 text-sm text-red-600">{formErrors.name}</p>
+            )}
           </div>
 
           <div>
@@ -323,8 +458,13 @@ const CashFlow = ({
               min="0.01"
               step="0.01"
               placeholder="0.00"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                formErrors.amount ? 'border-red-300' : 'border-gray-300'
+              }`}
             />
+            {formErrors.amount && (
+              <p className="mt-1 text-sm text-red-600">{formErrors.amount}</p>
+            )}
           </div>
 
           <div>
@@ -345,19 +485,23 @@ const CashFlow = ({
             <button
               type="button"
               onClick={onModalClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              disabled={submitting}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                editingRecord 
-                  ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500' 
+              disabled={submitting}
+              className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${
+                editingRecord
+                  ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
                   : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
               }`}
             >
-              {editingRecord ? 'Update' : 'Add'} Transaction
+              {submitting 
+                ? 'Saving...' 
+                : `${editingRecord ? 'Update' : 'Add'} Transaction`}
             </button>
           </div>
         </form>

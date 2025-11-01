@@ -8,9 +8,9 @@ import {
   ActionButtons,
   Loader,
   AddStockModal,
-  FilterSelect
+  FilterSelect,
+  NoRecordsAddButtonLayout
 } from '../../../components';
-import NoRecordsAddButtonLayout from '../../common/NoRecordsAddButtonLayout';
 
 function Products({
   products,

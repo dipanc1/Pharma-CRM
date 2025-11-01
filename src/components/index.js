@@ -19,4 +19,5 @@ export {
     Toast,
     AddStockModal,
     Modal,
+    NoRecordsAddButtonLayout
 } from './common';

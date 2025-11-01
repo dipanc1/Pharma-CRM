@@ -18,3 +18,4 @@ export { default as ActionButtons } from './ActionButtons';
 export { default as InfoField } from './InfoField';
 export { default as Toast } from './Toast';
 export { default as AddStockModal } from './AddStockModal';
+export { default as NoRecordsAddButtonLayout } from './NoRecordsAddButtonLayout';

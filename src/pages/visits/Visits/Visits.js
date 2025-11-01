@@ -11,7 +11,7 @@ import {
   StatusBadge,
   Pagination
 } from '../../../components';
-import NoRecordsAddButtonLayout from '../../common/NoRecordsAddButtonLayout';
+import NoRecordsAddButtonLayout from '../../../components/common/NoRecordsAddButtonLayout';
 import { format } from 'date-fns';
 
 function Visits({

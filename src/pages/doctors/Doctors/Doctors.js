@@ -10,9 +10,9 @@ import {
   StatusBadge, 
   Table, 
   ActionButtons,
-  Loader
+  Loader,
+  NoRecordsAddButtonLayout
 } from '../../../components';
-import NoRecordsAddButtonLayout from '../../common/NoRecordsAddButtonLayout';
 
 function Doctors({
   loading,

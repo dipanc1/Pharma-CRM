@@ -9,9 +9,9 @@ import {
   SecondaryButton,
   Table,
   StatusBadge,
-  InfoField
+  InfoField,
+  NoRecordsAddButtonLayout
 } from '../../../components';
-import NoRecordsAddButtonLayout from '../../common/NoRecordsAddButtonLayout';
 import { format } from 'date-fns';
 
 function DoctorDetail({ 
