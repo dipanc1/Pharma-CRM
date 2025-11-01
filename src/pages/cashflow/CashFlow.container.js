@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import CashFlow from './CashFlow';
 import useToast from '../../hooks/useToast';
 import { Toast } from '../../components';
+import { format, parseISO, startOfMonth } from 'date-fns';
 
 const CashFlowContainer = () => {
   const [cashFlowData, setCashFlowData] = useState([]);
@@ -15,11 +16,26 @@ const CashFlowContainer = () => {
     cashType: '',
     type: '',
     purpose: '',
-    searchTerm: ''
+    searchTerm: '',
+    startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+    endDate: format(new Date(), 'yyyy-MM-dd')
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const recordsPerPage = 10;
+
+  const [analytics, setAnalytics] = useState({
+    totalInflow: 0,
+    totalOutflow: 0,
+    netFlow: 0,
+    totalTransactions: 0
+  });
+
+  const [chartData, setChartData] = useState({
+    flowTypeData: [],
+    purposeData: [],
+    dailyTrendData: []
+  });
 
   const { toast, showError, showSuccess, hideToast } = useToast();
 
@@ -33,6 +49,12 @@ const CashFlowContainer = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allCashFlowData, filters.searchTerm, currentPage]);
 
+  useEffect(() => {
+    fetchAnalytics();
+    fetchChartData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.startDate, filters.endDate, filters.cashType, filters.type, filters.purpose]);
+
   const fetchCashFlow = async () => {
     try {
       setLoading(true);
@@ -42,7 +64,12 @@ const CashFlowContainer = () => {
         .order('transaction_date', { ascending: false })
         .order('created_at', { ascending: false });
 
-      // Apply non-search filters
+      // Apply all filters except search
+      if (filters.startDate && filters.endDate) {
+        query = query
+          .gte('transaction_date', filters.startDate)
+          .lte('transaction_date', filters.endDate);
+      }
       if (filters.cashType) {
         query = query.eq('cash_type', filters.cashType);
       }
@@ -58,7 +85,6 @@ const CashFlowContainer = () => {
       if (error) throw error;
 
       setAllCashFlowData(data || []);
-      // Add this line to set the total count for unfiltered data
       if (!filters.searchTerm) {
         setTotalRecords(count || 0);
       }
@@ -200,7 +226,7 @@ const CashFlowContainer = () => {
 
   const handleFilterChange = (filterName, value) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
-    setCurrentPage(1);
+    setCurrentPage  (1);
   };
 
   const handlePageChange = (page) => {
@@ -211,6 +237,129 @@ const CashFlowContainer = () => {
     if (submitting) return;
     setIsModalOpen(false);
     setEditingRecord(null);
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      let query = supabase
+        .from('cash_flow')
+        .select('cash_type, amount');
+
+      // Apply filters
+      if (filters.startDate && filters.endDate) {
+        query = query
+          .gte('transaction_date', filters.startDate)
+          .lte('transaction_date', filters.endDate);
+      }
+      if (filters.cashType) {
+        query = query.eq('cash_type', filters.cashType);
+      }
+      if (filters.type) {
+        query = query.eq('type', filters.type);
+      }
+      if (filters.purpose) {
+        query = query.eq('purpose', filters.purpose);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      const totalInflow = data
+        ?.filter(record => record.cash_type === 'in_flow')
+        .reduce((sum, record) => sum + parseFloat(record.amount || 0), 0) || 0;
+
+      const totalOutflow = data
+        ?.filter(record => record.cash_type === 'out_flow')
+        .reduce((sum, record) => sum + parseFloat(record.amount || 0), 0) || 0;
+
+      setAnalytics({
+        totalInflow,
+        totalOutflow,
+        netFlow: totalInflow - totalOutflow,
+        totalTransactions: data?.length || 0
+      });
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    }
+  };
+
+  const fetchChartData = async () => {
+    try {
+      let query = supabase
+        .from('cash_flow')
+        .select('cash_type, purpose, amount, transaction_date');
+
+      // Apply date filter
+      if (filters.startDate && filters.endDate) {
+        query = query
+          .gte('transaction_date', filters.startDate)
+          .lte('transaction_date', filters.endDate);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      // Flow Type Data
+      const flowTypeStats = data?.reduce((acc, record) => {
+        const type = record.cash_type === 'in_flow' ? 'In Flow' : 'Out Flow';
+        acc[type] = (acc[type] || 0) + parseFloat(record.amount || 0);
+        return acc;
+      }, {}) || {};
+
+      const flowTypeData = Object.entries(flowTypeStats).map(([type, amount]) => ({
+        type,
+        amount
+      }));
+
+      // Purpose Data
+      const purposeStats = data?.reduce((acc, record) => {
+        const purpose = record.purpose ? 
+          record.purpose.charAt(0).toUpperCase() + record.purpose.slice(1).replace('_', ' ') : 
+          'Other';
+        acc[purpose] = (acc[purpose] || 0) + parseFloat(record.amount || 0);
+        return acc;
+      }, {}) || {};
+
+      const purposeData = Object.entries(purposeStats)
+        .map(([purpose, amount]) => ({ purpose, amount }))
+        .sort((a, b) => b.amount - a.amount);
+
+      // Daily Trend Data (only if date range is selected)
+      let dailyTrendData = [];
+      if (filters.startDate && filters.endDate && data?.length > 0) {
+        const dailyStats = data.reduce((acc, record) => {
+          const date = format(parseISO(record.transaction_date), 'MMM dd');
+          if (!acc[date]) {
+            acc[date] = { date, inflow: 0, outflow: 0 };
+          }
+          
+          if (record.cash_type === 'in_flow') {
+            acc[date].inflow += parseFloat(record.amount || 0);
+          } else {
+            acc[date].outflow += parseFloat(record.amount || 0);
+          }
+          
+          return acc;
+        }, {});
+
+        dailyTrendData = Object.values(dailyStats)
+          .map(day => ({
+            ...day,
+            netFlow: day.inflow - day.outflow
+          }))
+          .sort((a, b) => new Date(a.date + ', 2024') - new Date(b.date + ', 2024'));
+      }
+
+      setChartData({
+        flowTypeData,
+        purposeData,
+        dailyTrendData
+      });
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+    }
   };
 
   return (
@@ -225,6 +374,8 @@ const CashFlowContainer = () => {
         currentPage={currentPage}
         totalRecords={totalRecords}
         recordsPerPage={recordsPerPage}
+        analytics={analytics}
+        chartData={chartData}
         onAdd={handleAdd}
         onEdit={handleEdit}
         onDelete={handleDelete}

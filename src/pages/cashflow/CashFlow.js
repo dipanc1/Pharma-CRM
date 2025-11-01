@@ -2,6 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { BanknotesIcon } from '@heroicons/react/24/outline';
 import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line
+} from 'recharts';
+import { format } from 'date-fns';
+import {
   Header,
   SearchInput,
   FilterSelect,
@@ -26,6 +41,8 @@ const CashFlow = ({
   currentPage,
   totalRecords,
   recordsPerPage,
+  analytics,
+  chartData,
   onAdd,
   onEdit,
   onDelete,
@@ -202,11 +219,14 @@ const CashFlow = ({
   ];
 
   const purposeOptions = [
-    { value: 'expense', label: 'Expense' },
     { value: 'gift', label: 'Gift' },
     { value: 'payment', label: 'Payment' },
     { value: 'advance', label: 'Advance' },
-    { value: 'debt_recovery', label: 'Debt Recovery' }
+    { value: 'debt_recovery', label: 'Debt Recovery' },
+    { value: 'loan', label: 'Loan' },
+    { value: 'daily_expense', label: 'Daily Expense' },
+    { value: 'travel_expense', label: 'Travel Expense' },
+    { value: 'other', label: 'Other' }
   ];
 
   const activeFilters = [
@@ -221,6 +241,14 @@ const CashFlow = ({
     filters.purpose && {
       key: 'purpose',
       label: `Purpose: ${purposeOptions.find(o => o.value === filters.purpose)?.label}`
+    },
+    filters.startDate && {
+      key: 'startDate',
+      label: `From: ${format(new Date(filters.startDate), 'MMM dd, yyyy')}`
+    },
+    filters.endDate && {
+      key: 'endDate',
+      label: `To: ${format(new Date(filters.endDate), 'MMM dd, yyyy')}`
     }
   ].filter(Boolean);
 
@@ -236,7 +264,7 @@ const CashFlow = ({
     <div className="space-y-6">
       <Header
         title="Cash Flow Management"
-        description="Track all cash inflows and outflows"
+        description="Track all cash inflows and outflows with analytics"
         buttons={[
           {
             onClick: onAdd,
@@ -246,9 +274,60 @@ const CashFlow = ({
         ]}
       />
 
-      {/* Filters */}
+      {/* Analytics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="card">
+          <div className="text-center">
+            <p className="text-sm font-medium text-gray-500">Total Inflow</p>
+            <p className="text-3xl font-bold text-green-600">{formatCurrency(analytics.totalInflow)}</p>
+            {(filters.startDate && filters.endDate) && (
+              <p className="text-xs text-gray-500 mt-1">
+                {format(new Date(filters.startDate), 'MMM dd')} - {format(new Date(filters.endDate), 'MMM dd, yyyy')}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="card">
+          <div className="text-center">
+            <p className="text-sm font-medium text-gray-500">Total Outflow</p>
+            <p className="text-3xl font-bold text-red-600">{formatCurrency(analytics.totalOutflow)}</p>
+            {(filters.startDate && filters.endDate) && (
+              <p className="text-xs text-gray-500 mt-1">
+                {format(new Date(filters.startDate), 'MMM dd')} - {format(new Date(filters.endDate), 'MMM dd, yyyy')}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="card">
+          <div className="text-center">
+            <p className="text-sm font-medium text-gray-500">Net Flow</p>
+            <p className={`text-3xl font-bold ${analytics.netFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(analytics.netFlow)}
+            </p>
+            {(filters.startDate && filters.endDate) && (
+              <p className="text-xs text-gray-500 mt-1">
+                {format(new Date(filters.startDate), 'MMM dd')} - {format(new Date(filters.endDate), 'MMM dd, yyyy')}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="card">
+          <div className="text-center">
+            <p className="text-sm font-medium text-gray-500">Total Transactions</p>
+            <p className="text-3xl font-bold text-gray-900">{analytics.totalTransactions}</p>
+            {(filters.startDate && filters.endDate) && (
+              <p className="text-xs text-gray-500 mt-1">
+                {format(new Date(filters.startDate), 'MMM dd')} - {format(new Date(filters.endDate), 'MMM dd, yyyy')}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Enhanced Filters */}
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Filters & Search</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <SearchInput
             label="Search Transactions"
             placeholder="Search by name..."
@@ -256,6 +335,34 @@ const CashFlow = ({
             onChange={(e) => onFilterChange('searchTerm', e.target.value)}
             id="transaction_search"
           />
+
+          <div>
+            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
+              Start Date
+            </label>
+            <input
+              type="date"
+              id="startDate"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={filters.startDate || ''}
+              max={filters.endDate || undefined}
+              onChange={(e) => onFilterChange('startDate', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
+              End Date
+            </label>
+            <input
+              type="date"
+              id="endDate"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={filters.endDate || ''}
+              min={filters.startDate || undefined}
+              onChange={(e) => onFilterChange('endDate', e.target.value)}
+            />
+          </div>
 
           <FilterSelect
             label="Flow Type"
@@ -292,9 +399,98 @@ const CashFlow = ({
               <FilterBadge
                 key={filter.key}
                 label={filter.label}
-                onRemove={() => onFilterChange(filter.key, '')}
+                onRemove={() => onFilterChange(filter.key === 'startDate' || filter.key === 'endDate' ? filter.key : filter.key, '')}
               />
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Flow Type Distribution */}
+        <div className="card">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Flow Type Distribution</h3>
+          <div className="h-64">
+            {chartData.flowTypeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData.flowTypeData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ type, percent }) => `${type} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="amount"
+                  >
+                    {chartData.flowTypeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.type === 'In Flow' ? '#10B981' : '#EF4444'} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [formatCurrency(value), 'Amount']} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                No data available
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Purpose Breakdown */}
+        <div className="card">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Purpose Breakdown</h3>
+          <div className="h-64">
+            {chartData.purposeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData.purposeData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="purpose" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={80}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [formatCurrency(value), 'Amount']} />
+                  <Bar dataKey="amount" fill="#3B82F6" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                No data available
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Daily Trend */}
+        {chartData.dailyTrendData.length > 0 && (
+          <div className="card lg:col-span-2">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Daily Cash Flow Trend</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData.dailyTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 11 }}
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    formatter={(value, name) => [formatCurrency(value), name === 'inflow' ? 'Inflow' : name === 'outflow' ? 'Outflow' : 'Net Flow']} 
+                    labelFormatter={(label) => `Date: ${label}`}
+                  />
+                  <Line type="monotone" dataKey="inflow" stroke="#10B981" strokeWidth={2} name="inflow" />
+                  <Line type="monotone" dataKey="outflow" stroke="#EF4444" strokeWidth={2} name="outflow" />
+                  <Line type="monotone" dataKey="netFlow" stroke="#3B82F6" strokeWidth={2} name="netFlow" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         )}
       </div>
