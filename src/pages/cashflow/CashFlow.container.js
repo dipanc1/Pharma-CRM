@@ -191,8 +191,12 @@ const CashFlowContainer = () => {
       setIsModalOpen(false);
       setEditingRecord(null);
 
-      // Refetch data to get updated records
-      await fetchCashFlow();
+      // Refetch all data to get updated records, analytics, and charts
+      await Promise.all([
+        fetchCashFlow(),
+        fetchAnalytics(),
+        fetchChartData()
+      ]);
     } catch (error) {
       console.error('Error saving record:', error);
       showError(error.message || 'Failed to save record');
@@ -216,8 +220,12 @@ const CashFlowContainer = () => {
 
       showSuccess('Record deleted successfully');
 
-      // Refetch data after deletion
-      await fetchCashFlow();
+      // Refetch all data after deletion
+      await Promise.all([
+        fetchCashFlow(),
+        fetchAnalytics(),
+        fetchChartData()
+      ]);
 
       // Check if current page becomes empty after deletion and adjust if needed
       setTimeout(() => {
