@@ -219,6 +219,7 @@ const CashFlow = ({
   ];
 
   const purposeOptions = [
+    { value: 'expense', label: 'Expense' },
     { value: 'gift', label: 'Gift' },
     { value: 'payment', label: 'Payment' },
     { value: 'advance', label: 'Advance' },
@@ -637,11 +638,11 @@ const CashFlow = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Select Purpose</option>
-                <option value="expense">Expense</option>
-                <option value="gift">Gift</option>
-                <option value="payment">Payment</option>
-                <option value="advance">Advance</option>
-                <option value="debt_recovery">Debt Recovery</option>
+                {purposeOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

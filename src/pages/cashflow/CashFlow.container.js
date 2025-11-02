@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import CashFlow from './CashFlow';
 import useToast from '../../hooks/useToast';
@@ -47,7 +47,7 @@ const CashFlowContainer = () => {
   useEffect(() => {
     applyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allCashFlowData, filters.searchTerm, currentPage]);
+  }, [allCashFlowData, filters.searchTerm, filters.startDate, filters.endDate, currentPage]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -58,6 +58,15 @@ const CashFlowContainer = () => {
   const fetchCashFlow = async () => {
     try {
       setLoading(true);
+      
+      // Date validation - skip fetch if invalid date range
+      if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
+        setAllCashFlowData([]);
+        setTotalRecords(0);
+        setLoading(false);
+        return;
+      }
+
       let query = supabase
         .from('cash_flow')
         .select('*', { count: 'exact' })
@@ -241,6 +250,17 @@ const CashFlowContainer = () => {
 
   const fetchAnalytics = async () => {
     try {
+      // Date validation
+      if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
+        setAnalytics({
+          totalInflow: 0,
+          totalOutflow: 0,
+          netFlow: 0,
+          totalTransactions: 0
+        });
+        return;
+      }
+
       let query = supabase
         .from('cash_flow')
         .select('cash_type, amount');
@@ -286,6 +306,16 @@ const CashFlowContainer = () => {
 
   const fetchChartData = async () => {
     try {
+      // Date validation
+      if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
+        setChartData({
+          flowTypeData: [],
+          purposeData: [],
+          dailyTrendData: []
+        });
+        return;
+      }
+
       let query = supabase
         .from('cash_flow')
         .select('cash_type, purpose, amount, transaction_date');
