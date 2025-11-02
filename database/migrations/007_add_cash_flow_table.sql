@@ -57,19 +57,11 @@ CREATE POLICY "Allow authenticated users to delete cash flow"
     TO authenticated
     USING (true);
 
--- Add trigger to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_cash_flow_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = now();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_cash_flow_updated_at_trigger
-    BEFORE UPDATE ON public.cash_flow
-    FOR EACH ROW
-    EXECUTE FUNCTION update_cash_flow_updated_at();
+CREATE POLICY "Allow all operations for cash_flow"
+    ON public.cash_flow
+    TO public
+    USING (true);
 
 -- Add foreign key constraints based on reference_type
 -- Note: These assume the existence of related tables (doctors, visits, sales, etc.)

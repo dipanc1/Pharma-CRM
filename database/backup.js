@@ -61,7 +61,7 @@ async function backupSchema() {
 
 async function fallbackSchemaBackup() {
   // Fallback: Get column information from each table
-  const tables = ['doctors', 'visits', 'products', 'sales', 'stock_transactions'];
+  const tables = ['doctors', 'visits', 'products', 'sales', 'stock_transactions' , 'cash_flow'];
   const schema = {};
 
   for (const tableName of tables) {
@@ -129,7 +129,8 @@ async function performBackup(options = {}) {
     'visits',
     'products',
     'sales',
-    'stock_transactions'
+    'stock_transactions',
+    'cash_flow'
   ];
 
   const backup = {

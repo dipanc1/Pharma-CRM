@@ -93,7 +93,7 @@ async function performRestore(backupFile) {
   console.log('\n🚀 Starting restoration...\n');
 
   // Restore tables in order (respect foreign keys)
-  const restoreOrder = ['doctors', 'products', 'visits', 'sales', 'stock_transactions'];
+  const restoreOrder = ['doctors', 'products', 'visits', 'sales', 'stock_transactions', 'cash_flow'];
 
   for (const tableName of restoreOrder) {
     if (backup.tables[tableName] && backup.tables[tableName].data) {
