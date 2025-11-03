@@ -275,8 +275,7 @@ const CashFlow = ({
   return (
     <div className="space-y-6">
       <Header
-        title="Cash Flow Management"
-        description="Track all cash inflows and outflows with analytics"
+        title="Cash Flow"
         buttons={[
           {
             onClick: onAdd,

@@ -21,14 +21,14 @@ function Dashboard({ stats, recentVisits, salesData, topContacts, COLORS, select
 
   const getDisplayTitle = () => {
     if (selectedMonth === 'overall') {
-      return 'Dashboard - All Time Data';
+      return 'Dashboard-All Time Data';
     } else if (selectedMonth === 'current') {
-      return `Dashboard - ${currentMonth}`;
+      return `Dashboard-${currentMonth}`;
     } else {
       const year = parseInt(selectedMonth.split('-')[0]);
       const month = parseInt(selectedMonth.split('-')[1]) - 1;
       const date = new Date(year, month);
-      return `Dashboard - ${format(date, 'MMMM yyyy')}`;
+      return `Dashboard-${format(date, 'MMMM yyyy')}`;
     }
   };
 
@@ -63,10 +63,8 @@ function Dashboard({ stats, recentVisits, salesData, topContacts, COLORS, select
       <Header
         title={getDisplayTitle()}
         buttons={[
-          { to: "/doctors/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Contact" },
           { to: "/visits/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Visit" },
           { onClick: handleReload, icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, title: 'Refresh' }
-
         ]}
       />
 
