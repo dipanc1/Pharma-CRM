@@ -8,11 +8,13 @@ import {
   PlusIcon,
   EyeIcon,
   ChartBarIcon,
-  BuildingStorefrontIcon
+  BuildingStorefrontIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { format } from 'date-fns';
 import { DashboardCard, Header } from '../../components';
+import { handleReload } from '../../helper';
 
 function Dashboard({ stats, recentVisits, salesData, topContacts, COLORS, selectedMonth, setSelectedMonth, monthOptions }) {
   const currentMonth = format(new Date(), 'MMMM yyyy');
@@ -63,6 +65,8 @@ function Dashboard({ stats, recentVisits, salesData, topContacts, COLORS, select
         buttons={[
           { to: "/doctors/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Contact" },
           { to: "/visits/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Visit" },
+          { onClick: handleReload, icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, title: 'Refresh' }
+
         ]}
       />
 

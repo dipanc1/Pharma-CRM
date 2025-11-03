@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlusIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline';
 import {
   Header,
   SearchInput,
@@ -13,6 +13,7 @@ import {
 } from '../../../components';
 import NoRecordsAddButtonLayout from '../../../components/common/NoRecordsAddButtonLayout';
 import { format } from 'date-fns';
+import { handleReload } from '../../../helper';
 
 function Visits({
   loading,
@@ -64,7 +65,8 @@ function Visits({
   ) : (
     <div className="space-y-6">
       <Header title="Visits" buttons={[
-        { to: "/visits/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Visit" }
+        { to: "/visits/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Visit" },
+        { onClick: handleReload, icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, title: 'Refresh' }
       ]} />
 
       <div className="card">
@@ -248,11 +250,10 @@ function Visits({
                     </div>
                   </Table.Cell>
                   <Table.Cell>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      isChemist 
-                        ? 'bg-teal-100 text-teal-800' 
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${isChemist
+                        ? 'bg-teal-100 text-teal-800'
                         : 'bg-indigo-100 text-indigo-800'
-                    }`}>
+                      }`}>
                       {isChemist ? 'Chemist' : 'Doctor'}
                     </span>
                   </Table.Cell>

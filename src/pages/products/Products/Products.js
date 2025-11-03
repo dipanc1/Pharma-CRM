@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlusIcon, CubeIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, CubeIcon, PencilIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import {
   AddButton,
   Header,
@@ -11,6 +11,7 @@ import {
   FilterSelect,
   NoRecordsAddButtonLayout
 } from '../../../components';
+import { handleReload } from '../../../helper';
 
 function Products({
   products,
@@ -36,7 +37,8 @@ function Products({
     <div className="space-y-6">
       {/* Header */}
       <Header title="Products" buttons={[
-        { to: "/products/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Product" }
+        { to: "/products/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Product" },
+        { onClick: handleReload, icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, title: 'Refresh' }
       ]} />
 
       {/* Search and Filter */}

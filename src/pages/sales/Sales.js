@@ -20,6 +20,8 @@ import {
   Loader,
   SearchInput
 } from '../../components';
+import { handleReload } from '../../helper';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 function Sales({
   loading,
@@ -60,7 +62,9 @@ function Sales({
     <Loader />
   ) : (
     <div className="space-y-6">
-      <Header title="Sales Analytics" buttons={[]} />
+      <Header title="Sales Analytics" buttons={[
+        { onClick: handleReload, icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, title: 'Refresh' }
+      ]} />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -174,11 +178,10 @@ function Sales({
                       >
                         <div className="flex items-center justify-between">
                           <div className="font-medium text-gray-900">{doctor.name}</div>
-                          <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
-                            isChemist 
-                              ? 'bg-teal-100 text-teal-800' 
-                              : 'bg-indigo-100 text-indigo-800'
-                          }`}>
+                          <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${isChemist
+                            ? 'bg-teal-100 text-teal-800'
+                            : 'bg-indigo-100 text-indigo-800'
+                            }`}>
                             {isChemist ? 'Chemist' : 'Doctor'}
                           </span>
                         </div>
@@ -265,15 +268,15 @@ function Sales({
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={contactData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="name" 
-                    angle={-45} 
-                    textAnchor="end" 
+                  <XAxis
+                    dataKey="name"
+                    angle={-45}
+                    textAnchor="end"
                     height={80}
                     tick={{ fontSize: 11 }}
                   />
                   <YAxis />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']}
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
@@ -283,11 +286,10 @@ function Sales({
                           <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
                             <div className="flex items-center gap-2 mb-1">
                               <p className="font-medium">{data.name}</p>
-                              <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
-                                isChemist 
-                                  ? 'bg-teal-100 text-teal-800' 
-                                  : 'bg-indigo-100 text-indigo-800'
-                              }`}>
+                              <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${isChemist
+                                ? 'bg-teal-100 text-teal-800'
+                                : 'bg-indigo-100 text-indigo-800'
+                                }`}>
                                 {isChemist ? 'Chemist' : 'Doctor'}
                               </span>
                             </div>
@@ -319,7 +321,7 @@ function Sales({
               Showing {Math.min(pageSize, Math.max(0, totalCount - (page - 1) * pageSize))} of {totalCount} sales
             </div>
           </div>
-          
+
           <Pagination
             currentPage={page}
             totalPages={maxPage}
@@ -336,7 +338,7 @@ function Sales({
               const sellingPrice = parseFloat(sale.unit_price);
               const profitPerUnit = sellingPrice - costPrice;
               const totalProfit = profitPerUnit * sale.quantity;
-              
+
               return (
                 <Table.Row key={sale.id}>
                   <Table.Cell>
@@ -355,11 +357,10 @@ function Sales({
                     </div>
                   </Table.Cell>
                   <Table.Cell>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      isChemist 
-                        ? 'bg-teal-100 text-teal-800' 
-                        : 'bg-indigo-100 text-indigo-800'
-                    }`}>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${isChemist
+                      ? 'bg-teal-100 text-teal-800'
+                      : 'bg-indigo-100 text-indigo-800'
+                      }`}>
                       {isChemist ? 'Chemist' : 'Doctor'}
                     </span>
                   </Table.Cell>

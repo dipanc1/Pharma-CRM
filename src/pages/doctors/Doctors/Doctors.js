@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlusIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { 
   AddButton, 
   Header, 
@@ -13,6 +13,7 @@ import {
   Loader,
   NoRecordsAddButtonLayout
 } from '../../../components';
+import { handleReload } from '../../../helper';
 
 function Doctors({
   loading,
@@ -92,7 +93,8 @@ function Doctors({
     <div className="space-y-6">
       {/* Header */}
       <Header title={pageTitle} buttons={[
-        { to: addButtonPath, icon: <PlusIcon className="h-4 w-4 mr-2" />, title: addButtonText }
+        { to: addButtonPath, icon: <PlusIcon className="h-4 w-4 mr-2" />, title: addButtonText },
+        { onClick: handleReload, icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, title: 'Refresh' }
       ]} />
 
       {/* Search and Filters */}

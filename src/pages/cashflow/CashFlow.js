@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon } from '@heroicons/react/24/outline';
-import { BanknotesIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, BanknotesIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import {
   BarChart,
   Bar,
@@ -30,6 +29,7 @@ import {
   NoRecordsAddButtonLayout,
   AddButton
 } from '../../components/common';
+import { handleReload } from '../../helper';
 
 const CashFlow = ({
   cashFlowData,
@@ -114,7 +114,10 @@ const CashFlow = ({
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
 
-    // Clear error when user starts typing
+    if (name === 'cash_type') {
+      setFormData(prev => ({ ...prev, purpose: '' }));
+    }
+
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -219,16 +222,24 @@ const CashFlow = ({
   ];
 
   const purposeOptions = [
-    { value: 'expense', label: 'Expense' },
-    { value: 'gift', label: 'Gift' },
-    { value: 'payment', label: 'Payment' },
-    { value: 'advance', label: 'Advance' },
-    { value: 'debt_recovery', label: 'Debt Recovery' },
-    { value: 'loan', label: 'Loan' },
-    { value: 'daily_expense', label: 'Daily Expense' },
-    { value: 'travel_expense', label: 'Travel Expense' },
-    { value: 'other', label: 'Other' }
+    { value: 'advance', label: 'Advance', cash_type: 'in_flow' },
+    { value: 'loan', label: 'Loan', cash_type: 'in_flow' },
+    { value: 'other', label: 'Other', cash_type: 'in_flow' },
+    { value: 'debt_received', label: 'Debt Received', cash_type: 'in_flow' },
+
+    { value: 'advance', label: 'Advance', cash_type: 'out_flow' },
+    { value: 'loan', label: 'Loan', cash_type: 'out_flow' },
+    { value: 'other', label: 'Other', cash_type: 'out_flow' },
+    { value: 'expense', label: 'Expense', cash_type: 'out_flow' },
+    { value: 'gift', label: 'Gift', cash_type: 'out_flow' },
+    { value: 'payment', label: 'Payment', cash_type: 'out_flow' },
+    { value: 'daily_expense', label: 'Daily Expense', cash_type: 'out_flow' },
+    { value: 'travel_expense', label: 'Travel Expense', cash_type: 'out_flow' },
   ];
+
+  const filteredPurposeOptions = purposeOptions.filter(option => {
+    return option.cash_type === formData.cash_type;
+  });
 
   const activeFilters = [
     filters.cashType && {
@@ -271,7 +282,9 @@ const CashFlow = ({
             onClick: onAdd,
             icon: <PlusIcon className="h-4 w-4 mr-2" />,
             title: "Add Transaction"
-          }
+          },
+          { onClick: handleReload, icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, title: 'Refresh' }
+
         ]}
       />
 
@@ -449,10 +462,10 @@ const CashFlow = ({
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData.purposeData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="purpose" 
-                    angle={-45} 
-                    textAnchor="end" 
+                  <XAxis
+                    dataKey="purpose"
+                    angle={-45}
+                    textAnchor="end"
                     height={80}
                     tick={{ fontSize: 11 }}
                   />
@@ -477,13 +490,13 @@ const CashFlow = ({
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData.dailyTrendData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
+                  <XAxis
+                    dataKey="date"
                     tick={{ fontSize: 11 }}
                   />
                   <YAxis />
-                  <Tooltip 
-                    formatter={(value, name) => [formatCurrency(value), name === 'inflow' ? 'Inflow' : name === 'outflow' ? 'Outflow' : 'Net Flow']} 
+                  <Tooltip
+                    formatter={(value, name) => [formatCurrency(value), name === 'inflow' ? 'Inflow' : name === 'outflow' ? 'Outflow' : 'Net Flow']}
                     labelFormatter={(label) => `Date: ${label}`}
                   />
                   <Line type="monotone" dataKey="inflow" stroke="#10B981" strokeWidth={2} name="inflow" />
@@ -638,7 +651,7 @@ const CashFlow = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Select Purpose</option>
-                {purposeOptions.map(option => (
+                {filteredPurposeOptions.map(option => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -714,8 +727,8 @@ const CashFlow = ({
               type="submit"
               disabled={submitting}
               className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${editingRecord
-                  ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
-                  : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+                ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
+                : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
                 }`}
             >
               {submitting

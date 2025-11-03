@@ -72,7 +72,6 @@ function App() {
             {/* Inventory Route */}
             <Route path="/inventory" element={<InventoryDashboard />} />
 
-
             {/* Cash Flow Route */}
             <Route path="/cash-flow" element={<CashFlow />} />
           </Route>

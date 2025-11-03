@@ -8,7 +8,6 @@ import { format, startOfMonth } from 'date-fns';
 
 function InventoryDashboardContainer() {
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
     const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [productFilter, setProductFilter] = useState('');
@@ -195,7 +194,6 @@ function InventoryDashboardContainer() {
             showError('Failed to load inventory data. Please check your connection and try again.');
         } finally {
             setLoading(false);
-            setRefreshing(false);
         }
     };
 
@@ -261,12 +259,6 @@ function InventoryDashboardContainer() {
         setCategoryStockData(chartData);
     };
 
-    const handleRefresh = async () => {
-        setRefreshing(true);
-        await fetchInventoryData();
-        showSuccess('Inventory data refreshed successfully');
-    };
-
     const handleExportData = () => {
         try {
             const csvData = [
@@ -312,7 +304,7 @@ function InventoryDashboardContainer() {
     return (
         <>
             <InventoryDashboard
-                loading={loading || refreshing}
+                loading={loading}
                 startDate={startDate}
                 setStartDate={setStartDate}
                 endDate={endDate}
@@ -329,7 +321,6 @@ function InventoryDashboardContainer() {
                 lowStockProducts={lowStockProducts}
                 summaryStats={summaryStats}
                 onExportData={handleExportData}
-                onRefresh={handleRefresh}
             />
             <Toast
                 message={toast.message}
