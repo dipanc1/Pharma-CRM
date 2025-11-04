@@ -4,7 +4,8 @@ export const TRANSACTION_TYPES = {
     OPENING: 'opening',
     PURCHASE: 'purchase',
     SALE: 'sale',
-    ADJUSTMENT: 'adjustment'
+    ADJUSTMENT: 'adjustment',
+    SALE_REVERSAL: 'sale_reversal'
 };
 
 // Get stock transactions for a product up to a specific date
@@ -91,7 +92,6 @@ export const calculateStockSummary = async (productId, date) => {
                 if (transaction.quantity > 0) {
                     openingStock += transaction.quantity;
                 } else {
-                    // Negative adjustments are treated as sales
                     sales += Math.abs(transaction.quantity);
                 }
                 break;
@@ -99,12 +99,17 @@ export const calculateStockSummary = async (productId, date) => {
                 purchases += transaction.quantity;
                 break;
             case TRANSACTION_TYPES.SALE:
-                sales += Math.abs(transaction.quantity); // Sales are negative, convert to positive
+                sales += Math.abs(transaction.quantity);
+                break;
+            case TRANSACTION_TYPES.SALE_REVERSAL:
+                sales -= Math.abs(transaction.quantity);
                 break;
             default:
                 break;
         }
     });
+
+    sales = Math.max(0, sales);
 
     const closingStock = openingStock + purchases - sales;
 
@@ -112,7 +117,7 @@ export const calculateStockSummary = async (productId, date) => {
         openingStock,
         purchases,
         sales,
-        closingStock: Math.max(0, closingStock) // Ensure non-negative stock
+        closingStock: Math.max(0, closingStock)
     };
 };
 

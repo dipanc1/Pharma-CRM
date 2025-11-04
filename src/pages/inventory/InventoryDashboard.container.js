@@ -89,17 +89,21 @@ function InventoryDashboardContainer() {
             // Get transactions in the date range
             const transactions = await getTransactionsInRange(product.id, startDateToUse, endDateToUse);
 
+            // Only real purchases
             const purchases = transactions
-                .filter(t => ['purchase', 'adjustment'].includes(t.transaction_type) && t.quantity > 0)
+                .filter(t => t.transaction_type === 'purchase')
                 .reduce((sum, t) => sum + t.quantity, 0);
 
+            // Sales as before
             const sales = transactions
-                .filter(t => ['sale'].includes(t.transaction_type))
+                .filter(t => t.transaction_type === 'sale')
                 .reduce((sum, t) => sum + Math.abs(t.quantity), 0);
 
-            const adjustments = transactions
-                .filter(t => t.transaction_type === 'adjustment')
-                .reduce((sum, t) => sum + t.quantity, 0);
+            const adjustments = transactions.reduce((sum, t) => {
+                if (t.transaction_type === 'adjustment') return sum + t.quantity;
+                if (t.transaction_type === 'sale_reversal') return sum + Math.abs(t.quantity);
+                return sum;
+            }, 0);
 
             const stockValue = closingStockSummary.closingStock * (product.price || 0);
 
@@ -217,13 +221,17 @@ function InventoryDashboardContainer() {
             (data || []).forEach(transaction => {
                 const date = transaction.transaction_date;
                 if (!dailyData[date]) {
-                    dailyData[date] = { purchases: 0, sales: 0 };
+                    dailyData[date] = { purchases: 0, sales: 0, adjustments: 0 };
                 }
 
-                if (['purchase', 'adjustment'].includes(transaction.transaction_type) && transaction.quantity > 0) {
+                if (transaction.transaction_type === 'purchase') {
                     dailyData[date].purchases += transaction.quantity;
                 } else if (transaction.transaction_type === 'sale') {
                     dailyData[date].sales += Math.abs(transaction.quantity);
+                } else if (transaction.transaction_type === 'adjustment') {
+                    dailyData[date].adjustments += transaction.quantity; // signed
+                } else if (transaction.transaction_type === 'sale_reversal') {
+                    dailyData[date].adjustments += Math.abs(transaction.quantity); // treat as positive adjustment
                 }
             });
 
@@ -232,7 +240,8 @@ function InventoryDashboardContainer() {
                 .map(([date, data]) => ({
                     date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                     purchases: data.purchases,
-                    sales: data.sales
+                    sales: data.sales,
+                    adjustments: data.adjustments
                 }));
 
             setStockMovementData(chartData);

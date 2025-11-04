@@ -267,12 +267,12 @@ function EditVisitContainer() {
       for (const originalSale of originalSales || []) {
         await addStockTransaction({
           product_id: originalSale.product_id,
-          transaction_type: TRANSACTION_TYPES.ADJUSTMENT,
+          transaction_type: TRANSACTION_TYPES.SALE_REVERSAL,
           quantity: originalSale.quantity,
           transaction_date: formData.visit_date,
           reference_type: 'visit_edit_reversal',
           reference_id: id,
-          notes: `Stock reversal for visit edit - Original sale quantity: ${originalSale.quantity}`
+          notes: `Sale reversal for visit edit - Restoring ${originalSale.quantity} units`
         });
       }
 

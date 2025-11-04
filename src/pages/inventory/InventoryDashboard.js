@@ -272,6 +272,10 @@ function InventoryDashboard({
                                 <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
                                 <span className="text-gray-600">Sales</span>
                             </div>
+                            <div className="flex items-center">
+                                <div className="w-3 h-3 bg-indigo-500 rounded-full mr-2"></div>
+                                <span className="text-gray-600">Adjustments</span>
+                            </div>
                         </div>
                     </div>
                     <div className="h-64">
@@ -311,6 +315,14 @@ function InventoryDashboard({
                                         strokeWidth={2}
                                         name="Sales"
                                         dot={{ fill: '#EF4444', strokeWidth: 2 }}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="adjustments"
+                                        stroke="#6366F1"
+                                        strokeWidth={2}
+                                        name="Adjustments"
+                                        dot={{ fill: '#6366F1', strokeWidth: 2 }}
                                     />
                                 </LineChart>
                             </ResponsiveContainer>
