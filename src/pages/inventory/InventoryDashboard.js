@@ -16,7 +16,8 @@ import {
 import {
     FilterSelect,
     Table,
-    StatusBadge
+    StatusBadge,
+    SearchInput
 } from '../../components';
 import {
     CubeIcon,
@@ -41,6 +42,12 @@ function InventoryDashboard({
     setCompanyFilter,
     companyOptions,
     products,
+    productSearch,
+    setProductSearch,
+    showProductDropdown,
+    setShowProductDropdown,
+    filteredProducts,
+    handleProductSelect,
     inventoryData,
     stockMovementData,
     categoryStockData,
@@ -60,13 +67,6 @@ function InventoryDashboard({
         'Closing Stock',
         'Stock Value',
         'Status'
-    ];
-
-    const productOptions = [
-        ...(products || []).map(product => ({
-            value: product.id,
-            label: product.name
-        }))
     ];
 
     const hasFilters = startDate || endDate || productFilter || companyFilter;
@@ -182,15 +182,45 @@ function InventoryDashboard({
                             max={new Date().toISOString().split('T')[0]}
                         />
                     </div>
-                    <div>
-                        <FilterSelect
+                    <div className="relative">
+                        <SearchInput
                             label="Filter by Product"
-                            value={productFilter || ''}
-                            onChange={(e) => setProductFilter(e.target.value)}
-                            options={productOptions}
-                            placeholder="All Products"
-                            id="productFilter"
+                            placeholder="Search for a product..."
+                            value={productSearch}
+                            onChange={(e) => setProductSearch(e.target.value)}
+                            onFocus={() => setShowProductDropdown(true)}
+                            id="product_search"
                         />
+
+                        {showProductDropdown && productSearch && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                                {filteredProducts.length > 0 ? (
+                                    filteredProducts.map(product => (
+                                        <div
+                                            key={product.id}
+                                            className="px-4 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                                            onClick={() => handleProductSelect(product)}
+                                        >
+                                            <div className="font-medium text-gray-900">{product.name}</div>
+                                            <div className="text-sm text-gray-600">
+                                                {product.company_name && `${product.company_name} • `}
+                                                Stock: {product.current_stock || 0}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="px-4 py-2 text-gray-500">No products found</div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Click outside to close dropdown */}
+                        {showProductDropdown && (
+                            <div
+                                className="fixed inset-0 z-5"
+                                onClick={() => setShowProductDropdown(false)}
+                            />
+                        )}
                     </div>
                     <div>
                         <FilterSelect

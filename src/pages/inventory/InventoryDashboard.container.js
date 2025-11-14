@@ -13,6 +13,8 @@ function InventoryDashboardContainer() {
     const [productFilter, setProductFilter] = useState('');
     const [companyFilter, setCompanyFilter] = useState('');
     const [products, setProducts] = useState([]);
+    const [productSearch, setProductSearch] = useState('');
+    const [showProductDropdown, setShowProductDropdown] = useState(false);
     const [inventoryData, setInventoryData] = useState([]);
     const [stockMovementData, setStockMovementData] = useState([]);
     const [categoryStockData, setCategoryStockData] = useState([]);
@@ -310,6 +312,26 @@ function InventoryDashboardContainer() {
         .sort()
         .map(company => ({ value: company, label: company }));
 
+    const filteredProducts = products.filter(product => 
+        product.name.toLowerCase().includes(productSearch.toLowerCase())
+    );
+
+    const handleProductSearchChange = (value) => {
+        setProductSearch(value);
+        if (value.trim()) {
+            setShowProductDropdown(true);
+        } else {
+            setProductFilter('');
+            setShowProductDropdown(false);
+        }
+    };
+
+    const handleProductSelect = (product) => {
+        setProductFilter(product.id);
+        setProductSearch(product.name);
+        setShowProductDropdown(false);
+    };
+
     return (
         <>
             <InventoryDashboard
@@ -324,6 +346,12 @@ function InventoryDashboardContainer() {
                 setCompanyFilter={setCompanyFilter}
                 companyOptions={companyOptions}
                 products={products}
+                productSearch={productSearch}
+                setProductSearch={handleProductSearchChange}
+                showProductDropdown={showProductDropdown}
+                setShowProductDropdown={setShowProductDropdown}
+                filteredProducts={filteredProducts}
+                handleProductSelect={handleProductSelect}
                 inventoryData={inventoryData}
                 stockMovementData={stockMovementData}
                 categoryStockData={categoryStockData}
