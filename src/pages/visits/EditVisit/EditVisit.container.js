@@ -23,6 +23,8 @@ function EditVisitContainer() {
   const [sales, setSales] = useState([]);
   const [doctorSearch, setDoctorSearch] = useState('');
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [newSale, setNewSale] = useState({
     product_id: '',
     quantity: '',
@@ -141,6 +143,10 @@ function EditVisitContainer() {
     );
   });
 
+  const filteredProducts = products.filter(product => 
+    product.name.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
   const handleDoctorSelect = (doctor) => {
     setFormData(prev => ({ ...prev, doctor_id: doctor.id }));
     setDoctorSearch(formatDoctorDisplay(doctor));
@@ -199,6 +205,34 @@ function EditVisitContainer() {
     }
   };
 
+  const handleProductSearchChange = (e) => {
+    setProductSearch(e.target.value);
+    setShowProductDropdown(true);
+    if (!e.target.value) {
+      setNewSale(prev => ({ ...prev, product_id: '' }));
+      setCurrentStock(null);
+    }
+  };
+
+  const handleProductSelect = async (product) => {
+    setNewSale(prev => ({ 
+      ...prev, 
+      product_id: product.id,
+      unit_price: product.price.toString()
+    }));
+    setProductSearch(`${product.name} - ₹${product.price} (Stock: ${product.current_stock || 0})`);
+    setShowProductDropdown(false);
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const stockSummary = await calculateStockSummary(product.id, today);
+      setCurrentStock(stockSummary.closingStock);
+    } catch (error) {
+      console.error('Error checking stock:', error);
+      setCurrentStock(null);
+    }
+  };
+
   const addSale = () => {
     const quantity = parseFloat(newSale.quantity);
     const unit_price = parseFloat(newSale.unit_price);
@@ -230,6 +264,7 @@ function EditVisitContainer() {
       quantity: '',
       unit_price: ''
     });
+    setProductSearch('');
     setCurrentStock(null);
   };
 
@@ -365,6 +400,12 @@ function EditVisitContainer() {
         setShowDoctorDropdown={setShowDoctorDropdown}
         filteredDoctors={filteredDoctors}
         handleDoctorSelect={handleDoctorSelect}
+        productSearch={productSearch}
+        handleProductSearchChange={handleProductSearchChange}
+        showProductDropdown={showProductDropdown}
+        setShowProductDropdown={setShowProductDropdown}
+        filteredProducts={filteredProducts}
+        handleProductSelect={handleProductSelect}
         currentStock={currentStock}
       />
       <Toast

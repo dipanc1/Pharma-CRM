@@ -14,13 +14,18 @@ function AddVisit({
   handleFormChange,
   handleSubmit,
   loading,
-  products,
   doctorSearch,
   handleDoctorSearchChange,
   showDoctorDropdown,
   setShowDoctorDropdown,
   filteredDoctors,
   handleDoctorSelect,
+  productSearch,
+  handleProductSearchChange,
+  showProductDropdown,
+  setShowProductDropdown,
+  filteredProducts,
+  handleProductSelect,
   sales,
   newSale,
   handleSaleChange,
@@ -30,10 +35,6 @@ function AddVisit({
   currentStock
 }) {
   const tableHeaders = ['Product', 'Quantity', 'Unit Price', 'Total', 'Actions'];
-  const productOptions = products.map(product => ({
-    value: product.id,
-    label: `${product.name} - ₹${product.price} (Stock: ${product.current_stock || 0})`
-  }));
   const statusOptions = [
     { value: 'completed', label: 'Completed' },
     { value: 'scheduled', label: 'Scheduled' },
@@ -169,16 +170,51 @@ function AddVisit({
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
 
             {/* Product Selection */}
-            <div>
-              <FilterSelect
+            <div className="relative">
+              <SearchInput
                 label="Product"
-                id="product_id"
-                name="product_id"
-                value={newSale.product_id}
-                onChange={handleSaleChange}
-                options={productOptions}
-                placeholder="Select product"
+                placeholder="Search for a product..."
+                value={productSearch}
+                onChange={handleProductSearchChange}
+                onFocus={() => setShowProductDropdown(true)}
+                id="product_search"
               />
+
+              {showProductDropdown && productSearch && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map(product => (
+                      <div
+                        key={product.id}
+                        className="px-4 py-2 cursor-pointer hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                        onClick={() => handleProductSelect(product)}
+                      >
+                        <div className="font-medium text-gray-900">{product.name}</div>
+                        <div className="text-sm text-gray-600 flex justify-between items-center">
+                          <span>₹{product.price}</span>
+                          <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                            (product.current_stock || 0) > 0 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            Stock: {product.current_stock || 0}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2 text-gray-500">No products found</div>
+                  )}
+                </div>
+              )}
+
+              {/* Click outside to close dropdown */}
+              {showProductDropdown && (
+                <div
+                  className="fixed inset-0 z-5"
+                  onClick={() => setShowProductDropdown(false)}
+                />
+              )}
             </div>
 
             <div>

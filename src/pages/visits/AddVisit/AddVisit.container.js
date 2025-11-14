@@ -14,6 +14,8 @@ function AddVisitContainer() {
   const [products, setProducts] = useState([]);
   const [doctorSearch, setDoctorSearch] = useState('');
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [formData, setFormData] = useState({
     doctor_id: '',
     visit_date: new Date().toISOString().split('T')[0],
@@ -93,6 +95,34 @@ function AddVisitContainer() {
     }
   };
 
+  const handleProductSearchChange = (e) => {
+    setProductSearch(e.target.value);
+    setShowProductDropdown(true);
+    if (!e.target.value) {
+      setNewSale(prev => ({ ...prev, product_id: '' }));
+      setCurrentStock(null);
+    }
+  };
+
+  const handleProductSelect = async (product) => {
+    setNewSale(prev => ({ 
+      ...prev, 
+      product_id: product.id,
+      unit_price: product.price.toString()
+    }));
+    setProductSearch(`${product.name} - ₹${product.price} (Stock: ${product.current_stock || 0})`);
+    setShowProductDropdown(false);
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const stockSummary = await calculateStockSummary(product.id, today);
+      setCurrentStock(stockSummary.closingStock);
+    } catch (error) {
+      console.error('Error checking stock:', error);
+      setCurrentStock(null);
+    }
+  };
+
   const addSale = () => {
     const quantity = parseFloat(newSale.quantity);
     const unit_price = parseFloat(newSale.unit_price);
@@ -124,6 +154,7 @@ function AddVisitContainer() {
       quantity: '',
       unit_price: ''
     });
+    setProductSearch('');
     setCurrentStock(null);
   };
 
@@ -208,6 +239,18 @@ function AddVisitContainer() {
     );
   });
 
+  const filteredProducts = products.filter(product => 
+    product.name.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
+  const handleDoctorSearchChange = (e) => {
+    setDoctorSearch(e.target.value);
+    setShowDoctorDropdown(true);
+    if (!e.target.value) {
+      setFormData(prev => ({ ...prev, doctor_id: '' }));
+    }
+  };
+
   const formatDoctorDisplay = (doctor) => {
     const isChemist = doctor.contact_type === 'chemist';
     if (isChemist) {
@@ -222,14 +265,6 @@ function AddVisitContainer() {
     setShowDoctorDropdown(false);
   };
 
-  const handleDoctorSearchChange = (e) => {
-    setDoctorSearch(e.target.value);
-    setShowDoctorDropdown(true);
-    if (!e.target.value) {
-      setFormData(prev => ({ ...prev, doctor_id: '' }));
-    }
-  };
-
   return (
     <>
       <AddVisit
@@ -237,7 +272,6 @@ function AddVisitContainer() {
         handleFormChange={handleFormChange}
         handleSubmit={handleSubmit}
         loading={loading}
-        products={products}
         doctorSearch={doctorSearch}
         setDoctorSearch={setDoctorSearch}
         handleDoctorSearchChange={handleDoctorSearchChange}
@@ -245,6 +279,12 @@ function AddVisitContainer() {
         setShowDoctorDropdown={setShowDoctorDropdown}
         filteredDoctors={filteredDoctors}
         handleDoctorSelect={handleDoctorSelect}
+        productSearch={productSearch}
+        handleProductSearchChange={handleProductSearchChange}
+        showProductDropdown={showProductDropdown}
+        setShowProductDropdown={setShowProductDropdown}
+        filteredProducts={filteredProducts}
+        handleProductSelect={handleProductSelect}
         sales={sales}
         newSale={newSale}
         handleSaleChange={handleSaleChange}
