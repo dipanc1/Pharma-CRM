@@ -21,6 +21,8 @@ function SalesContainer() {
 
   const [doctorSearch, setDoctorSearch] = useState('');
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
   
   const [dateRangeStats, setDateRangeStats] = useState({
     totalRevenue: 0,
@@ -321,6 +323,26 @@ function SalesContainer() {
     setShowDoctorDropdown(false);
   };
 
+  const filteredProducts = products.filter(product => 
+    product.name.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
+  const handleProductSearchChange = (value) => {
+    setProductSearch(value);
+    if (value.trim()) {
+      setShowProductDropdown(true);
+    } else {
+      setProductFilter('');
+      setShowProductDropdown(false);
+    }
+  };
+
+  const handleProductSelect = (product) => {
+    setProductFilter(product.id);
+    setProductSearch(product.name);
+    setShowProductDropdown(false);
+  };
+
   return (
     <>
       <Sales
@@ -350,6 +372,12 @@ function SalesContainer() {
         setShowDoctorDropdown={setShowDoctorDropdown}
         filteredDoctors={filteredDoctors}
         handleDoctorSelect={handleDoctorSelect}
+        productSearch={productSearch}
+        setProductSearch={handleProductSearchChange}
+        showProductDropdown={showProductDropdown}
+        setShowProductDropdown={setShowProductDropdown}
+        filteredProducts={filteredProducts}
+        handleProductSelect={handleProductSelect}
       />
       <Toast
         message={toast.message}
