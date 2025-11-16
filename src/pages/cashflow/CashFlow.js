@@ -229,6 +229,7 @@ const CashFlow = ({
 
     { value: 'advance', label: 'Advance', cash_type: 'out_flow' },
     { value: 'loan', label: 'Loan', cash_type: 'out_flow' },
+    { value: 'purchase', label: 'Purchase', cash_type: 'out_flow' },
     { value: 'other', label: 'Other', cash_type: 'out_flow' },
     { value: 'expense', label: 'Expense', cash_type: 'out_flow' },
     { value: 'gift', label: 'Gift', cash_type: 'out_flow' },
