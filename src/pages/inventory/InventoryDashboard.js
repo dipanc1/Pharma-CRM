@@ -102,9 +102,16 @@ function InventoryDashboard({
                             <div key={i} className="h-24 bg-gray-200 rounded"></div>
                         ))}
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                         <div className="h-80 bg-gray-200 rounded"></div>
                         <div className="h-80 bg-gray-200 rounded"></div>
+                    </div>
+                    
+                    {/* Loading Progress Indicator */}
+                    <div className="card text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading inventory data...</p>
+                        <p className="text-sm text-gray-500 mt-2">This may take a moment for large inventories</p>
                     </div>
                 </div>
             </div>

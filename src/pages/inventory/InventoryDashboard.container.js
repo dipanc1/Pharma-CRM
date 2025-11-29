@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import useToast from '../../hooks/useToast';
 import InventoryDashboard from './InventoryDashboard';
-import { calculateStockSummary } from '../../utils/stockUtils';
 import { Toast } from '../../components';
 import { format, startOfMonth } from 'date-fns';
 
@@ -54,12 +53,13 @@ function InventoryDashboardContainer() {
         }
     };
 
-    const getTransactionsInRange = async (productId, startDate, endDate) => {
+    const getTransactionsInRange = async (productIds, startDate, endDate) => {
         try {
+            // Fetch all transactions for multiple products at once
             const { data, error } = await supabase
                 .from('stock_transactions')
                 .select('*')
-                .eq('product_id', productId)
+                .in('product_id', productIds)
                 .gte('transaction_date', startDate)
                 .lte('transaction_date', endDate)
                 .order('transaction_date');
@@ -75,55 +75,127 @@ function InventoryDashboardContainer() {
         }
     };
 
-    const processProductInventory = async (product, startDateToUse, endDateToUse) => {
+    const calculateStockSummaryBatch = async (productIds, date) => {
         try {
-            // Calculate opening stock (day before start date)
+            // Get all transactions for these products up to the date
+            const { data, error } = await supabase
+                .from('stock_transactions')
+                .select('product_id, quantity')
+                .in('product_id', productIds)
+                .lte('transaction_date', date)
+                .order('transaction_date');
+
+            if (error) {
+                console.error('Error calculating stock summary batch:', error);
+                return {};
+            }
+
+            // Group transactions by product and sum quantities
+            const stockSummaries = {};
+            productIds.forEach(id => {
+                stockSummaries[id] = { closingStock: 0 };
+            });
+
+            (data || []).forEach(transaction => {
+                const productId = transaction.product_id;
+                if (stockSummaries[productId]) {
+                    stockSummaries[productId].closingStock += transaction.quantity;
+                }
+            });
+
+            return stockSummaries;
+        } catch (error) {
+            console.error('Error calculating stock summary batch:', error);
+            return {};
+        }
+    };
+
+    const processProductsBatch = async (productsBatch, startDateToUse, endDateToUse) => {
+        try {
+            const productIds = productsBatch.map(p => p.id);
+
+            // Get opening stock for all products (day before start date)
             const dayBeforeStart = new Date(startDateToUse);
             dayBeforeStart.setDate(dayBeforeStart.getDate() - 1);
-            const openingStockSummary = await calculateStockSummary(
-                product.id,
+            const openingStockSummaries = await calculateStockSummaryBatch(
+                productIds, 
                 dayBeforeStart.toISOString().split('T')[0]
             );
 
-            // Calculate closing stock (end date)
-            const closingStockSummary = await calculateStockSummary(product.id, endDateToUse);
+            // Get closing stock for all products (end date)
+            const closingStockSummaries = await calculateStockSummaryBatch(productIds, endDateToUse);
 
-            // Get transactions in the date range
-            const transactions = await getTransactionsInRange(product.id, startDateToUse, endDateToUse);
+            // Get transactions in the date range for all products
+            const transactions = await getTransactionsInRange(productIds, startDateToUse, endDateToUse);
 
-            // Only real purchases
-            const purchases = transactions
-                .filter(t => t.transaction_type === 'purchase')
-                .reduce((sum, t) => sum + t.quantity, 0);
+            // Group transactions by product
+            const transactionsByProduct = {};
+            productIds.forEach(id => {
+                transactionsByProduct[id] = [];
+            });
 
-            // Sales as before
-            const sales = transactions
-                .filter(t => t.transaction_type === 'sale')
-                .reduce((sum, t) => sum + Math.abs(t.quantity), 0);
+            transactions.forEach(transaction => {
+                const productId = transaction.product_id;
+                if (transactionsByProduct[productId]) {
+                    transactionsByProduct[productId].push(transaction);
+                }
+            });
 
-            const adjustments = transactions.reduce((sum, t) => {
-                if (t.transaction_type === 'adjustment') return sum + t.quantity;
-                if (t.transaction_type === 'sale_reversal') return sum + Math.abs(t.quantity);
-                return sum;
-            }, 0);
+            // Process each product with its transactions
+            return productsBatch.map(product => {
+                try {
+                    const productTransactions = transactionsByProduct[product.id] || [];
+                    const openingStock = openingStockSummaries[product.id]?.closingStock || 0;
+                    const closingStock = closingStockSummaries[product.id]?.closingStock || 0;
 
-            const stockValue = closingStockSummary.closingStock * (product.price || 0);
+                    // Calculate purchases, sales, and adjustments
+                    const purchases = productTransactions
+                        .filter(t => t.transaction_type === 'purchase')
+                        .reduce((sum, t) => sum + t.quantity, 0);
 
-            return {
-                product_id: product.id,
-                product_name: product.name,
-                company_name: product.company_name,
-                opening_stock: openingStockSummary.closingStock,
-                purchases,
-                sales,
-                adjustments,
-                closing_stock: closingStockSummary.closingStock,
-                stock_value: stockValue,
-                price: product.price || 0
-            };
+                    const sales = productTransactions
+                        .filter(t => t.transaction_type === 'sale')
+                        .reduce((sum, t) => sum + Math.abs(t.quantity), 0);
+
+                    const adjustments = productTransactions.reduce((sum, t) => {
+                        if (t.transaction_type === 'adjustment') return sum + t.quantity;
+                        if (t.transaction_type === 'sale_reversal') return sum + Math.abs(t.quantity);
+                        return sum;
+                    }, 0);
+
+                    const stockValue = closingStock * (product.price || 0);
+
+                    return {
+                        product_id: product.id,
+                        product_name: product.name,
+                        company_name: product.company_name,
+                        opening_stock: openingStock,
+                        purchases,
+                        sales,
+                        adjustments,
+                        closing_stock: closingStock,
+                        stock_value: stockValue,
+                        price: product.price || 0
+                    };
+                } catch (error) {
+                    console.error(`Error processing product ${product.name}:`, error);
+                    return {
+                        product_id: product.id,
+                        product_name: product.name,
+                        company_name: product.company_name,
+                        opening_stock: 0,
+                        purchases: 0,
+                        sales: 0,
+                        adjustments: 0,
+                        closing_stock: product.current_stock || 0,
+                        stock_value: (product.current_stock || 0) * (product.price || 0),
+                        price: product.price || 0
+                    };
+                }
+            });
         } catch (error) {
-            console.error(`Error processing product ${product.name}:`, error);
-            return {
+            console.error('Error processing products batch:', error);
+            return productsBatch.map(product => ({
                 product_id: product.id,
                 product_name: product.name,
                 company_name: product.company_name,
@@ -134,7 +206,7 @@ function InventoryDashboardContainer() {
                 closing_stock: product.current_stock || 0,
                 stock_value: (product.current_stock || 0) * (product.price || 0),
                 price: product.price || 0
-            };
+            }));
         }
     };
 
@@ -154,18 +226,63 @@ function InventoryDashboardContainer() {
                 productsToProcess = productsToProcess.filter(p => p.company_name === companyFilter);
             }
 
-            // Process products in batches for better performance
-            const BATCH_SIZE = 10;
+            // If no products to process, return early
+            if (productsToProcess.length === 0) {
+                setInventoryData([]);
+                setSummaryStats({
+                    totalProducts: 0,
+                    totalPurchases: 0,
+                    totalSales: 0,
+                    totalStockValue: 0
+                });
+                setCategoryStockData([]);
+                setStockMovementData([]);
+                return;
+            }
+
+            // Process products in smaller batches for better performance
+            const BATCH_SIZE = 5; // Reduced batch size
             const inventoryResults = [];
+
+            // Show progress for large datasets
+            const totalBatches = Math.ceil(productsToProcess.length / BATCH_SIZE);
+            let completedBatches = 0;
 
             for (let i = 0; i < productsToProcess.length; i += BATCH_SIZE) {
                 const batch = productsToProcess.slice(i, i + BATCH_SIZE);
-                const batchPromises = batch.map(product =>
-                    processProductInventory(product, startDateToUse, endDateToUse)
-                );
+                
+                try {
+                    const batchResults = await processProductsBatch(batch, startDateToUse, endDateToUse);
+                    inventoryResults.push(...batchResults);
+                    
+                    completedBatches++;
+                    
+                    // Update progress if it's a large dataset
+                    if (totalBatches > 5) {
+                        console.log(`Processing inventory: ${completedBatches}/${totalBatches} batches complete`);
+                    }
+                } catch (error) {
+                    console.error(`Error processing batch ${i}:`, error);
+                    // Continue with fallback data for this batch
+                    const fallbackResults = batch.map(product => ({
+                        product_id: product.id,
+                        product_name: product.name,
+                        company_name: product.company_name,
+                        opening_stock: 0,
+                        purchases: 0,
+                        sales: 0,
+                        adjustments: 0,
+                        closing_stock: product.current_stock || 0,
+                        stock_value: (product.current_stock || 0) * (product.price || 0),
+                        price: product.price || 0
+                    }));
+                    inventoryResults.push(...fallbackResults);
+                }
 
-                const batchResults = await Promise.all(batchPromises);
-                inventoryResults.push(...batchResults);
+                // Add a small delay between batches to prevent overwhelming the database
+                if (i + BATCH_SIZE < productsToProcess.length) {
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
             }
 
             setInventoryData(inventoryResults);
@@ -173,9 +290,9 @@ function InventoryDashboardContainer() {
             // Calculate summary stats
             const stats = inventoryResults.reduce((acc, item) => ({
                 totalProducts: acc.totalProducts + 1,
-                totalPurchases: acc.totalPurchases + item.purchases,
-                totalSales: acc.totalSales + item.sales,
-                totalStockValue: acc.totalStockValue + item.stock_value
+                totalPurchases: acc.totalPurchases + (item.purchases || 0),
+                totalSales: acc.totalSales + (item.sales || 0),
+                totalStockValue: acc.totalStockValue + (item.stock_value || 0)
             }), {
                 totalProducts: 0,
                 totalPurchases: 0,
@@ -185,13 +302,13 @@ function InventoryDashboardContainer() {
 
             setSummaryStats(stats);
 
-            // Generate stock movement data for chart
-            await generateStockMovementData(startDateToUse, endDateToUse);
+            // Generate other data in parallel
+            await Promise.all([
+                generateStockMovementData(startDateToUse, endDateToUse),
+                generateCategoryStockData(inventoryResults)
+            ]);
 
-            // Generate category stock data
-            generateCategoryStockData(inventoryResults);
-
-            // Find low stock products
+            // Find low stock products (use current stock, not calculated)
             const lowStock = products.filter(p => (p.current_stock || 0) <= 10);
             setLowStockProducts(lowStock);
 
@@ -205,6 +322,7 @@ function InventoryDashboardContainer() {
 
     const generateStockMovementData = async (startDate, endDate) => {
         try {
+            // Optimize: only get necessary fields and use date grouping in query
             const { data, error } = await supabase
                 .from('stock_transactions')
                 .select('transaction_date, transaction_type, quantity')
@@ -218,26 +336,30 @@ function InventoryDashboardContainer() {
                 return;
             }
 
-            // Group by date
-            const dailyData = {};
+            // Group by date more efficiently
+            const dailyData = new Map();
+            
             (data || []).forEach(transaction => {
                 const date = transaction.transaction_date;
-                if (!dailyData[date]) {
-                    dailyData[date] = { purchases: 0, sales: 0, adjustments: 0 };
+                
+                if (!dailyData.has(date)) {
+                    dailyData.set(date, { purchases: 0, sales: 0, adjustments: 0 });
                 }
 
+                const dayData = dailyData.get(date);
+                
                 if (transaction.transaction_type === 'purchase') {
-                    dailyData[date].purchases += transaction.quantity;
+                    dayData.purchases += transaction.quantity;
                 } else if (transaction.transaction_type === 'sale') {
-                    dailyData[date].sales += Math.abs(transaction.quantity);
+                    dayData.sales += Math.abs(transaction.quantity);
                 } else if (transaction.transaction_type === 'adjustment') {
-                    dailyData[date].adjustments += transaction.quantity; // signed
+                    dayData.adjustments += transaction.quantity;
                 } else if (transaction.transaction_type === 'sale_reversal') {
-                    dailyData[date].adjustments += Math.abs(transaction.quantity); // treat as positive adjustment
+                    dayData.adjustments += Math.abs(transaction.quantity);
                 }
             });
 
-            const chartData = Object.entries(dailyData)
+            const chartData = Array.from(dailyData.entries())
                 .sort(([a], [b]) => new Date(a) - new Date(b))
                 .map(([date, data]) => ({
                     date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -254,20 +376,28 @@ function InventoryDashboardContainer() {
     };
 
     const generateCategoryStockData = (inventoryData) => {
-        const companyTotals = (inventoryData || []).reduce((acc, item) => {
-            const company = item.company_name || 'Other';
-            acc[company] = (acc[company] || 0) + item.stock_value;
-            return acc;
-        }, {});
+        try {
+            const companyTotals = new Map();
 
-        const chartData = Object.entries(companyTotals)
-            .map(([company, value]) => ({
-                company,
-                value: parseFloat(value)
-            }))
-            .sort((a, b) => b.value - a.value);
+            (inventoryData || []).forEach(item => {
+                const company = item.company_name || 'Other';
+                const currentValue = companyTotals.get(company) || 0;
+                companyTotals.set(company, currentValue + (item.stock_value || 0));
+            });
 
-        setCategoryStockData(chartData);
+            const chartData = Array.from(companyTotals.entries())
+                .map(([company, value]) => ({
+                    company,
+                    value: parseFloat(value) || 0
+                }))
+                .filter(item => item.value > 0)
+                .sort((a, b) => b.value - a.value);
+
+            setCategoryStockData(chartData);
+        } catch (error) {
+            console.error('Error generating category stock data:', error);
+            setCategoryStockData([]);
+        }
     };
 
     const handleExportData = () => {
