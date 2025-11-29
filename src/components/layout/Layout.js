@@ -8,7 +8,8 @@ import {
   CubeIcon,
   ChartBarIcon,
   BuildingStorefrontIcon,
-  BanknotesIcon // Add this import
+  BanknotesIcon,
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,7 +31,7 @@ const Layout = () => {
     { name: 'Products', href: '/products', icon: CubeIcon },
     { name: 'Inventory', href: '/inventory', icon: ChartBarIcon },
     { name: 'Cash Flow', href: '/cash-flow', icon: BanknotesIcon }, 
-    { name: 'Ledger', href: '/ledger', icon: BanknotesIcon } 
+    { name: 'Ledger', href: '/ledger', icon: ClipboardDocumentListIcon } 
   ];
 
   return (
