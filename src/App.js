@@ -36,6 +36,9 @@ import EditVisit from './pages/visits/EditVisit';
 // Cash Flow pages
 import CashFlow from './pages/cashflow';
 
+// Add Ledger pages
+import Ledger from './pages/ledger';
+
 function App() {
   return (
     <AuthProvider>
@@ -70,10 +73,14 @@ function App() {
             <Route path="sales" element={<Sales />} />
 
             {/* Inventory Route */}
-            <Route path="/inventory" element={<InventoryDashboard />} />
+            <Route path="inventory" element={<InventoryDashboard />} />
 
             {/* Cash Flow Route */}
-            <Route path="/cash-flow" element={<CashFlow />} />
+            <Route path="cash-flow" element={<CashFlow />} />
+
+            {/* Ledger Route */}
+            <Route path="ledger" element={<Ledger />} />
+
           </Route>
         </Routes>
       </div>

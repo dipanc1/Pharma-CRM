@@ -29,7 +29,8 @@ const Layout = () => {
     { name: 'Sales', href: '/sales', icon: CurrencyRupeeIcon },
     { name: 'Products', href: '/products', icon: CubeIcon },
     { name: 'Inventory', href: '/inventory', icon: ChartBarIcon },
-    { name: 'Cash Flow', href: '/cash-flow', icon: BanknotesIcon }, // Add this line
+    { name: 'Cash Flow', href: '/cash-flow', icon: BanknotesIcon }, 
+    { name: 'Ledger', href: '/ledger', icon: BanknotesIcon } 
   ];
 
   return (

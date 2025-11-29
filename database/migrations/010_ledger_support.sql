@@ -1,6 +1,9 @@
 -- Migration: Ledger support (entries + helper indexes)
 -- Created: 2025-11-29
 
+-- Needed for gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- 1) Ledger entries (per contact)
 CREATE TABLE IF NOT EXISTS public.ledger_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -16,28 +19,46 @@ CREATE TABLE IF NOT EXISTS public.ledger_entries (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Ensure single-sided entries (either debit>0 or credit>0, not both)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'chk_ledger_entries_one_sided'
+  ) THEN
+    ALTER TABLE public.ledger_entries
+      ADD CONSTRAINT chk_ledger_entries_one_sided
+      CHECK (
+        (debit = 0 AND credit > 0) OR
+        (credit = 0 AND debit > 0)
+      );
+  END IF;
+END$$;
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_ledger_doctor_id ON public.ledger_entries(doctor_id);
 CREATE INDEX IF NOT EXISTS idx_ledger_entry_date ON public.ledger_entries(entry_date DESC);
 CREATE INDEX IF NOT EXISTS idx_ledger_source ON public.ledger_entries(source_type, source_id);
 
--- 2) Helper view: trial balance per contact
-CREATE OR REPLACE VIEW public.ledger_trial_balance AS
-SELECT
-  d.id AS doctor_id,
-  d.name,
-  d.contact_type,
-  COALESCE(SUM(le.debit), 0) AS total_debit,
-  COALESCE(SUM(le.credit), 0) AS total_credit,
-  COALESCE(SUM(le.debit) - SUM(le.credit), 0) AS current_balance
-FROM public.doctors d
-LEFT JOIN public.ledger_entries le ON le.doctor_id = d.id
-GROUP BY d.id, d.name, d.contact_type;
+-- Avoid duplicate entries for the same source
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ledger_source_unique
+  ON public.ledger_entries(source_type, source_id)
+  WHERE source_id IS NOT NULL;
 
-COMMENT ON VIEW public.ledger_trial_balance IS 'Aggregated debit/credit and current balance per contact';
+-- 2) RLS (match your existing pattern)
+ALTER TABLE IF EXISTS public.ledger_entries ENABLE ROW LEVEL SECURITY;
 
--- 3) Notes:
--- - Sales via visits should add ledger entries with debit = total_amount (doctor owes).
--- - Cash flow linked to doctor_id should add ledger entries:
---     in_flow  -> credit (payment received, reduces balance)
---     out_flow -> debit (advance/expense paid to contact, increases balance)
+DROP POLICY IF EXISTS "Allow all operations for ledger_entries" ON public.ledger_entries;
+CREATE POLICY "Allow all operations for ledger_entries"
+  ON public.ledger_entries
+  TO public
+  USING (true)
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow service role full access to ledger_entries" ON public.ledger_entries;
+CREATE POLICY "Allow service role full access to ledger_entries"
+  ON public.ledger_entries
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
