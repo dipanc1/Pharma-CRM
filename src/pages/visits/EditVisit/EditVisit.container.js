@@ -319,6 +319,13 @@ function EditVisitContainer() {
 
       if (deleteError) throw deleteError;
 
+      // Delete old ledger entry
+      await supabase
+        .from('ledger_entries')
+        .delete()
+        .eq('source_type', 'visit')
+        .eq('source_id', id);
+
       // Insert the current sales and create new stock transactions
       if (sales.length > 0) {
         const salesData = sales.map(sale => ({
@@ -334,6 +341,18 @@ function EditVisitContainer() {
           .insert(salesData);
 
         if (salesError) throw salesError;
+
+        // Create new ledger entry for total sales
+        const totalSalesAmount = sales.reduce((sum, s) => sum + s.total_amount, 0);
+        await supabase.from('ledger_entries').insert({
+          doctor_id: formData.doctor_id,
+          entry_date: formData.visit_date,
+          source_type: 'visit',
+          source_id: id,
+          description: `Sales from visit (edited) - ${sales.length} items`,
+          debit: totalSalesAmount,
+          credit: 0
+        });
 
         // Add new stock transactions for each sale
         for (const sale of sales) {

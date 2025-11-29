@@ -184,106 +184,151 @@ const CashFlowContainer = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (formData) => {
-    if (submitting) return;
+const handleSubmit = async (formData) => {
+  if (submitting) return;
 
-    try {
-      setSubmitting(true);
+  try {
+    setSubmitting(true);
 
-      // Validate required fields
-      if (!formData.name?.trim()) {
-        throw new Error('Name is required');
-      }
-      if (!formData.amount || parseFloat(formData.amount) <= 0) {
-        throw new Error('Valid amount is required');
-      }
-      if (!formData.transaction_date) {
-        throw new Error('Transaction date is required');
-      }
-
-      const processedData = {
-        ...formData,
-        doctor_id: formData.doctor_id || null,
-        name: formData.name.trim(),
-        amount: parseFloat(formData.amount),
-        notes: formData.notes?.trim() || null,
-        purpose: formData.purpose || null
-      };
-
-      if (editingRecord) {
-        // Update existing record
-        const { error } = await supabase
-          .from('cash_flow')
-          .update(processedData)
-          .eq('id', editingRecord.id);
-
-        if (error) throw error;
-        showSuccess('Record updated successfully');
-      } else {
-        // Insert new record
-        const { error } = await supabase
-          .from('cash_flow')
-          .insert([processedData]);
-
-        if (error) throw error;
-        showSuccess('Record added successfully');
-        // Reset to first page when adding new record
-        setCurrentPage(1);
-      }
-
-      setIsModalOpen(false);
-      setEditingRecord(null);
-      setDoctorSearch('');
-
-      // Refetch all data to get updated records, analytics, and charts
-      await Promise.all([
-        fetchCashFlow(),
-        fetchAnalytics(),
-        fetchChartData()
-      ]);
-    } catch (error) {
-      console.error('Error saving record:', error);
-      showError(error.message || 'Failed to save record');
-    } finally {
-      setSubmitting(false);
+    // Validate required fields
+    if (!formData.name?.trim()) {
+      throw new Error('Name is required');
     }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this record?')) {
-      return;
+    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+      throw new Error('Valid amount is required');
+    }
+    if (!formData.transaction_date) {
+      throw new Error('Transaction date is required');
     }
 
-    try {
+    const processedData = {
+      ...formData,
+      doctor_id: formData.doctor_id || null,
+      name: formData.name.trim(),
+      amount: parseFloat(formData.amount),
+      notes: formData.notes?.trim() || null,
+      purpose: formData.purpose || null
+    };
+
+    if (editingRecord) {
+      // Update existing record
       const { error } = await supabase
         .from('cash_flow')
-        .delete()
-        .eq('id', id);
+        .update(processedData)
+        .eq('id', editingRecord.id);
 
       if (error) throw error;
 
-      showSuccess('Record deleted successfully');
+      // Update ledger entry if doctor_id exists
+      if (processedData.doctor_id) {
+        // Delete old ledger entry
+        await supabase
+          .from('ledger_entries')
+          .delete()
+          .eq('source_type', 'cash')
+          .eq('source_id', editingRecord.id);
 
-      // Refetch all data after deletion
-      await Promise.all([
-        fetchCashFlow(),
-        fetchAnalytics(),
-        fetchChartData()
-      ]);
+        // Insert new ledger entry
+        const isCredit = processedData.cash_type === 'in_flow';
+        await supabase.from('ledger_entries').insert({
+          doctor_id: processedData.doctor_id,
+          entry_date: processedData.transaction_date,
+          source_type: 'cash',
+          source_id: editingRecord.id,
+          description: `${processedData.cash_type === 'in_flow' ? 'Payment received' : 'Payment made'} - ${processedData.name}`,
+          debit: isCredit ? 0 : processedData.amount,
+          credit: isCredit ? processedData.amount : 0
+        });
+      }
 
-      // Check if current page becomes empty after deletion and adjust if needed
-      setTimeout(() => {
-        const newTotalRecords = totalRecords - 1;
-        const maxPage = Math.ceil(newTotalRecords / recordsPerPage);
-        if (currentPage > maxPage && maxPage > 0) {
-          setCurrentPage(maxPage);
-        }
-      }, 100);
-    } catch (error) {
-      console.error('Error deleting record:', error);
-      showError('Failed to delete record');
+      showSuccess('Record updated successfully');
+    } else {
+      // Insert new record
+      const { data: newRecord, error } = await supabase
+        .from('cash_flow')
+        .insert([processedData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Create ledger entry if doctor_id exists
+      if (processedData.doctor_id) {
+        const isCredit = processedData.cash_type === 'in_flow';
+        await supabase.from('ledger_entries').insert({
+          doctor_id: processedData.doctor_id,
+          entry_date: processedData.transaction_date,
+          source_type: 'cash',
+          source_id: newRecord.id,
+          description: `${processedData.cash_type === 'in_flow' ? 'Payment received' : 'Payment made'} - ${processedData.name}`,
+          debit: isCredit ? 0 : processedData.amount,
+          credit: isCredit ? processedData.amount : 0
+        });
+      }
+
+      showSuccess('Record added successfully');
+      setCurrentPage(1);
     }
-  };
+
+    setIsModalOpen(false);
+    setEditingRecord(null);
+    setDoctorSearch('');
+
+    // Refetch all data to get updated records, analytics, and charts
+    await Promise.all([
+      fetchCashFlow(),
+      fetchAnalytics(),
+      fetchChartData()
+    ]);
+  } catch (error) {
+    console.error('Error saving record:', error);
+    showError(error.message || 'Failed to save record');
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+const handleDelete = async (id) => {
+  if (!window.confirm('Are you sure you want to delete this record?')) {
+    return;
+  }
+
+  try {
+    await supabase
+      .from('ledger_entries')
+      .delete()
+      .eq('source_type', 'cash')
+      .eq('source_id', id);
+
+    const { error } = await supabase
+      .from('cash_flow')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    showSuccess('Record deleted successfully');
+
+    // Refetch all data after deletion
+    await Promise.all([
+      fetchCashFlow(),
+      fetchAnalytics(),
+      fetchChartData()
+    ]);
+
+    // Check if current page becomes empty after deletion and adjust if needed
+    setTimeout(() => {
+      const newTotalRecords = totalRecords - 1;
+      const maxPage = Math.ceil(newTotalRecords / recordsPerPage);
+      if (currentPage > maxPage && maxPage > 0) {
+        setCurrentPage(maxPage);
+      }
+    }, 100);
+  } catch (error) {
+    console.error('Error deleting record:', error);
+    showError('Failed to delete record');
+  }
+};
 
   const handleFilterChange = (filterName, value) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));

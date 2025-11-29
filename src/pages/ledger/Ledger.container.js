@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import useToast from '../../hooks/useToast';
 import Ledger from './Ledger';
@@ -6,7 +6,7 @@ import Ledger from './Ledger';
 const LedgerContainer = () => {
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState([]);
-  const [trialBalance, setTrialBalance] = useState([]);
+  const [allEntries, setAllEntries] = useState([]); // For trial balance
   const [doctorFilter, setDoctorFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -15,11 +15,11 @@ const LedgerContainer = () => {
 
   useEffect(() => {
     fetchDoctors();
+    fetchAllEntries(); // Fetch all entries once for trial balance
   }, []);
 
   useEffect(() => {
     fetchLedger();
-    fetchTrialBalance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doctorFilter, startDate, endDate]);
 
@@ -30,6 +30,21 @@ const LedgerContainer = () => {
       .order('name');
     if (error) { console.error(error); }
     setDoctors(data || []);
+  };
+
+  const fetchAllEntries = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('ledger_entries')
+        .select(`
+          *,
+          doctors:doctor_id (id, name, contact_type)
+        `);
+      if (error) throw error;
+      setAllEntries(data || []);
+    } catch (e) {
+      console.error('Error fetching all entries:', e);
+    }
   };
 
   const fetchLedger = async () => {
@@ -60,18 +75,37 @@ const LedgerContainer = () => {
     }
   };
 
-  const fetchTrialBalance = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('ledger_trial_balance')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      setTrialBalance(data || []);
-    } catch (e) {
-      console.error(e);
-    }
+  const handleRefresh = async () => {
+    await Promise.all([fetchLedger(), fetchAllEntries()]);
   };
+
+  // Compute trial balance from ALL entries (not filtered)
+  const trialBalance = useMemo(() => {
+    const balanceMap = {};
+
+    allEntries.forEach(entry => {
+      const doctorId = entry.doctor_id;
+      if (!balanceMap[doctorId]) {
+        balanceMap[doctorId] = {
+          doctor_id: doctorId,
+          name: entry.doctors?.name || 'Unknown',
+          contact_type: entry.doctors?.contact_type || 'doctor',
+          total_debit: 0,
+          total_credit: 0
+        };
+      }
+      balanceMap[doctorId].total_debit += parseFloat(entry.debit || 0);
+      balanceMap[doctorId].total_credit += parseFloat(entry.credit || 0);
+    });
+
+    return Object.values(balanceMap)
+      .map(tb => ({
+        ...tb,
+        current_balance: tb.total_debit - tb.total_credit
+      }))
+      .filter(tb => tb.total_debit !== 0 || tb.total_credit !== 0) // Only show contacts with transactions
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allEntries]);
 
   return (
     <Ledger
@@ -85,6 +119,7 @@ const LedgerContainer = () => {
       endDate={endDate}
       setEndDate={setEndDate}
       doctors={doctors}
+      onRefresh={handleRefresh}
     />
   );
 };

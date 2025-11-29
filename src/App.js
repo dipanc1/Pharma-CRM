@@ -37,7 +37,7 @@ import EditVisit from './pages/visits/EditVisit';
 import CashFlow from './pages/cashflow';
 
 // Add Ledger pages
-import Ledger from './pages/ledger';
+import Ledger from './pages/ledger'
 
 function App() {
   return (
