@@ -7,9 +7,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
 } from 'recharts';
 import { format } from 'date-fns';
 import {
@@ -56,11 +53,11 @@ function Sales({
   filteredProducts,
   handleProductSelect
 }) {
-  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
+  const totalCompanySales = companyData.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
 
   const tableHeaders = ['Date', 'Contact', 'Type', 'Product', 'Company', 'Quantity', 'Unit Price', 'Total', 'Margin'];
   const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
-  const hasActiveFilters = startDate || endDate || doctorFilter || productFilter;
+  const hasActiveFilters = !!(startDate || endDate || doctorFilter || productFilter || doctorSearch || productSearch);
 
   return loading ? (
     <Loader />
@@ -258,41 +255,64 @@ function Sales({
         </div>
       </div>
 
-      {/* Charts */}
+      {/* Charts (Sales by Company converted to Table) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sales by Company */}
+        {/* Sales by Company - Table */}
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Sales by Company</h3>
-          <div className="h-64">
-            {companyData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={companyData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ company, percent }) => `${company} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="amount"
-                  >
-                    {companyData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                No data available
-              </div>
-            )}
-          </div>
+          {companyData.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Company
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Sales (₹)
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      % Share
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {companyData
+                    .sort((a, b) => b.amount - a.amount)
+                    .map((row) => {
+                      const amount = parseFloat(row.amount) || 0;
+                      const percent = totalCompanySales > 0 ? (amount / totalCompanySales) * 100 : 0;
+                      return (
+                        <tr key={row.company}>
+                          <td className="px-4 py-2 text-sm text-gray-900">{row.company}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                            ₹{amount.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                            {percent.toFixed(2)}%
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {/* Total Row */}
+                  <tr className="bg-gray-50 font-medium">
+                    <td className="px-4 py-2 text-sm text-gray-900">Total</td>
+                    <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                      ₹{totalCompanySales.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-900 text-right">100.00%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-64 text-gray-500">
+              No data available
+            </div>
+          )}
         </div>
 
-        {/* Top Contacts by Sales */}
+        {/* Top Contacts by Sales (keep existing bar chart) */}
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Top Contacts by Sales</h3>
           <div className="h-64">
@@ -309,7 +329,7 @@ function Sales({
                   />
                   <YAxis />
                   <Tooltip
-                    formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']}
+                    formatter={(value) => [`₹${Number(value).toFixed(2)}`, 'Amount']}
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
@@ -321,11 +341,11 @@ function Sales({
                               <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${isChemist
                                 ? 'bg-teal-100 text-teal-800'
                                 : 'bg-indigo-100 text-indigo-800'
-                                }`}>
+                              }`}>
                                 {isChemist ? 'Chemist' : 'Doctor'}
                               </span>
                             </div>
-                            <p className="text-sm">₹{data.amount.toFixed(2)}</p>
+                            <p className="text-sm">₹{Number(data.amount).toFixed(2)}</p>
                           </div>
                         );
                       }

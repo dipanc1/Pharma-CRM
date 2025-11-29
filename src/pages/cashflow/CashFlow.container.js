@@ -37,7 +37,16 @@ const CashFlowContainer = () => {
     dailyTrendData: []
   });
 
+  // Doctor/Chemist linking state
+  const [doctors, setDoctors] = useState([]);
+  const [doctorSearch, setDoctorSearch] = useState('');
+
   const { toast, showError, showSuccess, hideToast } = useToast();
+
+  useEffect(() => {
+    fetchDoctors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetchCashFlow();
@@ -55,6 +64,20 @@ const CashFlowContainer = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.startDate, filters.endDate, filters.cashType, filters.type, filters.purpose]);
 
+  const fetchDoctors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('doctors')
+        .select('id, name, contact_type, hospital, specialization')
+        .order('name');
+      
+      if (error) throw error;
+      setDoctors(data || []);
+    } catch (err) {
+      console.error('Error fetching doctors:', err);
+    }
+  };
+
   const fetchCashFlow = async () => {
     try {
       setLoading(true);
@@ -69,7 +92,16 @@ const CashFlowContainer = () => {
 
       let query = supabase
         .from('cash_flow')
-        .select('*', { count: 'exact' })
+        .select(`
+          *,
+          doctors:doctor_id (
+            id,
+            name,
+            contact_type,
+            hospital,
+            specialization
+          )
+        `, { count: 'exact' })
         .order('transaction_date', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -112,7 +144,8 @@ const CashFlowContainer = () => {
     if (filters.searchTerm) {
       const searchLower = filters.searchTerm.toLowerCase();
       filteredData = filteredData.filter(record =>
-        (record.name || '').toLowerCase().includes(searchLower)
+        (record.name || '').toLowerCase().includes(searchLower) ||
+        (record.doctors?.name || '').toLowerCase().includes(searchLower)
       );
     }
 
@@ -127,6 +160,7 @@ const CashFlowContainer = () => {
 
   const handleAdd = () => {
     setEditingRecord(null);
+    setDoctorSearch('');
     setIsModalOpen(true);
   };
 
@@ -139,6 +173,14 @@ const CashFlowContainer = () => {
         new Date().toISOString().split('T')[0]
     };
     setEditingRecord(formattedRecord);
+    
+    // Set doctor search if linked
+    if (record.doctors?.name) {
+      setDoctorSearch(record.doctors.name);
+    } else {
+      setDoctorSearch('');
+    }
+    
     setIsModalOpen(true);
   };
 
@@ -161,6 +203,7 @@ const CashFlowContainer = () => {
 
       const processedData = {
         ...formData,
+        doctor_id: formData.doctor_id || null,
         name: formData.name.trim(),
         amount: parseFloat(formData.amount),
         notes: formData.notes?.trim() || null,
@@ -190,6 +233,7 @@ const CashFlowContainer = () => {
 
       setIsModalOpen(false);
       setEditingRecord(null);
+      setDoctorSearch('');
 
       // Refetch all data to get updated records, analytics, and charts
       await Promise.all([
@@ -243,7 +287,7 @@ const CashFlowContainer = () => {
 
   const handleFilterChange = (filterName, value) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
-    setCurrentPage  (1);
+    setCurrentPage(1);
   };
 
   const handlePageChange = (page) => {
@@ -254,6 +298,7 @@ const CashFlowContainer = () => {
     if (submitting) return;
     setIsModalOpen(false);
     setEditingRecord(null);
+    setDoctorSearch('');
   };
 
   const fetchAnalytics = async () => {
@@ -400,6 +445,10 @@ const CashFlowContainer = () => {
     }
   };
 
+  const filteredDoctors = doctors.filter(d =>
+    (d.name || '').toLowerCase().includes(doctorSearch.toLowerCase())
+  );
+
   return (
     <>
       <CashFlow
@@ -421,6 +470,9 @@ const CashFlowContainer = () => {
         onModalClose={handleModalClose}
         onFilterChange={handleFilterChange}
         onPageChange={handlePageChange}
+        doctors={filteredDoctors}
+        doctorSearch={doctorSearch}
+        setDoctorSearch={setDoctorSearch}
       />
       <Toast
         message={toast.message}

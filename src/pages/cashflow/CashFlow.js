@@ -49,7 +49,10 @@ const CashFlow = ({
   onSubmit,
   onModalClose,
   onFilterChange,
-  onPageChange
+  onPageChange,
+  doctors,
+  doctorSearch,
+  setDoctorSearch
 }) => {
   const [formData, setFormData] = useState({
     transaction_date: new Date().toISOString().split('T')[0],
@@ -58,10 +61,12 @@ const CashFlow = ({
     type: 'sundry',
     amount: '',
     purpose: 'expense',
-    notes: ''
+    notes: '',
+    doctor_id: ''
   });
 
   const [formErrors, setFormErrors] = useState({});
+  const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
 
   // Initialize form data when modal opens or editing record changes
   useEffect(() => {
@@ -74,7 +79,8 @@ const CashFlow = ({
           type: editingRecord.type || 'sundry',
           amount: editingRecord.amount ? editingRecord.amount.toString() : '',
           purpose: editingRecord.purpose || '',
-          notes: editingRecord.notes || ''
+          notes: editingRecord.notes || '',
+          doctor_id: editingRecord.doctor_id || ''
         });
       } else {
         setFormData({
@@ -84,7 +90,8 @@ const CashFlow = ({
           type: 'sundry',
           amount: '',
           purpose: 'expense',
-          notes: ''
+          notes: '',
+          doctor_id: ''
         });
       }
       setFormErrors({});
@@ -187,6 +194,34 @@ const CashFlow = ({
           suffix=""
         />
       )
+    },
+    {
+      key: 'doctors',
+      label: 'Linked Contact',
+      format: (value, row) => {
+        if (row.doctors?.id) {
+          const isChemist = row.doctors.contact_type === 'chemist';
+          return (
+            <div className="flex items-center gap-2">
+              <a
+                href={`/doctors/${row.doctors.id}`}
+                className="text-primary-600 hover:underline font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                {row.doctors.name}
+              </a>
+              <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                isChemist ? 'bg-teal-100 text-teal-800' : 'bg-indigo-100 text-indigo-800'
+              }`}>
+                {isChemist ? 'Chemist' : 'Doctor'}
+              </span>
+            </div>
+          );
+        }
+        return <span className="text-gray-400 text-sm">—</span>;
+      }
     },
     { key: 'name', label: 'Name' },
     {
@@ -560,7 +595,7 @@ const CashFlow = ({
                 {columns.map((column) => (
                   <Table.Cell key={`${record.id}-${column.key}`}>
                     {column.format
-                      ? column.format(record[column.key])
+                      ? column.format(record[column.key], record)
                       : record[column.key] || '-'}
                   </Table.Cell>
                 ))}
@@ -589,6 +624,7 @@ const CashFlow = ({
       >
         <form onSubmit={handleFormSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Transaction Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Transaction Date *
@@ -600,14 +636,16 @@ const CashFlow = ({
                 onChange={handleInputChange}
                 required
                 max={new Date().toISOString().split('T')[0]}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${formErrors.transaction_date ? 'border-red-300' : 'border-gray-300'
-                  }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  formErrors.transaction_date ? 'border-red-300' : 'border-gray-300'
+                }`}
               />
               {formErrors.transaction_date && (
                 <p className="mt-1 text-sm text-red-600">{formErrors.transaction_date}</p>
               )}
             </div>
 
+            {/* Flow Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Flow Type *
@@ -624,6 +662,7 @@ const CashFlow = ({
               </select>
             </div>
 
+            {/* Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Type *
@@ -640,6 +679,7 @@ const CashFlow = ({
               </select>
             </div>
 
+            {/* Purpose */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Purpose
@@ -652,14 +692,83 @@ const CashFlow = ({
               >
                 <option value="">Select Purpose</option>
                 {filteredPurposeOptions.map(option => (
-                  <option key={option.value} value={option.value}>
+                  <option key={`${option.value}-${option.cash_type}`} value={option.value}>
                     {option.label}
                   </option>
                 ))}
               </select>
             </div>
+
+            {/* Link to Contact - Full Width */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Link to Contact (Optional)
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={doctorSearch}
+                  onChange={(e) => setDoctorSearch(e.target.value)}
+                  onFocus={() => setShowDoctorDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowDoctorDropdown(false), 200)}
+                  placeholder="Search doctor / chemist..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {showDoctorDropdown && doctorSearch && doctors.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-56 overflow-auto">
+                    {doctors.map(d => {
+                      const isChemist = d.contact_type === 'chemist';
+                      return (
+                        <div
+                          key={d.id}
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, doctor_id: d.id }));
+                            setDoctorSearch(d.name);
+                            setShowDoctorDropdown(false);
+                          }}
+                          className="px-3 py-2 cursor-pointer hover:bg-gray-50 flex justify-between items-center border-b last:border-b-0"
+                        >
+                          <div>
+                            <span className="text-sm font-medium text-gray-900">{d.name}</span>
+                            {(isChemist ? d.hospital : d.specialization) && (
+                              <span className="text-xs text-gray-500 ml-2">
+                                • {isChemist ? d.hospital : d.specialization}
+                              </span>
+                            )}
+                          </div>
+                          <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                            isChemist ? 'bg-teal-100 text-teal-800' : 'bg-indigo-100 text-indigo-800'
+                          }`}>
+                            {isChemist ? 'Chemist' : 'Doctor'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {formData.doctor_id && (
+                  <p className="mt-1 text-xs text-green-600 flex items-center justify-between">
+                    <span>✓ Linked to contact</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, doctor_id: '' }));
+                        setDoctorSearch('');
+                      }}
+                      className="text-red-600 hover:underline"
+                    >
+                      Clear
+                    </button>
+                  </p>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Optionally link this transaction to a doctor or chemist for better tracking.
+              </p>
+            </div>
           </div>
 
+          {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Name *
@@ -671,14 +780,16 @@ const CashFlow = ({
               onChange={handleInputChange}
               required
               placeholder="Person name or sundry item description"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${formErrors.name ? 'border-red-300' : 'border-gray-300'
-                }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                formErrors.name ? 'border-red-300' : 'border-gray-300'
+              }`}
             />
             {formErrors.name && (
               <p className="mt-1 text-sm text-red-600">{formErrors.name}</p>
             )}
           </div>
 
+          {/* Amount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Amount *
@@ -692,14 +803,16 @@ const CashFlow = ({
               min="0.01"
               step="0.01"
               placeholder="0.00"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${formErrors.amount ? 'border-red-300' : 'border-gray-300'
-                }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                formErrors.amount ? 'border-red-300' : 'border-gray-300'
+              }`}
             />
             {formErrors.amount && (
               <p className="mt-1 text-sm text-red-600">{formErrors.amount}</p>
             )}
           </div>
 
+          {/* Notes */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Notes
@@ -714,6 +827,7 @@ const CashFlow = ({
             />
           </div>
 
+          {/* Form Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
@@ -726,10 +840,11 @@ const CashFlow = ({
             <button
               type="submit"
               disabled={submitting}
-              className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${editingRecord
-                ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
-                : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
-                }`}
+              className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${
+                editingRecord
+                  ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
+                  : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+              }`}
             >
               {submitting
                 ? 'Saving...'
