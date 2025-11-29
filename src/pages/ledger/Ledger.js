@@ -37,15 +37,12 @@ const Ledger = ({
   view,
   setView
 }) => {
-  const entryHeaders = ['Date', 'Contact', 'Type', 'Source', 'Description', 'Debit', 'Credit', 'Balance'];
+  const entryHeaders = ['Date', 'Contact', 'Source Type', 'Description', 'Debit', 'Credit', 'Balance'];
   const tbHeaders = ['Contact', 'Details', 'Total Debit', 'Total Credit', 'Current Balance'];
 
-  const doctorOptions = [{ value: '', label: 'All Contacts' }].concat(
-    (doctors || []).map(d => ({ value: d.id, label: d.name }))
-  );
+  const doctorOptions = doctors.map(d => ({ value: d.id, label: d.name }));
 
   const sourceTypeOptions = [
-    { value: '', label: 'All Sources' },
     { value: 'visit', label: 'Visit' },
     { value: 'sale', label: 'Sale' },
     { value: 'cash', label: 'Cash' }

@@ -2,15 +2,17 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import useToast from '../../hooks/useToast';
 import Ledger from './Ledger';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 const LedgerContainer = () => {
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState([]);
   const [allEntries, setAllEntries] = useState([]);
   const [doctorFilter, setDoctorFilter] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const initialStartDate = format(startOfMonth(new Date()), 'yyyy-MM-dd');
+  const initialEndDate = format(endOfMonth(new Date()), 'yyyy-MM-dd');
+  const [startDate, setStartDate] = useState(initialStartDate);
+  const [endDate, setEndDate] = useState(initialEndDate);
   const [doctors, setDoctors] = useState([]);
   const [sourceType, setSourceType] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,8 +29,8 @@ const LedgerContainer = () => {
 
   useEffect(() => {
     fetchLedger();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctorFilter, startDate, endDate, sourceType, page, searchTerm]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctorFilter, startDate, endDate, sourceType]);
 
   const fetchDoctors = async () => {
     const { data, error } = await supabase
@@ -78,21 +80,7 @@ const LedgerContainer = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Apply search filter
-      let filtered = data || [];
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        filtered = filtered.filter(e => 
-          (e.doctors?.name || '').toLowerCase().includes(searchLower) ||
-          (e.description || '').toLowerCase().includes(searchLower)
-        );
-      }
-
-      // Client-side pagination
-      const start = (page - 1) * pageSize;
-      const paginated = filtered.slice(start, start + pageSize);
-
-      setEntries(paginated);
+      setEntries(data || []);
     } catch (e) {
       console.error(e);
       showError('Failed to load ledger entries');
@@ -106,42 +94,33 @@ const LedgerContainer = () => {
     await Promise.all([fetchLedger(), fetchAllEntries()]);
     showSuccess('Ledger refreshed successfully');
   };
-
-  const totalPages = useMemo(() => {
-    let filtered = allEntries;
-    if (doctorFilter) filtered = filtered.filter(e => e.doctor_id === doctorFilter);
-    if (sourceType) filtered = filtered.filter(e => e.source_type === sourceType);
-    if (startDate && endDate) {
-      filtered = filtered.filter(e => e.entry_date >= startDate && e.entry_date <= endDate);
-    }
+  const filteredForDisplay = useMemo(() => {
+    let filtered = entries;
     if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
+      const s = searchTerm.toLowerCase();
       filtered = filtered.filter(e =>
-        (e.doctors?.name || '').toLowerCase().includes(searchLower) ||
-        (e.description || '').toLowerCase().includes(searchLower)
+        (e.doctors?.name || '').toLowerCase().includes(s) ||
+        (e.description || '').toLowerCase().includes(s)
       );
     }
-    return Math.max(1, Math.ceil(filtered.length / pageSize));
-  }, [allEntries, doctorFilter, sourceType, startDate, endDate, searchTerm]);
+    return filtered;
+  }, [entries, searchTerm]);
+
+  const displayEntries = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredForDisplay.slice(start, start + pageSize);
+  }, [filteredForDisplay, page]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredForDisplay.length / pageSize)),
+    [filteredForDisplay]
+  );
 
   const periodTotals = useMemo(() => {
-    let filtered = allEntries;
-    if (doctorFilter) filtered = filtered.filter(e => e.doctor_id === doctorFilter);
-    if (sourceType) filtered = filtered.filter(e => e.source_type === sourceType);
-    if (startDate && endDate) {
-      filtered = filtered.filter(e => e.entry_date >= startDate && e.entry_date <= endDate);
-    }
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(e =>
-        (e.doctors?.name || '').toLowerCase().includes(searchLower) ||
-        (e.description || '').toLowerCase().includes(searchLower)
-      );
-    }
-    const debit = filtered.reduce((s, e) => s + parseFloat(e.debit || 0), 0);
-    const credit = filtered.reduce((s, e) => s + parseFloat(e.credit || 0), 0);
-    return { debit, credit, net: debit - credit, count: filtered.length };
-  }, [allEntries, doctorFilter, sourceType, startDate, endDate, searchTerm]);
+    const debit = filteredForDisplay.reduce((s, e) => s + parseFloat(e.debit || 0), 0);
+    const credit = filteredForDisplay.reduce((s, e) => s + parseFloat(e.credit || 0), 0);
+    return { debit, credit, net: debit - credit, count: filteredForDisplay.length };
+  }, [filteredForDisplay]);
 
   const trialBalance = useMemo(() => {
     const balanceMap = {};
@@ -238,7 +217,7 @@ const LedgerContainer = () => {
   return (
     <Ledger
       loading={loading}
-      entries={entries}
+      entries={displayEntries}
       trialBalance={trialBalance}
       doctorFilter={doctorFilter}
       setDoctorFilter={setDoctorFilter}
