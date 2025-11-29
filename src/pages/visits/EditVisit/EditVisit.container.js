@@ -283,7 +283,26 @@ function EditVisitContainer() {
     setSaving(true);
 
     try {
-      // Get original sales and ledger entries for reference
+      // Pre-validate stock for new sales before any database operations
+      if (sales.length > 0) {
+        for (const sale of sales) {
+          try {
+            const stockSummary = await calculateStockSummary(sale.product_id, formData.visit_date);
+            // For existing sales, we need to account for the quantity that will be restored
+            const existingSale = sales.find(s => s.id === sale.id && s.id < 1000000000000); // Database IDs are smaller
+            const adjustedStock = existingSale ? stockSummary.closingStock + existingSale.quantity : stockSummary.closingStock;
+            
+            if (adjustedStock < sale.quantity) {
+              throw new Error(`Insufficient stock for ${sale.product_name}. Available: ${adjustedStock}, Required: ${sale.quantity}`);
+            }
+          } catch (stockError) {
+            showError(`Stock validation failed: ${stockError.message}`);
+            return;
+          }
+        }
+      }
+
+      // Get original sales for reference
       const { data: originalSales, error: originalSalesError } = await supabase
         .from('sales')
         .select('*')
@@ -292,6 +311,23 @@ function EditVisitContainer() {
       if (originalSalesError) throw originalSalesError;
 
       const originalTotalAmount = (originalSales || []).reduce((sum, s) => sum + parseFloat(s.total_amount || 0), 0);
+
+      // Generate invoice numbers early
+      let reversalInvoiceNumber = null;
+      let newInvoiceNumber = null;
+      
+      try {
+        if (originalTotalAmount > 0) {
+          reversalInvoiceNumber = await generateInvoiceNumber();
+        }
+        if (sales.length > 0) {
+          newInvoiceNumber = await generateInvoiceNumber();
+        }
+      } catch (invoiceError) {
+        console.error('Invoice generation error:', invoiceError);
+        showError('Failed to generate invoice numbers. Please try again.');
+        return;
+      }
 
       // Update visit
       const { error: visitError } = await supabase
@@ -303,21 +339,25 @@ function EditVisitContainer() {
 
       // Reverse original stock transactions
       for (const originalSale of originalSales || []) {
-        await addStockTransaction({
-          product_id: originalSale.product_id,
-          transaction_type: TRANSACTION_TYPES.SALE_REVERSAL,
-          quantity: originalSale.quantity,
-          transaction_date: formData.visit_date,
-          reference_type: 'visit_edit_reversal',
-          reference_id: id,
-          notes: `Sale reversal for visit edit - Restoring ${originalSale.quantity} units`
-        });
+        try {
+          await addStockTransaction({
+            product_id: originalSale.product_id,
+            transaction_type: TRANSACTION_TYPES.SALE_REVERSAL,
+            quantity: originalSale.quantity,
+            transaction_date: formData.visit_date,
+            reference_type: 'visit_edit_reversal',
+            reference_id: id,
+            notes: `Sale reversal for visit edit - Restoring ${originalSale.quantity} units`
+          });
+        } catch (stockError) {
+          console.error('Stock reversal error:', stockError);
+          throw new Error(`Failed to reverse stock for original sale`);
+        }
       }
 
       // Create reversal ledger entry if there were original sales
-      if (originalTotalAmount > 0) {
-        const reversalInvoiceNumber = await generateInvoiceNumber();
-        await supabase.from('ledger_entries').insert({
+      if (originalTotalAmount > 0 && reversalInvoiceNumber) {
+        const { error: reversalLedgerError } = await supabase.from('ledger_entries').insert({
           doctor_id: formData.doctor_id,
           entry_date: formData.visit_date,
           source_type: 'visit',
@@ -327,6 +367,11 @@ function EditVisitContainer() {
           credit: originalTotalAmount, // CREDIT - Reducing customer debt
           invoice_number: reversalInvoiceNumber
         });
+
+        if (reversalLedgerError) {
+          console.error('Reversal ledger error:', reversalLedgerError);
+          throw new Error('Failed to create reversal ledger entry');
+        }
       }
 
       // Delete all existing sales for this visit (but keep ledger history)
@@ -338,7 +383,7 @@ function EditVisitContainer() {
       if (deleteError) throw deleteError;
 
       // Insert the current sales and create new transactions
-      if (sales.length > 0) {
+      if (sales.length > 0 && newInvoiceNumber) {
         const salesData = sales.map(sale => ({
           visit_id: id,
           product_id: sale.product_id,
@@ -355,9 +400,8 @@ function EditVisitContainer() {
 
         // Create new ledger entry for updated sales
         const totalSalesAmount = sales.reduce((sum, s) => sum + s.total_amount, 0);
-        const newInvoiceNumber = await generateInvoiceNumber();
         
-        await supabase.from('ledger_entries').insert({
+        const { error: newLedgerError } = await supabase.from('ledger_entries').insert({
           doctor_id: formData.doctor_id,
           entry_date: formData.visit_date,
           source_type: 'visit',
@@ -368,17 +412,27 @@ function EditVisitContainer() {
           invoice_number: newInvoiceNumber
         });
 
+        if (newLedgerError) {
+          console.error('New ledger error:', newLedgerError);
+          throw new Error('Failed to create new ledger entry');
+        }
+
         // Add new stock transactions for each sale
         for (const sale of sales) {
-          await addStockTransaction({
-            product_id: sale.product_id,
-            transaction_type: TRANSACTION_TYPES.SALE,
-            quantity: -sale.quantity,
-            transaction_date: formData.visit_date,
-            reference_type: 'visit',
-            reference_id: id,
-            notes: `Updated sale via visit edit - Invoice: ${newInvoiceNumber}`
-          });
+          try {
+            await addStockTransaction({
+              product_id: sale.product_id,
+              transaction_type: TRANSACTION_TYPES.SALE,
+              quantity: -sale.quantity,
+              transaction_date: formData.visit_date,
+              reference_type: 'visit',
+              reference_id: id,
+              notes: `Updated sale via visit edit - Invoice: ${newInvoiceNumber}`
+            });
+          } catch (stockError) {
+            console.error('New stock transaction error:', stockError);
+            throw new Error(`Failed to update stock for ${sale.product_name}`);
+          }
         }
       }
 
@@ -389,16 +443,22 @@ function EditVisitContainer() {
       ]);
 
       for (const productId of allAffectedProducts) {
-        await updateProductStock(productId);
+        try {
+          await updateProductStock(productId);
+        } catch (stockError) {
+          console.error('Product stock update error:', stockError);
+          // Don't throw here as this is cleanup - log and continue
+        }
       }
 
-      showSuccess('Visit updated successfully!');
+      const successMessage = `Visit updated successfully! ${newInvoiceNumber ? `New Invoice: ${newInvoiceNumber}` : ''}`;
+      showSuccess(successMessage);
       setTimeout(() => {
         navigate(`/visits/${id}`);
       }, 1500);
     } catch (error) {
       console.error('Error updating visit:', error);
-      showError('Error updating visit. Please try again.');
+      showError(error.message || 'Error updating visit. Please try again.');
     } finally {
       setSaving(false);
     }

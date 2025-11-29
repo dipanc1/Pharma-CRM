@@ -53,7 +53,10 @@ function Sales({
   filteredProducts,
   handleProductSelect
 }) {
-  const totalCompanySales = companyData.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+  const totalCompanySales = companyData.reduce((sum, c) => {
+    const amount = parseFloat(c.amount) || 0;
+    return sum + amount;
+  }, 0);
 
   const tableHeaders = ['Date', 'Contact', 'Type', 'Product', 'Company', 'Quantity', 'Unit Price', 'Total', 'Margin'];
   const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -67,12 +70,12 @@ function Sales({
         { onClick: handleReload, icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, title: 'Refresh' }
       ]} />
 
-      {/* Stats Cards */}
+      {/* Stats Cards with better formatting */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="card">
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500">Total Revenue</p>
-            <p className="text-3xl font-bold text-gray-900">₹{totalRevenue.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-gray-900">₹{(totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             {(startDate && endDate) && (
               <p className="text-xs text-gray-500 mt-1">
                 {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}
@@ -83,7 +86,9 @@ function Sales({
         <div className="card">
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500">Total Margin</p>
-            <p className="text-3xl font-bold text-green-600">₹{totalGrossProfit.toFixed(2)}</p>
+            <p className={`text-3xl font-bold mt-1 ${(totalGrossProfit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              ₹{Math.abs(totalGrossProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
             {(startDate && endDate) && (
               <p className="text-xs text-gray-500 mt-1">
                 {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}
@@ -94,7 +99,7 @@ function Sales({
         <div className="card">
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500">Total Items Sold</p>
-            <p className="text-3xl font-bold text-gray-900">{totalItems}</p>
+            <p className="text-3xl font-bold text-gray-900">{(totalItems || 0).toLocaleString('en-IN')}</p>
             {(startDate && endDate) && (
               <p className="text-xs text-gray-500 mt-1">
                 {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}
@@ -105,7 +110,7 @@ function Sales({
         <div className="card">
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500">Total Transactions</p>
-            <p className="text-3xl font-bold text-gray-900">{totalTransactions}</p>
+            <p className="text-3xl font-bold text-gray-900">{(totalTransactions || 0).toLocaleString('en-IN')}</p>
             {(startDate && endDate) && (
               <p className="text-xs text-gray-500 mt-1">
                 {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}
@@ -386,10 +391,26 @@ function Sales({
           <Table headers={tableHeaders}>
             {filteredSales.map((sale) => {
               const isChemist = sale.visits?.doctors?.contact_type === 'chemist';
-              const costPrice = parseFloat(sale.products?.price || 0);
-              const sellingPrice = parseFloat(sale.unit_price);
-              const profitPerUnit = sellingPrice - costPrice;
-              const totalProfit = profitPerUnit * sale.quantity;
+              
+              // Enhanced profit calculation with error handling
+              let profitDisplay = '₹0.00';
+              let profitColor = 'text-gray-600';
+              
+              try {
+                const costPrice = parseFloat(sale.products?.price || 0);
+                const sellingPrice = parseFloat(sale.unit_price || 0);
+                const quantity = parseInt(sale.quantity || 0, 10);
+                
+                if (!isNaN(costPrice) && !isNaN(sellingPrice) && !isNaN(quantity)) {
+                  const profitPerUnit = sellingPrice - costPrice;
+                  const totalProfit = profitPerUnit * quantity;
+                  
+                  profitDisplay = `₹${Math.abs(totalProfit).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                  profitColor = totalProfit >= 0 ? 'text-green-600' : 'text-red-600';
+                }
+              } catch (error) {
+                console.error('Error calculating profit for display:', error);
+              }
 
               return (
                 <Table.Row key={sale.id}>
@@ -398,7 +419,7 @@ function Sales({
                   </Table.Cell>
                   <Table.Cell>
                     <div>
-                      <div className="font-medium text-gray-900">{sale.visits?.doctors?.name}</div>
+                      <div className="font-medium text-gray-900">{sale.visits?.doctors?.name || 'Unknown'}</div>
                       <div className="text-sm text-gray-500">
                         {isChemist ? (
                           sale.visits?.doctors?.hospital || 'N/A'
@@ -416,13 +437,13 @@ function Sales({
                       {isChemist ? 'Chemist' : 'Doctor'}
                     </span>
                   </Table.Cell>
-                  <Table.Cell className="font-medium">{sale.products?.name}</Table.Cell>
+                  <Table.Cell className="font-medium">{sale.products?.name || 'Unknown Product'}</Table.Cell>
                   <Table.Cell>{sale.products?.company_name || 'N/A'}</Table.Cell>
-                  <Table.Cell>{sale.quantity}</Table.Cell>
-                  <Table.Cell>₹{parseFloat(sale.unit_price).toFixed(2)}</Table.Cell>
-                  <Table.Cell className="font-medium">₹{parseFloat(sale.total_amount).toFixed(2)}</Table.Cell>
-                  <Table.Cell className={`font-medium ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ₹{totalProfit.toFixed(2)}
+                  <Table.Cell>{parseInt(sale.quantity || 0, 10).toLocaleString('en-IN')}</Table.Cell>
+                  <Table.Cell>₹{parseFloat(sale.unit_price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Table.Cell>
+                  <Table.Cell className="font-medium">₹{parseFloat(sale.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Table.Cell>
+                  <Table.Cell className={`font-medium ${profitColor}`}>
+                    {profitDisplay}
                   </Table.Cell>
                 </Table.Row>
               );

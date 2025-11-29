@@ -31,7 +31,7 @@ const LedgerContainer = () => {
   useEffect(() => {
     fetchLedger();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctorFilter, startDate, endDate, sourceType]);
+  }, [doctorFilter, startDate, endDate, sourceType, allEntries]); // Added allEntries dependency
 
   const fetchDoctors = async () => {
     const { data, error } = await supabase
@@ -63,6 +63,13 @@ const LedgerContainer = () => {
   const fetchLedger = async () => {
     try {
       setLoading(true);
+      
+      // Early return if allEntries not loaded yet
+      if (allEntries.length === 0) {
+        setEntriesWithBalance([]);
+        return;
+      }
+
       let query = supabase
         .from('ledger_entries')
         .select(`
@@ -81,32 +88,47 @@ const LedgerContainer = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Calculate running balance for each doctor
-      const entriesWithRunningBalance = [];
-      const doctorIds = [...new Set((data || []).map(entry => entry.doctor_id))];
-      
-      for (const doctorId of doctorIds) {
-        const doctorEntries = calculateRunningBalance(allEntries, doctorId);
-        const filteredDoctorEntries = doctorEntries.filter(entry => 
-          (data || []).some(d => d.id === entry.id)
-        );
-        entriesWithRunningBalance.push(...filteredDoctorEntries);
+      if (!data || data.length === 0) {
+        setEntriesWithBalance([]);
+        return;
       }
 
-      // Sort the final result by date descending
-      entriesWithRunningBalance.sort((a, b) => {
-        const dateA = new Date(a.entry_date);
-        const dateB = new Date(b.entry_date);
-        if (dateB.getTime() === dateA.getTime()) {
-          return new Date(b.created_at) - new Date(a.created_at);
+      try {
+        // Calculate running balance for each doctor that appears in filtered data
+        const entriesWithRunningBalance = [];
+        const doctorIds = [...new Set(data.map(entry => entry.doctor_id))];
+        
+        for (const doctorId of doctorIds) {
+          const doctorEntries = calculateRunningBalance(allEntries, doctorId);
+          
+          // Filter to only show entries that match our current filter criteria
+          const filteredDoctorEntries = doctorEntries.filter(entry => 
+            data.some(d => d.id === entry.id)
+          );
+          
+          entriesWithRunningBalance.push(...filteredDoctorEntries);
         }
-        return dateB - dateA;
-      });
 
-      setEntriesWithBalance(entriesWithRunningBalance);
+        // Sort the final result by date descending
+        entriesWithRunningBalance.sort((a, b) => {
+          const dateA = new Date(a.entry_date);
+          const dateB = new Date(b.entry_date);
+          if (dateB.getTime() === dateA.getTime()) {
+            return new Date(b.created_at) - new Date(a.created_at);
+          }
+          return dateB - dateA;
+        });
+
+        setEntriesWithBalance(entriesWithRunningBalance);
+      } catch (balanceError) {
+        console.error('Error calculating running balance:', balanceError);
+        // Fallback: show entries without running balance
+        setEntriesWithBalance(data.map(entry => ({ ...entry, running_balance: 0 })));
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Error fetching ledger:', e);
       showError('Failed to load ledger entries');
+      setEntriesWithBalance([]);
     } finally {
       setLoading(false);
     }
@@ -114,7 +136,9 @@ const LedgerContainer = () => {
 
   const handleRefresh = async () => {
     setPage(1);
-    await Promise.all([fetchLedger(), fetchAllEntries()]);
+    // Fetch allEntries first, then ledger will be fetched due to dependency
+    await fetchAllEntries();
+    await fetchLedger();
     showSuccess('Ledger refreshed successfully');
   };
   const filteredForDisplay = useMemo(() => {

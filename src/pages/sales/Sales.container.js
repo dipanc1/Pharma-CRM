@@ -9,7 +9,7 @@ function SalesContainer() {
   const [salesState, setSalesState] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd')); // Changed to current date
   const [doctorFilter, setDoctorFilter] = useState('');
   const [doctors, setDoctors] = useState([]);
   const [productFilter, setProductFilter] = useState('');
@@ -42,7 +42,7 @@ function SalesContainer() {
     try {
       setLoading(true);
 
-      // Date validation and short-circuit rules
+      // Enhanced date validation
       const justStart = !!(startDate && !endDate);
       const justEnd = !!(!startDate && endDate);
       const invalidRange = !!(startDate && endDate && endDate < startDate);
@@ -65,8 +65,8 @@ function SalesContainer() {
         `)
         .order('created_at', { ascending: false });
 
-      // Apply date filters only when both dates are selected and valid
-      if (startDate && endDate) {
+      // Apply date filters with proper validation
+      if (startDate && endDate && startDate <= endDate) {
         query = query
           .gte('visits.visit_date', startDate)
           .lte('visits.visit_date', endDate);
@@ -82,11 +82,25 @@ function SalesContainer() {
 
       const { data, error } = await query;
 
-      if (error) throw error;
-      setSalesState(data || []);
+      if (error) {
+        console.error('Sales fetch error:', error);
+        throw error;
+      }
+      
+      // Validate and clean data
+      const cleanedData = (data || []).filter(sale => {
+        return sale && 
+               sale.visits && 
+               sale.products &&
+               !isNaN(parseFloat(sale.total_amount || 0)) &&
+               !isNaN(parseInt(sale.quantity || 0, 10));
+      });
+
+      setSalesState(cleanedData);
     } catch (error) {
       console.error('Error fetching sales:', error);
-      showError('Error loading sales data. Please try again.');
+      showError('Error loading sales data. Please check your connection and try again.');
+      setSalesState([]);
     } finally {
       setLoading(false);
     }
@@ -150,49 +164,113 @@ function SalesContainer() {
     });
   }, [salesState, doctorSearch, productSearch]);
 
-  // Totals based on filtered list
+  // Enhanced totals calculation with error handling
   const totals = useMemo(() => {
-    const totalRevenue =
-      filteredSalesAll.reduce((sum, s) => sum + parseFloat(s.total_amount || 0), 0) || 0;
-    const totalItems =
-      filteredSalesAll.reduce((sum, s) => sum + (parseInt(s.quantity, 10) || 0), 0) || 0;
-    const totalTransactions = filteredSalesAll.length;
-    const totalGrossProfit =
-      filteredSalesAll.reduce((sum, s) => {
-        const costPrice = parseFloat(s.products?.price || 0);
-        const sellingPrice = parseFloat(s.unit_price || 0);
-        const profitPerUnit = sellingPrice - costPrice;
-        return sum + profitPerUnit * (parseInt(s.quantity, 10) || 0);
-      }, 0) || 0;
+    try {
+      const totalRevenue = filteredSalesAll.reduce((sum, s) => {
+        const amount = parseFloat(s.total_amount || 0);
+        return sum + (isNaN(amount) ? 0 : amount);
+      }, 0);
+      
+      const totalItems = filteredSalesAll.reduce((sum, s) => {
+        const quantity = parseInt(s.quantity || 0, 10);
+        return sum + (isNaN(quantity) ? 0 : quantity);
+      }, 0);
+      
+      const totalTransactions = filteredSalesAll.length;
+      
+      const totalGrossProfit = filteredSalesAll.reduce((sum, s) => {
+        try {
+          const costPrice = parseFloat(s.products?.price || 0);
+          const sellingPrice = parseFloat(s.unit_price || 0);
+          const quantity = parseInt(s.quantity || 0, 10);
+          
+          if (isNaN(costPrice) || isNaN(sellingPrice) || isNaN(quantity)) {
+            return sum;
+          }
+          
+          const profitPerUnit = sellingPrice - costPrice;
+          return sum + (profitPerUnit * quantity);
+        } catch (error) {
+          console.error('Error calculating profit for sale:', s.id, error);
+          return sum;
+        }
+      }, 0);
 
-    return { totalRevenue, totalItems, totalTransactions, totalGrossProfit };
+      return { 
+        totalRevenue: totalRevenue || 0, 
+        totalItems: totalItems || 0, 
+        totalTransactions, 
+        totalGrossProfit: totalGrossProfit || 0 
+      };
+    } catch (error) {
+      console.error('Error calculating totals:', error);
+      return { totalRevenue: 0, totalItems: 0, totalTransactions: 0, totalGrossProfit: 0 };
+    }
   }, [filteredSalesAll]);
 
-  // Charts based on filtered list
+  // Enhanced company data with error handling
   const companyData = useMemo(() => {
-    const byCompany = filteredSalesAll.reduce((acc, s) => {
-      const company = s.products?.company_name || 'Other';
-      acc[company] = (acc[company] || 0) + parseFloat(s.total_amount || 0);
-      return acc;
-    }, {});
-    return Object.entries(byCompany).map(([company, amount]) => ({
-      company,
-      amount: parseFloat(amount)
-    }));
+    try {
+      const byCompany = filteredSalesAll.reduce((acc, s) => {
+        try {
+          const company = s.products?.company_name || 'Other';
+          const amount = parseFloat(s.total_amount || 0);
+          
+          if (isNaN(amount)) return acc;
+          
+          acc[company] = (acc[company] || 0) + amount;
+          return acc;
+        } catch (error) {
+          console.error('Error processing company data for sale:', s.id, error);
+          return acc;
+        }
+      }, {});
+      
+      return Object.entries(byCompany)
+        .map(([company, amount]) => ({
+          company,
+          amount: parseFloat(amount) || 0
+        }))
+        .filter(item => item.amount > 0) // Filter out zero amounts
+        .sort((a, b) => b.amount - a.amount); // Sort by amount descending
+    } catch (error) {
+      console.error('Error calculating company data:', error);
+      return [];
+    }
   }, [filteredSalesAll]);
 
+  // Enhanced contact data with error handling
   const contactData = useMemo(() => {
-    const byContact = filteredSalesAll.reduce((acc, s) => {
-      const name = s.visits?.doctors?.name || 'Unknown';
-      const contact_type = s.visits?.doctors?.contact_type || 'doctor';
-      const key = `${name}|${contact_type}`;
-      if (!acc[key]) acc[key] = { name, contact_type, amount: 0 };
-      acc[key].amount += parseFloat(s.total_amount || 0);
-      return acc;
-    }, {});
-    return Object.values(byContact)
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 10);
+    try {
+      const byContact = filteredSalesAll.reduce((acc, s) => {
+        try {
+          const name = s.visits?.doctors?.name || 'Unknown';
+          const contact_type = s.visits?.doctors?.contact_type || 'doctor';
+          const key = `${name}|${contact_type}`;
+          const amount = parseFloat(s.total_amount || 0);
+          
+          if (isNaN(amount)) return acc;
+          
+          if (!acc[key]) {
+            acc[key] = { name, contact_type, amount: 0 };
+          }
+          acc[key].amount += amount;
+          return acc;
+        } catch (error) {
+          console.error('Error processing contact data for sale:', s.id, error);
+          return acc;
+        }
+      }, {});
+      
+      return Object.values(byContact)
+        .filter(contact => contact.amount > 0) // Filter out zero amounts
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 10);
+    } catch (error) {
+      console.error('Error calculating contact data:', error);
+      return [];
+    }
   }, [filteredSalesAll]);
 
   // Pagination based on filtered list
@@ -229,12 +307,16 @@ function SalesContainer() {
   };
 
   const handleDoctorSearchChange = (value) => {
-    setDoctorSearch(value);
-    if (value.trim()) {
-      setShowDoctorDropdown(true);
-    } else {
-      setDoctorFilter('');
-      setShowDoctorDropdown(false);
+    try {
+      setDoctorSearch(value || '');
+      if ((value || '').trim()) {
+        setShowDoctorDropdown(true);
+      } else {
+        setDoctorFilter('');
+        setShowDoctorDropdown(false);
+      }
+    } catch (error) {
+      console.error('Error in doctor search change:', error);
     }
   };
 
@@ -250,12 +332,16 @@ function SalesContainer() {
   );
 
   const handleProductSearchChange = (value) => {
-    setProductSearch(value);
-    if (value.trim()) {
-      setShowProductDropdown(true);
-    } else {
-      setProductFilter('');
-      setShowProductDropdown(false);
+    try {
+      setProductSearch(value || '');
+      if ((value || '').trim()) {
+        setShowProductDropdown(true);
+      } else {
+        setProductFilter('');
+        setShowProductDropdown(false);
+      }
+    } catch (error) {
+      console.error('Error in product search change:', error);
     }
   };
 

@@ -173,6 +173,36 @@ function AddVisitContainer() {
     setLoading(true);
 
     try {
+      // Pre-validate stock before any database operations
+      if (sales.length > 0) {
+        for (const sale of sales) {
+          try {
+            const stockSummary = await calculateStockSummary(sale.product_id, formData.visit_date);
+            if (stockSummary.closingStock < sale.quantity) {
+              throw new Error(`Insufficient stock for ${sale.product_name}. Available: ${stockSummary.closingStock}, Required: ${sale.quantity}`);
+            }
+          } catch (stockError) {
+            showError(`Stock validation failed: ${stockError.message}`);
+            return;
+          }
+        }
+      }
+
+      // Generate invoice number early to catch any issues
+      let invoiceNumber = null;
+      if (sales.length > 0) {
+        try {
+          invoiceNumber = await generateInvoiceNumber();
+          if (!invoiceNumber) {
+            throw new Error('Failed to generate invoice number');
+          }
+        } catch (invoiceError) {
+          console.error('Invoice generation error:', invoiceError);
+          showError('Failed to generate invoice number. Please try again.');
+          return;
+        }
+      }
+
       // Insert visit
       const { data: visit, error: visitError } = await supabase
         .from('visits')
@@ -183,7 +213,7 @@ function AddVisitContainer() {
       if (visitError) throw visitError;
 
       // Insert sales and update stock if any
-      if (sales.length > 0) {
+      if (sales.length > 0 && invoiceNumber) {
         const salesData = sales.map(sale => ({
           visit_id: visit.id,
           product_id: sale.product_id,
@@ -200,11 +230,8 @@ function AddVisitContainer() {
 
         const totalSalesAmount = sales.reduce((sum, s) => sum + s.total_amount, 0);
         
-        // Generate invoice number
-        const invoiceNumber = await generateInvoiceNumber();
-        
         // Create ledger entry for the sale (DEBIT - Customer owes us money)
-        await supabase.from('ledger_entries').insert({
+        const { error: ledgerError } = await supabase.from('ledger_entries').insert({
           doctor_id: formData.doctor_id,
           entry_date: formData.visit_date,
           source_type: 'visit',
@@ -215,28 +242,38 @@ function AddVisitContainer() {
           invoice_number: invoiceNumber
         });
 
+        if (ledgerError) {
+          console.error('Ledger entry error:', ledgerError);
+          throw new Error('Failed to create ledger entry');
+        }
+
         // Add stock transactions for each sale
         for (const sale of sales) {
-          await addStockTransaction({
-            product_id: sale.product_id,
-            transaction_type: TRANSACTION_TYPES.SALE,
-            quantity: -sale.quantity, // Negative for sale
-            transaction_date: formData.visit_date,
-            reference_type: 'visit',
-            reference_id: visit.id,
-            notes: `Sale via visit to contact ID: ${formData.doctor_id} - Invoice: ${invoiceNumber}`
-          });
+          try {
+            await addStockTransaction({
+              product_id: sale.product_id,
+              transaction_type: TRANSACTION_TYPES.SALE,
+              quantity: -sale.quantity, // Negative for sale
+              transaction_date: formData.visit_date,
+              reference_type: 'visit',
+              reference_id: visit.id,
+              notes: `Sale via visit to contact ID: ${formData.doctor_id} - Invoice: ${invoiceNumber}`
+            });
 
-          // Update current stock in products table
-          await updateProductStock(sale.product_id);
+            // Update current stock in products table
+            await updateProductStock(sale.product_id);
+          } catch (stockError) {
+            console.error('Stock transaction error:', stockError);
+            throw new Error(`Failed to update stock for ${sale.product_name}`);
+          }
         }
       }
 
-      showSuccess('Visit added successfully!');
+      showSuccess(`Visit added successfully! ${invoiceNumber ? `Invoice: ${invoiceNumber}` : ''}`);
       navigate('/visits');
     } catch (error) {
       console.error('Error adding visit:', error);
-      showError('Error adding visit. Please try again.');
+      showError(error.message || 'Error adding visit. Please try again.');
     } finally {
       setLoading(false);
     }
