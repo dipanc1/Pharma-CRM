@@ -16,6 +16,12 @@ import Sales from './pages/sales';
 // Inventory pages
 import InventoryDashboard from './pages/inventory';
 
+// Cash-Flow pages
+import CashFlow from './pages/cashflow';
+
+// Add Ledger pages
+import Ledger from './pages/ledger';
+
 // Products pages
 import Products from './pages/products/Products';
 import AddProduct from './pages/products/AddProduct';
@@ -32,12 +38,6 @@ import Visits from './pages/visits/Visits';
 import AddVisit from './pages/visits/AddVisit';
 import VisitDetail from './pages/visits/VisitDetail';
 import EditVisit from './pages/visits/EditVisit';
-
-// Cash Flow pages
-import CashFlow from './pages/cashflow';
-
-// Add Ledger pages
-import Ledger from './pages/ledger'
 
 function App() {
   return (
@@ -75,7 +75,7 @@ function App() {
             {/* Inventory Route */}
             <Route path="inventory" element={<InventoryDashboard />} />
 
-            {/* Cash Flow Route */}
+            {/* Cash-Flow Route */}
             <Route path="cash-flow" element={<CashFlow />} />
 
             {/* Ledger Route */}
