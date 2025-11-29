@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import useToast from '../../hooks/useToast';
 import Ledger from './Ledger';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { calculateRunningBalance } from '../../utils/invoiceUtils';
 
 const LedgerContainer = () => {
@@ -10,7 +10,7 @@ const LedgerContainer = () => {
   const [allEntries, setAllEntries] = useState([]);
   const [doctorFilter, setDoctorFilter] = useState('');
   const initialStartDate = format(startOfMonth(new Date()), 'yyyy-MM-dd');
-  const initialEndDate = format(endOfMonth(new Date()), 'yyyy-MM-dd');
+  const initialEndDate = format(new Date(), 'yyyy-MM-dd');
   const [startDate, setStartDate] = useState(initialStartDate);
   const [endDate, setEndDate] = useState(initialEndDate);
   const [doctors, setDoctors] = useState([]);
