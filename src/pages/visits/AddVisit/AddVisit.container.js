@@ -5,6 +5,7 @@ import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
 import AddVisit from './AddVisit';
 import { addStockTransaction, updateProductStock, TRANSACTION_TYPES, calculateStockSummary } from '../../../utils/stockUtils';
+import { generateInvoiceNumber } from '../../../utils/invoiceUtils';
 
 function AddVisitContainer() {
   const navigate = useNavigate();
@@ -198,14 +199,20 @@ function AddVisitContainer() {
         if (salesError) throw salesError;
 
         const totalSalesAmount = sales.reduce((sum, s) => sum + s.total_amount, 0);
+        
+        // Generate invoice number
+        const invoiceNumber = await generateInvoiceNumber();
+        
+        // Create ledger entry for the sale (DEBIT - Customer owes us money)
         await supabase.from('ledger_entries').insert({
           doctor_id: formData.doctor_id,
           entry_date: formData.visit_date,
           source_type: 'visit',
           source_id: visit.id,
-          description: `Sales from visit - ${sales.length} items`,
+          description: `Sales from visit - ${sales.length} items (Invoice: ${invoiceNumber})`,
           debit: totalSalesAmount,
-          credit: 0
+          credit: 0,
+          invoice_number: invoiceNumber
         });
 
         // Add stock transactions for each sale
@@ -217,7 +224,7 @@ function AddVisitContainer() {
             transaction_date: formData.visit_date,
             reference_type: 'visit',
             reference_id: visit.id,
-            notes: `Sale via visit to contact ID: ${formData.doctor_id}`
+            notes: `Sale via visit to contact ID: ${formData.doctor_id} - Invoice: ${invoiceNumber}`
           });
 
           // Update current stock in products table

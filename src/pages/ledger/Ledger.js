@@ -37,7 +37,7 @@ const Ledger = ({
   view,
   setView
 }) => {
-  const entryHeaders = ['Date', 'Contact', 'Source Type', 'Description', 'Debit', 'Credit', 'Balance'];
+  const entryHeaders = ['Date', 'Contact', 'Source Type', 'Invoice #', 'Description', 'Debit', 'Credit', 'Balance'];
   const tbHeaders = ['Contact', 'Details', 'Total Debit', 'Total Credit', 'Current Balance'];
 
   const doctorOptions = doctors.map(d => ({ value: d.id, label: d.name }));
@@ -273,6 +273,11 @@ const Ledger = ({
                             {e.source_type}
                           </span>
                         </Table.Cell>
+                        <Table.Cell>
+                          <div className="text-sm font-mono text-gray-600">
+                            {e.invoice_number || '-'}
+                          </div>
+                        </Table.Cell>
                         <Table.Cell className="max-w-xs">
                           <div className="truncate" title={e.description || '-'}>
                             {e.description || '-'}
@@ -289,6 +294,8 @@ const Ledger = ({
                           parseFloat(e.running_balance || 0) < 0 ? 'text-green-600' : 'text-gray-900'
                         }`}>
                           {formatCurrency(Math.abs(e.running_balance || 0))}
+                          {parseFloat(e.running_balance || 0) > 0 && <span className="text-xs ml-1">(Dr)</span>}
+                          {parseFloat(e.running_balance || 0) < 0 && <span className="text-xs ml-1">(Cr)</span>}
                         </Table.Cell>
                       </Table.Row>
                     );

@@ -5,6 +5,7 @@ import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
 import EditVisit from './EditVisit';
 import { addStockTransaction, updateProductStock, TRANSACTION_TYPES, calculateStockSummary } from '../../../utils/stockUtils';
+import { generateInvoiceNumber } from '../../../utils/invoiceUtils';
 
 function EditVisitContainer() {
   const { id } = useParams();
@@ -282,13 +283,15 @@ function EditVisitContainer() {
     setSaving(true);
 
     try {
-      // Get original sales for stock reversal
+      // Get original sales and ledger entries for reference
       const { data: originalSales, error: originalSalesError } = await supabase
         .from('sales')
         .select('*')
         .eq('visit_id', id);
 
       if (originalSalesError) throw originalSalesError;
+
+      const originalTotalAmount = (originalSales || []).reduce((sum, s) => sum + parseFloat(s.total_amount || 0), 0);
 
       // Update visit
       const { error: visitError } = await supabase
@@ -311,7 +314,22 @@ function EditVisitContainer() {
         });
       }
 
-      // Delete all existing sales for this visit
+      // Create reversal ledger entry if there were original sales
+      if (originalTotalAmount > 0) {
+        const reversalInvoiceNumber = await generateInvoiceNumber();
+        await supabase.from('ledger_entries').insert({
+          doctor_id: formData.doctor_id,
+          entry_date: formData.visit_date,
+          source_type: 'visit',
+          source_id: id,
+          description: `Reversal of original visit sales - ₹${originalTotalAmount.toFixed(2)} (Invoice: ${reversalInvoiceNumber})`,
+          debit: 0,
+          credit: originalTotalAmount, // CREDIT - Reducing customer debt
+          invoice_number: reversalInvoiceNumber
+        });
+      }
+
+      // Delete all existing sales for this visit (but keep ledger history)
       const { error: deleteError } = await supabase
         .from('sales')
         .delete()
@@ -319,14 +337,7 @@ function EditVisitContainer() {
 
       if (deleteError) throw deleteError;
 
-      // Delete old ledger entry
-      await supabase
-        .from('ledger_entries')
-        .delete()
-        .eq('source_type', 'visit')
-        .eq('source_id', id);
-
-      // Insert the current sales and create new stock transactions
+      // Insert the current sales and create new transactions
       if (sales.length > 0) {
         const salesData = sales.map(sale => ({
           visit_id: id,
@@ -342,16 +353,19 @@ function EditVisitContainer() {
 
         if (salesError) throw salesError;
 
-        // Create new ledger entry for total sales
+        // Create new ledger entry for updated sales
         const totalSalesAmount = sales.reduce((sum, s) => sum + s.total_amount, 0);
+        const newInvoiceNumber = await generateInvoiceNumber();
+        
         await supabase.from('ledger_entries').insert({
           doctor_id: formData.doctor_id,
           entry_date: formData.visit_date,
           source_type: 'visit',
           source_id: id,
-          description: `Sales from visit (edited) - ${sales.length} items`,
-          debit: totalSalesAmount,
-          credit: 0
+          description: `Updated sales from visit - ${sales.length} items (Invoice: ${newInvoiceNumber})`,
+          debit: totalSalesAmount, // DEBIT - Customer owes us money for new sales
+          credit: 0,
+          invoice_number: newInvoiceNumber
         });
 
         // Add new stock transactions for each sale
@@ -363,7 +377,7 @@ function EditVisitContainer() {
             transaction_date: formData.visit_date,
             reference_type: 'visit',
             reference_id: id,
-            notes: `Updated sale via visit edit to contact ID: ${formData.doctor_id}`
+            notes: `Updated sale via visit edit - Invoice: ${newInvoiceNumber}`
           });
         }
       }

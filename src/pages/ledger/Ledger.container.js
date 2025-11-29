@@ -3,10 +3,10 @@ import { supabase } from '../../lib/supabase';
 import useToast from '../../hooks/useToast';
 import Ledger from './Ledger';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { calculateRunningBalance } from '../../utils/invoiceUtils';
 
 const LedgerContainer = () => {
   const [loading, setLoading] = useState(true);
-  const [entries, setEntries] = useState([]);
   const [allEntries, setAllEntries] = useState([]);
   const [doctorFilter, setDoctorFilter] = useState('');
   const initialStartDate = format(startOfMonth(new Date()), 'yyyy-MM-dd');
@@ -18,6 +18,7 @@ const LedgerContainer = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [view, setView] = useState('entries'); // Added
+  const [entriesWithBalance, setEntriesWithBalance] = useState([]);
   const pageSize = 25;
   const { showError, showSuccess } = useToast();
 
@@ -80,7 +81,29 @@ const LedgerContainer = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      setEntries(data || []);
+      // Calculate running balance for each doctor
+      const entriesWithRunningBalance = [];
+      const doctorIds = [...new Set((data || []).map(entry => entry.doctor_id))];
+      
+      for (const doctorId of doctorIds) {
+        const doctorEntries = calculateRunningBalance(allEntries, doctorId);
+        const filteredDoctorEntries = doctorEntries.filter(entry => 
+          (data || []).some(d => d.id === entry.id)
+        );
+        entriesWithRunningBalance.push(...filteredDoctorEntries);
+      }
+
+      // Sort the final result by date descending
+      entriesWithRunningBalance.sort((a, b) => {
+        const dateA = new Date(a.entry_date);
+        const dateB = new Date(b.entry_date);
+        if (dateB.getTime() === dateA.getTime()) {
+          return new Date(b.created_at) - new Date(a.created_at);
+        }
+        return dateB - dateA;
+      });
+
+      setEntriesWithBalance(entriesWithRunningBalance);
     } catch (e) {
       console.error(e);
       showError('Failed to load ledger entries');
@@ -95,16 +118,17 @@ const LedgerContainer = () => {
     showSuccess('Ledger refreshed successfully');
   };
   const filteredForDisplay = useMemo(() => {
-    let filtered = entries;
+    let filtered = entriesWithBalance;
     if (searchTerm) {
       const s = searchTerm.toLowerCase();
       filtered = filtered.filter(e =>
         (e.doctors?.name || '').toLowerCase().includes(s) ||
-        (e.description || '').toLowerCase().includes(s)
+        (e.description || '').toLowerCase().includes(s) ||
+        (e.invoice_number || '').toLowerCase().includes(s)
       );
     }
     return filtered;
-  }, [entries, searchTerm]);
+  }, [entriesWithBalance, searchTerm]);
 
   const displayEntries = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -151,15 +175,17 @@ const LedgerContainer = () => {
 
   const handleExportCSV = () => {
     try {
-      const headers = ['Date', 'Contact', 'Type', 'Source', 'Description', 'Debit', 'Credit'];
-      const rows = entries.map(e => [
+      const headers = ['Date', 'Invoice #', 'Contact', 'Type', 'Source', 'Description', 'Debit', 'Credit', 'Balance'];
+      const rows = filteredForDisplay.map(e => [
         e.entry_date,
+        e.invoice_number || '',
         e.doctors?.name || '',
         e.doctors?.contact_type || '',
         e.source_type,
         (e.description || '').replace(/(\r\n|\n|\r|,)/g, ' '),
         parseFloat(e.debit || 0).toFixed(2),
-        parseFloat(e.credit || 0).toFixed(2)
+        parseFloat(e.credit || 0).toFixed(2),
+        parseFloat(e.running_balance || 0).toFixed(2)
       ]);
       const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
