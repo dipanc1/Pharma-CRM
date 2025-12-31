@@ -306,20 +306,6 @@ function SalesContainer() {
     return `${doctor.name}${doctor.specialization ? ` - ${doctor.specialization}` : ''}${doctor.doctor_type ? ` (${doctor.doctor_type}` : ''}${doctor.doctor_class ? ` - ${doctor.doctor_class})` : doctor.doctor_type ? ')' : ''}`;
   };
 
-  const handleDoctorSearchChange = (value) => {
-    try {
-      setDoctorSearch(value || '');
-      if ((value || '').trim()) {
-        setShowDoctorDropdown(true);
-      } else {
-        setDoctorFilter('');
-        setShowDoctorDropdown(false);
-      }
-    } catch (error) {
-      console.error('Error in doctor search change:', error);
-    }
-  };
-
   const handleDoctorSelect = (doctor) => {
     setDoctorFilter(doctor.id);
     setDoctorSearch(formatDoctorDisplay(doctor));
@@ -330,20 +316,6 @@ function SalesContainer() {
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(productSearch.toLowerCase())
   );
-
-  const handleProductSearchChange = (value) => {
-    try {
-      setProductSearch(value || '');
-      if ((value || '').trim()) {
-        setShowProductDropdown(true);
-      } else {
-        setProductFilter('');
-        setShowProductDropdown(false);
-      }
-    } catch (error) {
-      console.error('Error in product search change:', error);
-    }
-  };
 
   const handleProductSelect = (product) => {
     setProductFilter(product.id);
@@ -375,13 +347,13 @@ function SalesContainer() {
         companyData={companyData}
         contactData={contactData}
         doctorSearch={doctorSearch}
-        setDoctorSearch={handleDoctorSearchChange}
+        setDoctorSearch={setDoctorSearch}
         showDoctorDropdown={showDoctorDropdown}
         setShowDoctorDropdown={setShowDoctorDropdown}
         filteredDoctors={filteredDoctors}
         handleDoctorSelect={handleDoctorSelect}
         productSearch={productSearch}
-        setProductSearch={handleProductSearchChange}
+        setProductSearch={setProductSearch}
         showProductDropdown={showProductDropdown}
         setShowProductDropdown={setShowProductDropdown}
         filteredProducts={filteredProducts}
