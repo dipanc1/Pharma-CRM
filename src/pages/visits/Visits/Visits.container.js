@@ -267,6 +267,21 @@ function VisitsContainer() {
           }
         }
 
+        // Delete the original ledger entry (if exists)
+        if (totalAmount > 0) {
+          const { error: deleteLedgerError } = await supabase
+            .from('ledger_entries')
+            .delete()
+            .eq('source_type', 'visit')
+            .eq('source_id', id);
+
+          if (deleteLedgerError) {
+            console.error('Original ledger deletion error:', deleteLedgerError);
+            showError('Failed to delete original ledger entry. Deletion aborted.');
+            return;
+          }
+        }
+
         // Reverse stock transactions for all sales
         if (visitData?.sales) {
           for (const sale of visitData.sales) {
@@ -274,7 +289,7 @@ function VisitsContainer() {
               await addStockTransaction({
                 product_id: sale.product_id,
                 transaction_type: TRANSACTION_TYPES.SALE_REVERSAL,
-                quantity: sale.quantity, // Positive to add back to stock
+                quantity: sale.quantity,
                 transaction_date: visitData.visit_date,
                 reference_type: 'visit_deletion',
                 reference_id: id,
@@ -294,10 +309,10 @@ function VisitsContainer() {
             doctor_id: visitData.doctor_id,
             entry_date: visitData.visit_date,
             source_type: 'visit',
-            source_id: id,
-            description: `Reversal for deleted visit - ${salesCount} item${salesCount !== 1 ? 's' : ''} (Invoice: ${reversalInvoiceNumber})`,
+            source_id: null, // Not linked to any visit since it's deleted
+            description: `Reversal for deleted visit - ${salesCount} item${salesCount !== 1 ? 's' : ''} (Reversal Invoice: ${reversalInvoiceNumber})`,
             debit: 0,
-            credit: totalAmount, // CREDIT to reverse the DEBIT from the original sale
+            credit: totalAmount, // CREDIT to reverse the original DEBIT
             invoice_number: reversalInvoiceNumber
           });
 
@@ -326,7 +341,6 @@ function VisitsContainer() {
               await updateProductStock(sale.product_id);
             } catch (stockError) {
               console.error('Product stock update error:', stockError);
-              // Don't throw here as deletion was successful
             }
           }
         }
