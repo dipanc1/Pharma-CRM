@@ -302,11 +302,9 @@ function InventoryDashboardContainer() {
 
             setSummaryStats(stats);
 
-            // Generate other data in parallel
-            await Promise.all([
-                generateStockMovementData(startDateToUse, endDateToUse),
-                generateCategoryStockData(inventoryResults)
-            ]);
+            // Generate other data
+            generateStockMovementData(inventoryResults);
+            generateCategoryStockData(inventoryResults);
 
             // Find low stock products (use current stock, not calculated)
             const lowStock = products.filter(p => (p.current_stock || 0) <= 10);
@@ -320,57 +318,20 @@ function InventoryDashboardContainer() {
         }
     };
 
-    const generateStockMovementData = async (startDate, endDate) => {
+    const generateStockMovementData = (inventoryData) => {
         try {
-            // Optimize: only get necessary fields and use date grouping in query
-            const { data, error } = await supabase
-                .from('stock_transactions')
-                .select('transaction_date, transaction_type, quantity')
-                .gte('transaction_date', startDate)
-                .lte('transaction_date', endDate)
-                .order('transaction_date');
-
-            if (error) {
-                console.error('Error generating stock movement data:', error);
-                setStockMovementData([]);
-                return;
-            }
-
-            // Group by date more efficiently
-            const dailyData = new Map();
-            
-            (data || []).forEach(transaction => {
-                const date = transaction.transaction_date;
-                
-                if (!dailyData.has(date)) {
-                    dailyData.set(date, { purchases: 0, sales: 0, adjustments: 0 });
-                }
-
-                const dayData = dailyData.get(date);
-                
-                if (transaction.transaction_type === 'purchase') {
-                    dayData.purchases += transaction.quantity;
-                } else if (transaction.transaction_type === 'sale') {
-                    dayData.sales += Math.abs(transaction.quantity);
-                } else if (transaction.transaction_type === 'adjustment') {
-                    dayData.adjustments += transaction.quantity;
-                } else if (transaction.transaction_type === 'sale_reversal') {
-                    dayData.adjustments += Math.abs(transaction.quantity);
-                }
-            });
-
-            const chartData = Array.from(dailyData.entries())
-                .sort(([a], [b]) => new Date(a) - new Date(b))
-                .map(([date, data]) => ({
-                    date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                    purchases: data.purchases,
-                    sales: data.sales,
-                    adjustments: data.adjustments
-                }));
+            const chartData = (inventoryData || [])
+                .map(item => ({
+                    name: item.product_name,
+                    sales: Math.abs(item.sales || 0)
+                }))
+                .filter(item => item.sales > 0)
+                .sort((a, b) => b.sales - a.sales)
+                .slice(0, 10);
 
             setStockMovementData(chartData);
         } catch (error) {
-            console.error('Error generating stock movement data:', error);
+            console.error('Error generating top products data:', error);
             setStockMovementData([]);
         }
     };
@@ -382,7 +343,7 @@ function InventoryDashboardContainer() {
             (inventoryData || []).forEach(item => {
                 const company = item.company_name || 'Other';
                 const currentValue = companyTotals.get(company) || 0;
-                companyTotals.set(company, currentValue + (item.stock_value || 0));
+                companyTotals.set(company, currentValue + (item.purchases || 0));
             });
 
             const chartData = Array.from(companyTotals.entries())

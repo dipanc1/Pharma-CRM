@@ -6,12 +6,8 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    LineChart,
-    Line,
-    PieChart,
-    Pie,
-    Cell,
-    Legend
+    BarChart,
+    Bar
 } from 'recharts';
 import {
     FilterSelect,
@@ -55,7 +51,6 @@ function InventoryDashboard({
     summaryStats,
     onExportData
 }) {
-    const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16'];
 
     const tableHeaders = [
         'Product',
@@ -297,39 +292,24 @@ function InventoryDashboard({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Top Products by Sales Volume */}
                 <div className="card">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-medium text-gray-900">Stock Movement Over Time</h3>
-                        <div className="flex items-center space-x-4 text-sm">
-                            <div className="flex items-center">
-                                <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                                <span className="text-gray-600">Purchases</span>
-                            </div>
-                            <div className="flex items-center">
-                                <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                                <span className="text-gray-600">Sales</span>
-                            </div>
-                            <div className="flex items-center">
-                                <div className="w-3 h-3 bg-indigo-500 rounded-full mr-2"></div>
-                                <span className="text-gray-600">Adjustments</span>
-                            </div>
-                        </div>
-                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Top Products by Sales Volume</h3>
                     <div className="h-64">
                         {(stockMovementData || []).length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={stockMovementData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <BarChart data={stockMovementData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis
-                                        dataKey="date"
-                                        tick={{ fontSize: 12 }}
-                                        tickLine={{ stroke: '#e0e0e0' }}
+                                        dataKey="name"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={80}
+                                        tick={{ fontSize: 11 }}
                                     />
-                                    <YAxis
-                                        tick={{ fontSize: 12 }}
-                                        tickLine={{ stroke: '#e0e0e0' }}
-                                    />
+                                    <YAxis />
                                     <Tooltip
+                                        formatter={(value) => [`${value} units`, 'Sales']}
                                         contentStyle={{
                                             backgroundColor: '#fff',
                                             border: '1px solid #e0e0e0',
@@ -337,79 +317,71 @@ function InventoryDashboard({
                                             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                                         }}
                                     />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="purchases"
-                                        stroke="#10B981"
-                                        strokeWidth={2}
-                                        name="Purchases"
-                                        dot={{ fill: '#10B981', strokeWidth: 2 }}
-                                    />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="sales"
-                                        stroke="#EF4444"
-                                        strokeWidth={2}
-                                        name="Sales"
-                                        dot={{ fill: '#EF4444', strokeWidth: 2 }}
-                                    />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="adjustments"
-                                        stroke="#6366F1"
-                                        strokeWidth={2}
-                                        name="Adjustments"
-                                        dot={{ fill: '#6366F1', strokeWidth: 2 }}
-                                    />
-                                </LineChart>
+                                    <Bar dataKey="sales" fill="#3B82F6" />
+                                </BarChart>
                             </ResponsiveContainer>
                         ) : (
                             <div className="flex items-center justify-center h-full text-gray-500">
-                                <div className="text-center">
-                                    <ChartBarIcon className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                                    <p>No stock movement data available</p>
-                                    <p className="text-sm text-gray-400">Data will appear when transactions are recorded</p>
-                                </div>
+                                No data available
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Stock by Category */}
+                {/* Purchases by Company - Table */}
                 <div className="card">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Stock Value by Company</h3>
-                    <div className="h-64">
-                        {(categoryStockData || []).length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={categoryStockData}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        label={({ company, percent }) => percent > 5 ? `${company} ${(percent * 100).toFixed(0)}%` : ''}
-                                        outerRadius={80}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {categoryStockData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip formatter={(value) => [formatCurrency(value), 'Stock Value']} />
-                                    <Legend />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-gray-500">
-                                <div className="text-center">
-                                    <ChartBarIcon className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                                    <p>No company data available</p>
-                                    <p className="text-sm text-gray-400">Add products with companies to see distribution</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Purchases by Company</h3>
+                    {(categoryStockData || []).length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Company
+                                        </th>
+                                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Purchases (units)
+                                        </th>
+                                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            % Share
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {categoryStockData
+                                        .sort((a, b) => b.value - a.value)
+                                        .map((row) => {
+                                            const amount = parseFloat(row.value) || 0;
+                                            const totalPurchases = categoryStockData.reduce((sum, c) => sum + (parseFloat(c.value) || 0), 0);
+                                            const percent = totalPurchases > 0 ? (amount / totalPurchases) * 100 : 0;
+                                            return (
+                                                <tr key={row.company}>
+                                                    <td className="px-4 py-2 text-sm text-gray-900">{row.company}</td>
+                                                    <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                                                        {amount.toFixed(0)}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                                                        {percent.toFixed(2)}%
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    {/* Total Row */}
+                                    <tr className="bg-gray-50 font-medium">
+                                        <td className="px-4 py-2 text-sm text-gray-900">Total</td>
+                                        <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                                            {categoryStockData.reduce((sum, c) => sum + (parseFloat(c.value) || 0), 0).toFixed(0)}
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-gray-900 text-right">100.00%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center h-64 text-gray-500">
+                            No data available
+                        </div>
+                    )}
                 </div>
             </div>
 
