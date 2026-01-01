@@ -51,12 +51,12 @@ const CashFlowContainer = () => {
   useEffect(() => {
     fetchCashFlow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.cashType, filters.type, filters.purpose]);
+  }, [filters.cashType, filters.type, filters.purpose, filters.startDate, filters.endDate]);
 
   useEffect(() => {
     applyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allCashFlowData, filters.searchTerm, filters.startDate, filters.endDate, currentPage]);
+  }, [allCashFlowData, filters.searchTerm, currentPage]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -121,24 +121,22 @@ const CashFlowContainer = () => {
         query = query.eq('purpose', filters.purpose);
       }
 
-      const { data, error, count } = await query;
+      const { data, error } = await query;
 
       if (error) throw error;
 
       setAllCashFlowData(data || []);
-      if (!filters.searchTerm) {
-        setTotalRecords(count || 0);
-      }
     } catch (error) {
       console.error('Error fetching cash flow:', error);
       showError('Failed to fetch cash flow records');
+      setAllCashFlowData([]);
     } finally {
       setLoading(false);
     }
   };
 
   const applyFilters = () => {
-    let filteredData = allCashFlowData;
+    let filteredData = [...allCashFlowData];
 
     // Apply search filter
     if (filters.searchTerm) {
@@ -149,13 +147,16 @@ const CashFlowContainer = () => {
       );
     }
 
+    // Update total records count
+    const totalFiltered = filteredData.length;
+    setTotalRecords(totalFiltered);
+
     // Apply pagination
     const startIndex = (currentPage - 1) * recordsPerPage;
     const endIndex = startIndex + recordsPerPage;
     const paginatedData = filteredData.slice(startIndex, endIndex);
 
     setCashFlowData(paginatedData);
-    setTotalRecords(filteredData.length);
   };
 
   const handleAdd = () => {
@@ -332,7 +333,9 @@ const handleDelete = async (id) => {
 
   const handleFilterChange = (filterName, value) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
-    setCurrentPage(1);
+    if (filterName !== 'searchTerm') {
+      setCurrentPage(1);
+    }
   };
 
   const handlePageChange = (page) => {

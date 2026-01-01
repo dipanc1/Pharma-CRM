@@ -4,6 +4,8 @@ import { supabase } from '../../../lib/supabase';
 import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
 import VisitDetail from './VisitDetail';
+import { addStockTransaction, updateProductStock, TRANSACTION_TYPES } from '../../../utils/stockUtils';
+import { generateInvoiceNumber } from '../../../utils/invoiceUtils';
 
 function VisitDetailContainer() {
   const { id } = useParams();
@@ -52,6 +54,80 @@ function VisitDetailContainer() {
   const deleteVisit = async () => {
     if (window.confirm('Are you sure you want to delete this visit? This will also delete all associated sales.')) {
       try {
+        // Get full visit details
+        const { data: visitData } = await supabase
+          .from('visits')
+          .select(`
+            visit_date,
+            doctor_id,
+            doctors (name, contact_type),
+            sales (id, product_id, quantity, total_amount, products (name))
+          `)
+          .eq('id', id)
+          .single();
+
+        if (!visitData) {
+          showError('Visit not found');
+          return;
+        }
+
+        const salesCount = visitData?.sales?.length || 0;
+        const totalAmount = visitData?.sales?.reduce((sum, sale) => sum + parseFloat(sale.total_amount || 0), 0) || 0;
+
+        // Generate reversal invoice number if there are sales
+        let reversalInvoiceNumber = null;
+        if (salesCount > 0) {
+          try {
+            reversalInvoiceNumber = await generateInvoiceNumber();
+          } catch (invoiceError) {
+            console.error('Invoice generation error:', invoiceError);
+            showError('Failed to generate reversal invoice. Please try again.');
+            return;
+          }
+        }
+
+        // Reverse stock transactions for all sales
+        if (visitData?.sales) {
+          for (const sale of visitData.sales) {
+            try {
+              await addStockTransaction({
+                product_id: sale.product_id,
+                transaction_type: TRANSACTION_TYPES.SALE_REVERSAL,
+                quantity: sale.quantity, // Positive to add back to stock
+                transaction_date: visitData.visit_date,
+                reference_type: 'visit_deletion',
+                reference_id: id,
+                notes: `Sale reversal for deleted visit - Restoring ${sale.quantity} units of ${sale.products?.name || 'Unknown Product'}`
+              });
+            } catch (stockError) {
+              console.error('Stock reversal error:', stockError);
+              showError(`Failed to reverse stock for ${sale.products?.name}. Deletion aborted.`);
+              return;
+            }
+          }
+        }
+
+        // Create reversal ledger entry if there were sales
+        if (totalAmount > 0 && reversalInvoiceNumber) {
+          const { error: reversalLedgerError } = await supabase.from('ledger_entries').insert({
+            doctor_id: visitData.doctor_id,
+            entry_date: visitData.visit_date,
+            source_type: 'visit',
+            source_id: id,
+            description: `Reversal for deleted visit - ${salesCount} item${salesCount !== 1 ? 's' : ''} (Invoice: ${reversalInvoiceNumber})`,
+            debit: 0,
+            credit: totalAmount, // CREDIT - Reducing customer debt
+            invoice_number: reversalInvoiceNumber
+          });
+
+          if (reversalLedgerError) {
+            console.error('Reversal ledger error:', reversalLedgerError);
+            showError('Failed to create reversal ledger entry. Deletion aborted.');
+            return;
+          }
+        }
+
+        // Delete the visit
         const { error } = await supabase
           .from('visits')
           .delete()
@@ -59,7 +135,27 @@ function VisitDetailContainer() {
 
         if (error) throw error;
 
-        showSuccess('Visit deleted successfully');
+        // Update current stock for all affected products
+        if (visitData?.sales) {
+          for (const sale of visitData.sales) {
+            try {
+              await updateProductStock(sale.product_id);
+            } catch (stockError) {
+              console.error('Product stock update error:', stockError);
+              // Don't throw here as deletion was successful
+            }
+          }
+        }
+
+        let successMessage = `Visit deleted successfully`;
+        if (salesCount > 0) {
+          successMessage += ` and ${salesCount} sale${salesCount !== 1 ? 's' : ''} reversed`;
+        }
+        if (reversalInvoiceNumber) {
+          successMessage += ` (Reversal Invoice: ${reversalInvoiceNumber})`;
+        }
+
+        showSuccess(successMessage);
         navigate('/visits');
       } catch (error) {
         console.error('Error deleting visit:', error);
