@@ -101,7 +101,7 @@ function InventoryDashboard({
                         <div className="h-80 bg-gray-200 rounded"></div>
                         <div className="h-80 bg-gray-200 rounded"></div>
                     </div>
-                    
+
                     {/* Loading Progress Indicator */}
                     <div className="card text-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -292,41 +292,6 @@ function InventoryDashboard({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Top Products by Sales Volume */}
-                <div className="card">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Top Products by Sales Volume</h3>
-                    <div className="h-64">
-                        {(stockMovementData || []).length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={stockMovementData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis
-                                        dataKey="name"
-                                        angle={-45}
-                                        textAnchor="end"
-                                        height={80}
-                                        tick={{ fontSize: 11 }}
-                                    />
-                                    <YAxis />
-                                    <Tooltip
-                                        formatter={(value) => [`${value} units`, 'Sales']}
-                                        contentStyle={{
-                                            backgroundColor: '#fff',
-                                            border: '1px solid #e0e0e0',
-                                            borderRadius: '8px',
-                                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                                        }}
-                                    />
-                                    <Bar dataKey="sales" fill="#3B82F6" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-gray-500">
-                                No data available
-                            </div>
-                        )}
-                    </div>
-                </div>
 
                 {/* Purchases by Company - Table */}
                 <div className="card">
@@ -383,6 +348,43 @@ function InventoryDashboard({
                         </div>
                     )}
                 </div>
+
+                {/* Top Products by Sales Volume */}
+                <div className="card">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Top Products by Sales Volume</h3>
+                    <div className="h-64">
+                        {(stockMovementData || []).length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={stockMovementData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis
+                                        dataKey="name"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={80}
+                                        tick={{ fontSize: 11 }}
+                                    />
+                                    <YAxis />
+                                    <Tooltip
+                                        formatter={(value) => [`${value} units`, 'Sales']}
+                                        contentStyle={{
+                                            backgroundColor: '#fff',
+                                            border: '1px solid #e0e0e0',
+                                            borderRadius: '8px',
+                                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                        }}
+                                    />
+                                    <Bar dataKey="sales" fill="#3B82F6" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-gray-500">
+                                No data available
+                            </div>
+                        )}
+                    </div>
+                </div>
+
             </div>
 
             {/* Low Stock Alert */}
