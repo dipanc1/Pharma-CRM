@@ -61,17 +61,17 @@ const Ledger = ({
         title="Ledger Management" 
         subtitle="Track all financial transactions and account balances"
         buttons={[
-          { 
-            onClick: onRefresh, 
-            icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, 
-            title: 'Refresh',
-            color: 'secondary'
-          },
           {
             onClick: view === 'entries' ? onExportCSV : onExportTrialBalance,
             icon: <ArrowDownTrayIcon className="h-4 w-4 mr-2" />,
             title: `Export ${view === 'entries' ? 'Entries' : 'Trial Balance'}`,
             color: 'primary'
+          },
+          { 
+            onClick: onRefresh, 
+            icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, 
+            title: 'Refresh',
+            color: 'secondary'
           }
         ]}
       />
