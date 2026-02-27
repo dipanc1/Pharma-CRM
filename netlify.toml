@@ -2,6 +2,15 @@
   command = "npm run build"
   publish = "build"
 
+# Proxy Supabase requests through Netlify to bypass Jio DNS issues
+[[redirects]]
+  from = "/supabase-proxy/*"
+  to = "https://revujdffljzczkjvtgcc.supabase.co/:splat"
+  status = 200
+  force = true
+  [redirects.headers]
+    X-Forwarded-Host = "revujdffljzczkjvtgcc.supabase.co"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

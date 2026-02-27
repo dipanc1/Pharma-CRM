@@ -1,7 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
+const supabaseDirectUrl = process.env.REACT_APP_SUPABASE_URL
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY
+
+// In production, proxy Supabase requests through Netlify to bypass
+// Jio ISP DNS issues that block supabase.co on some Indian networks
+const isProduction = process.env.NODE_ENV === 'production'
+const supabaseUrl = isProduction
+  ? `${window.location.origin}/supabase-proxy`
+  : supabaseDirectUrl
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 

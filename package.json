@@ -14,16 +14,16 @@
     "recharts": "^2.8.0"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "set NODE_OPTIONS=--dns-result-order=ipv4first && react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "setup": "node setup.js",
-    "backup": "node database/backup.js",
-    "backup:schema": "node database/backup.js --schema-only",
-    "backup:no-schema": "node database/backup.js --no-schema",
-    "restore": "node database/restore.js",
-    "restore:schema": "node database/restore-schema.js"
+    "setup": "set NODE_OPTIONS=--dns-result-order=ipv4first && node setup.js",
+    "backup": "set NODE_OPTIONS=--dns-result-order=ipv4first && node database/backup.js",
+    "backup:schema": "set NODE_OPTIONS=--dns-result-order=ipv4first && node database/backup.js --schema-only",
+    "backup:no-schema": "set NODE_OPTIONS=--dns-result-order=ipv4first && node database/backup.js --no-schema",
+    "restore": "set NODE_OPTIONS=--dns-result-order=ipv4first && node database/restore.js",
+    "restore:schema": "set NODE_OPTIONS=--dns-result-order=ipv4first && node database/restore-schema.js"
   },
   "eslintConfig": {
     "extends": [
