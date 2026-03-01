@@ -22,6 +22,7 @@ const VoiceConfirmationModal = ({
   onRetry,
   onCancel,
   onStopListening, // callback to stop recording
+  confirmLabel, // optional override for confirm button text
 }) => {
   const [editedData, setEditedData] = useState({});
   const [isEditing, setIsEditing] = useState(false);
@@ -219,7 +220,7 @@ const VoiceConfirmationModal = ({
               className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500"
             >
               <CheckIcon className="h-4 w-4 mr-1.5" />
-              {isEditing ? 'Save Edited Data' : 'Confirm & Save'}
+              {isEditing ? 'Apply Changes' : (confirmLabel || 'Confirm & Save')}
             </button>
           </div>
         </div>

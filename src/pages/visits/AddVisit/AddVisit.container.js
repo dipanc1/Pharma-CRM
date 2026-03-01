@@ -316,33 +316,42 @@ function AddVisitContainer() {
   const voiceContext = VOICE_CONTEXTS.addVisit;
 
   const handleVoiceConfirm = useCallback(async (data) => {
-    // Validate doctor
-    if (!data.doctor_id) {
-      throw new Error('Contact not recognized. Please say the name clearly or add the visit manually.');
-    }
-    const matchedDoctor = doctors.find(d => d.id === data.doctor_id);
-    if (!matchedDoctor) {
-      throw new Error('Contact not found in your list.');
+    // Select doctor by ID
+    if (data.doctor_id) {
+      const matchedDoctor = doctors.find(d => d.id === data.doctor_id);
+      if (matchedDoctor) {
+        setFormData(prev => ({ ...prev, doctor_id: matchedDoctor.id }));
+        const isChemist = matchedDoctor.contact_type === 'chemist';
+        const display = isChemist
+          ? `${matchedDoctor.name}${matchedDoctor.hospital ? ` - ${matchedDoctor.hospital}` : ''} [Chemist]`
+          : `${matchedDoctor.name}${matchedDoctor.specialization ? ` - ${matchedDoctor.specialization}` : ''}`;
+        setDoctorSearch(display);
+        setShowDoctorDropdown(false);
+      }
     }
 
-    // Build visit form data
-    const visitFormData = {
-      doctor_id: data.doctor_id,
-      visit_date: data.visit_date || new Date().toISOString().split('T')[0],
-      notes: data.notes || '',
-      status: data.status || 'completed',
-    };
+    // Set basic form fields
+    if (data.visit_date) {
+      setFormData(prev => ({ ...prev, visit_date: data.visit_date }));
+    }
+    if (data.status) {
+      setFormData(prev => ({ ...prev, status: data.status }));
+    }
+    if (data.notes) {
+      setFormData(prev => ({ ...prev, notes: data.notes }));
+    }
 
-    // Build sales array — only matched products
-    const visitSales = [];
-    if (data.sales && Array.isArray(data.sales)) {
+    // Add sale items — only matched products
+    if (data.sales && Array.isArray(data.sales) && data.sales.length > 0) {
+      const newSales = [];
       for (const sale of data.sales) {
         const product = sale.product_id ? products.find(p => p.id === sale.product_id) : null;
         if (!product) continue;
         const quantity = parseFloat(sale.quantity) || 0;
         const unit_price = parseFloat(sale.unit_price) || product.price || 0;
         if (quantity <= 0) continue;
-        visitSales.push({
+        newSales.push({
+          id: Date.now() + Math.random(),
           product_id: product.id,
           quantity,
           unit_price,
@@ -350,14 +359,14 @@ function AddVisitContainer() {
           product_name: product.name,
         });
       }
+      if (newSales.length > 0) {
+        setSales(prev => [...prev, ...newSales]);
+      }
     }
 
-    // Save directly to database
-    const invoiceNumber = await saveVisitData(visitFormData, visitSales);
-    showSuccess(`Visit added via voice! ${invoiceNumber ? `Invoice: ${invoiceNumber}` : ''}`);
-    navigate('/visits');
+    showSuccess('Voice data applied! You can add more items, edit quantities, then submit.');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctors, products, showSuccess, navigate]);
+  }, [doctors, products, showSuccess]);
 
   const voice = useVoiceCommand({
     pageContext: voiceContext,
@@ -428,6 +437,7 @@ function AddVisitContainer() {
         onRetry={voice.retryListening}
         onCancel={voice.reset}
         onStopListening={voice.stopListening}
+        confirmLabel="Apply to Form"
       />
     </>
   );
