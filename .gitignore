@@ -3,3 +3,4 @@ node_modules
 # Database backups
 database/backups/*.json
 !database/backups/.gitkeep
+build

@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
-import { Toast } from '../../../components';
+import { Toast, VoiceCommandButton, VoiceConfirmationModal } from '../../../components';
 import useToast from '../../../hooks/useToast';
+import useVoiceCommand from '../../../hooks/useVoiceCommand';
+import { VOICE_CONTEXTS } from '../../../config/voiceContexts';
 import AddDoctor from './AddDoctor';
 
 function AddDoctorContainer() {
@@ -141,6 +143,51 @@ function AddDoctorContainer() {
 
   const backPath = `/doctors?type=${formData.contact_type}`;
 
+  // ─── Voice Command Integration ─────────────────────────────
+  const voiceContext = VOICE_CONTEXTS.addDoctor;
+
+  const handleVoiceConfirm = useCallback(async (data) => {
+    const contactType = data.contact_type || formData.contact_type;
+    const isChemist = contactType === 'chemist';
+
+    const dataToInsert = {
+      name: data.name || '',
+      contact_type: contactType,
+      specialization: isChemist ? null : (data.specialization || null),
+      hospital: data.hospital || null,
+      contact_number: data.contact_number || null,
+      email: data.email || null,
+      address: data.address || null,
+      doctor_class: isChemist ? null : (data.doctor_class || null),
+      doctor_type: isChemist ? null : (data.doctor_type || null),
+    };
+
+    if (!dataToInsert.name?.trim()) {
+      throw new Error('Name is required');
+    }
+
+    const { error } = await supabase.from('doctors').insert([dataToInsert]);
+    if (error) throw error;
+
+    const label = isChemist ? 'Chemist' : 'Doctor';
+    showSuccess(`${label} added successfully via voice!`);
+    navigate(`/doctors?type=${contactType}`);
+  }, [formData.contact_type, showSuccess, navigate]);
+
+  const voice = useVoiceCommand({
+    pageContext: voiceContext,
+    existingData: {},
+    onConfirm: handleVoiceConfirm,
+  });
+
+  const handleVoiceToggle = () => {
+    if (voice.isListening) {
+      voice.stopListening();
+    } else {
+      voice.startListening();
+    }
+  };
+
   return (
     <>
       <AddDoctor
@@ -156,6 +203,28 @@ function AddDoctorContainer() {
         type={toast.type}
         isVisible={toast.isVisible}
         onClose={hideToast}
+      />
+      <VoiceCommandButton
+        isListening={voice.isListening}
+        isProcessing={voice.isProcessing}
+        isSupported={voice.isSupported}
+        isConfigured={voice.isConfigured}
+        onClick={handleVoiceToggle}
+      />
+      <VoiceConfirmationModal
+        isOpen={!voice.isIdle}
+        state={voice.state}
+        transcript={voice.transcript}
+        interimTranscript={voice.interimTranscript}
+        parsedData={voice.parsedData}
+        error={voice.error}
+        fieldLabels={voiceContext.fieldLabels}
+        fieldOrder={voiceContext.fieldOrder}
+        onConfirm={voice.confirmData}
+        onConfirmEdited={voice.confirmEditedData}
+        onRetry={voice.retryListening}
+        onCancel={voice.reset}
+        onStopListening={voice.stopListening}
       />
     </>
   );

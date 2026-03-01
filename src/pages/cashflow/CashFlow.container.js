@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import CashFlow from './CashFlow';
 import useToast from '../../hooks/useToast';
-import { Toast } from '../../components';
+import useVoiceCommand from '../../hooks/useVoiceCommand';
+import { VOICE_CONTEXTS } from '../../config/voiceContexts';
+import { Toast, VoiceCommandButton, VoiceConfirmationModal } from '../../components';
 import { format, parseISO, startOfMonth } from 'date-fns';
 
 const CashFlowContainer = () => {
@@ -497,6 +499,81 @@ const handleDelete = async (id) => {
     (d.name || '').toLowerCase().includes(doctorSearch.toLowerCase())
   );
 
+  // ─── Voice Command Integration ─────────────────────────────
+  const voiceContext = VOICE_CONTEXTS.addCashFlow;
+
+  const handleVoiceConfirm = useCallback(async (data) => {
+    // Validate required fields
+    if (!data.name?.trim()) {
+      throw new Error('Name or description is required');
+    }
+    if (!data.amount || parseFloat(data.amount) <= 0) {
+      throw new Error('A valid amount is required');
+    }
+
+    // Resolve doctor contact by exact ID
+    let doctorId = null;
+    if (data.doctor_id) {
+      const match = doctors.find(d => d.id === data.doctor_id);
+      if (match) doctorId = match.id;
+    }
+
+    const processedData = {
+      transaction_date: data.transaction_date || new Date().toISOString().split('T')[0],
+      cash_type: data.cash_type || 'out_flow',
+      name: data.name.trim(),
+      type: data.type || 'sundry',
+      amount: parseFloat(data.amount),
+      notes: data.notes?.trim() || null,
+      purpose: data.purpose || null,
+      doctor_id: doctorId,
+    };
+
+    // Insert directly into database
+    const { data: newRecord, error } = await supabase
+      .from('cash_flow')
+      .insert([processedData])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Create ledger entry if doctor linked
+    if (doctorId) {
+      const isCredit = processedData.cash_type === 'in_flow';
+      await supabase.from('ledger_entries').insert({
+        doctor_id: doctorId,
+        entry_date: processedData.transaction_date,
+        source_type: 'cash',
+        source_id: newRecord.id,
+        description: `${processedData.cash_type === 'in_flow' ? 'Payment received' : 'Payment made'} - ${processedData.name}`,
+        debit: isCredit ? 0 : processedData.amount,
+        credit: isCredit ? processedData.amount : 0,
+      });
+    }
+
+    showSuccess('Cash flow entry added via voice!');
+    // Refresh all data
+    await Promise.all([fetchCashFlow(), fetchAnalytics(), fetchChartData()]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctors, showSuccess]);
+
+  const voice = useVoiceCommand({
+    pageContext: voiceContext,
+    existingData: { doctors },
+    onConfirm: handleVoiceConfirm,
+  });
+
+  const handleVoiceToggle = () => {
+    if (voice.isListening) {
+      voice.stopListening();
+    } else {
+      voice.startListening();
+    }
+  };
+
+  const [voicePrefilledData, setVoicePrefilledData] = useState(null);
+
   return (
     <>
       <CashFlow
@@ -521,12 +598,36 @@ const handleDelete = async (id) => {
         doctors={filteredDoctors}
         doctorSearch={doctorSearch}
         setDoctorSearch={setDoctorSearch}
+        voicePrefilledData={voicePrefilledData}
+        onVoicePrefilledConsumed={() => setVoicePrefilledData(null)}
       />
       <Toast
         message={toast.message}
         type={toast.type}
         isVisible={toast.isVisible}
         onClose={hideToast}
+      />
+      <VoiceCommandButton
+        isListening={voice.isListening}
+        isProcessing={voice.isProcessing}
+        isSupported={voice.isSupported}
+        isConfigured={voice.isConfigured}
+        onClick={handleVoiceToggle}
+      />
+      <VoiceConfirmationModal
+        isOpen={!voice.isIdle}
+        state={voice.state}
+        transcript={voice.transcript}
+        interimTranscript={voice.interimTranscript}
+        parsedData={voice.parsedData}
+        error={voice.error}
+        fieldLabels={voiceContext.fieldLabels}
+        fieldOrder={voiceContext.fieldOrder}
+        onConfirm={voice.confirmData}
+        onConfirmEdited={voice.confirmEditedData}
+        onRetry={voice.retryListening}
+        onCancel={voice.reset}
+        onStopListening={voice.stopListening}
       />
     </>
   );

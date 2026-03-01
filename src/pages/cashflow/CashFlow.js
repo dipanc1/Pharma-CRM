@@ -52,7 +52,9 @@ const CashFlow = ({
   onPageChange,
   doctors,
   doctorSearch,
-  setDoctorSearch
+  setDoctorSearch,
+  voicePrefilledData,
+  onVoicePrefilledConsumed
 }) => {
   const [formData, setFormData] = useState({
     transaction_date: new Date().toISOString().split('T')[0],
@@ -71,7 +73,19 @@ const CashFlow = ({
   // Initialize form data when modal opens or editing record changes
   useEffect(() => {
     if (isModalOpen) {
-      if (editingRecord) {
+      if (voicePrefilledData) {
+        setFormData({
+          transaction_date: voicePrefilledData.transaction_date || new Date().toISOString().split('T')[0],
+          cash_type: voicePrefilledData.cash_type || 'out_flow',
+          name: voicePrefilledData.name || '',
+          type: voicePrefilledData.type || 'sundry',
+          amount: voicePrefilledData.amount ? voicePrefilledData.amount.toString() : '',
+          purpose: voicePrefilledData.purpose || '',
+          notes: voicePrefilledData.notes || '',
+          doctor_id: voicePrefilledData.doctor_id || ''
+        });
+        if (onVoicePrefilledConsumed) onVoicePrefilledConsumed();
+      } else if (editingRecord) {
         setFormData({
           transaction_date: editingRecord.transaction_date || new Date().toISOString().split('T')[0],
           cash_type: editingRecord.cash_type || 'out_flow',
@@ -96,7 +110,7 @@ const CashFlow = ({
       }
       setFormErrors({});
     }
-  }, [editingRecord, isModalOpen]);
+  }, [editingRecord, isModalOpen, voicePrefilledData, onVoicePrefilledConsumed]);
 
   const validateForm = () => {
     const errors = {};

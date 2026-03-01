@@ -4,6 +4,7 @@
   "description": "CRM application for pharmaceutical sales representatives",
   "private": true,
   "dependencies": {
+    "@google/genai": "^1.43.0",
     "@heroicons/react": "^2.0.18",
     "@supabase/supabase-js": "^2.38.4",
     "date-fns": "^4.1.0",
