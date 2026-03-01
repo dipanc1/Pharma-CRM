@@ -174,10 +174,12 @@ function AddVisitContainer() {
 
     try {
       // Pre-validate stock before any database operations
+      // Always validate against current stock (today) since updateProductStock recalculates as of today
       if (sales.length > 0) {
+        const today = new Date().toISOString().split('T')[0];
         for (const sale of sales) {
           try {
-            const stockSummary = await calculateStockSummary(sale.product_id, formData.visit_date);
+            const stockSummary = await calculateStockSummary(sale.product_id, today);
             if (stockSummary.closingStock < sale.quantity) {
               throw new Error(`Insufficient stock for ${sale.product_name}. Available: ${stockSummary.closingStock}, Required: ${sale.quantity}`);
             }

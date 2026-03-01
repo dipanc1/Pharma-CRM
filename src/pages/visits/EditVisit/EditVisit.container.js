@@ -284,10 +284,12 @@ function EditVisitContainer() {
 
     try {
       // Pre-validate stock for new sales before any database operations
+      // Always validate against current stock (today) since updateProductStock recalculates as of today
       if (sales.length > 0) {
+        const today = new Date().toISOString().split('T')[0];
         for (const sale of sales) {
           try {
-            const stockSummary = await calculateStockSummary(sale.product_id, formData.visit_date);
+            const stockSummary = await calculateStockSummary(sale.product_id, today);
             // For existing sales, we need to account for the quantity that will be restored
             const existingSale = sales.find(s => s.id === sale.id && s.id < 1000000000000); // Database IDs are smaller
             const adjustedStock = existingSale ? stockSummary.closingStock + existingSale.quantity : stockSummary.closingStock;
