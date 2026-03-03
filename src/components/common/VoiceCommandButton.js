@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { MicrophoneIcon, StopIcon } from '@heroicons/react/24/solid';
 
 /**
- * Floating voice command button with recording state visualization.
- * Shows a pulsing mic when listening, spinner when processing.
+ * Floating, draggable voice command button with recording state visualization.
+ * Can be dragged anywhere on screen. Tapping triggers voice, dragging moves it.
  */
 const VoiceCommandButton = ({ 
   isListening, 
@@ -13,7 +13,54 @@ const VoiceCommandButton = ({
   onClick, 
   className = '' 
 }) => {
+  const [position, setPosition] = useState({ x: null, y: null });
+  const dragRef = useRef(null);
+  const isDraggingRef = useRef(false);
+  const hasDraggedRef = useRef(false);
+  const startPosRef = useRef({ x: 0, y: 0 });
+  const buttonPosRef = useRef({ x: 0, y: 0 });
+
+  // Initialize position on mount (bottom-right)
+  useEffect(() => {
+    setPosition({
+      x: window.innerWidth - 80,
+      y: window.innerHeight - 80,
+    });
+  }, []);
+
+  const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+
+  const handlePointerDown = useCallback((e) => {
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
+    startPosRef.current = { x: e.clientX, y: e.clientY };
+    buttonPosRef.current = { ...position };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, [position]);
+
+  const handlePointerMove = useCallback((e) => {
+    if (!isDraggingRef.current) return;
+    const dx = e.clientX - startPosRef.current.x;
+    const dy = e.clientY - startPosRef.current.y;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      hasDraggedRef.current = true;
+    }
+    setPosition({
+      x: clamp(buttonPosRef.current.x + dx, 8, window.innerWidth - 64),
+      y: clamp(buttonPosRef.current.y + dy, 8, window.innerHeight - 64),
+    });
+  }, []);
+
+  const handlePointerUp = useCallback((e) => {
+    isDraggingRef.current = false;
+    // If user didn't drag (just tapped), trigger onClick
+    if (!hasDraggedRef.current && onClick) {
+      onClick();
+    }
+  }, [onClick]);
+
   if (!isSupported || !isConfigured) return null;
+  if (position.x === null) return null; // Not yet initialized
 
   const getButtonStyles = () => {
     if (isListening) {
@@ -33,16 +80,26 @@ const VoiceCommandButton = ({
 
   return (
     <button
+      ref={dragRef}
       type="button"
-      onClick={onClick}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
       disabled={isProcessing}
       title={getTitle()}
+      style={{
+        position: 'fixed',
+        left: position.x,
+        top: position.y,
+        touchAction: 'none',
+        userSelect: 'none',
+      }}
       className={`
-        fixed bottom-6 right-6 z-[60]
+        z-[60]
         flex items-center justify-center
         w-14 h-14 rounded-full
         text-white
-        transition-all duration-300 ease-in-out
+        transition-shadow duration-200
         focus:outline-none focus:ring-4 focus:ring-primary-300
         disabled:cursor-wait
         ${getButtonStyles()}
