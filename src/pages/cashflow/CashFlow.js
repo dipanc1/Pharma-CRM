@@ -119,6 +119,7 @@ const CashFlow = ({
       }
       setFormErrors({});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen]);
 
   const validateForm = () => {
