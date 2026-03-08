@@ -312,16 +312,10 @@ function EditVisitContainer() {
 
       if (originalSalesError) throw originalSalesError;
 
-      const originalTotalAmount = (originalSales || []).reduce((sum, s) => sum + parseFloat(s.total_amount || 0), 0);
-
-      // Generate invoice numbers early
-      let reversalInvoiceNumber = null;
+      // Generate invoice number for new sales
       let newInvoiceNumber = null;
       
       try {
-        if (originalTotalAmount > 0) {
-          reversalInvoiceNumber = await generateInvoiceNumber();
-        }
         if (sales.length > 0) {
           newInvoiceNumber = await generateInvoiceNumber();
         }
@@ -357,26 +351,19 @@ function EditVisitContainer() {
         }
       }
 
-      // Create reversal ledger entry if there were original sales
-      if (originalTotalAmount > 0 && reversalInvoiceNumber) {
-        const { error: reversalLedgerError } = await supabase.from('ledger_entries').insert({
-          doctor_id: formData.doctor_id,
-          entry_date: formData.visit_date,
-          source_type: 'visit',
-          source_id: id,
-          description: `Reversal of original visit sales - ₹${originalTotalAmount.toFixed(2)} (Invoice: ${reversalInvoiceNumber})`,
-          debit: 0,
-          credit: originalTotalAmount, // CREDIT - Reducing customer debt
-          invoice_number: reversalInvoiceNumber
-        });
+      // Delete old ledger entries for this visit before creating new ones
+      const { error: deleteLedgerError } = await supabase
+        .from('ledger_entries')
+        .delete()
+        .eq('source_type', 'visit')
+        .eq('source_id', id);
 
-        if (reversalLedgerError) {
-          console.error('Reversal ledger error:', reversalLedgerError);
-          throw new Error('Failed to create reversal ledger entry');
-        }
+      if (deleteLedgerError) {
+        console.error('Ledger deletion error:', deleteLedgerError);
+        throw new Error('Failed to delete old ledger entries');
       }
 
-      // Delete all existing sales for this visit (but keep ledger history)
+      // Delete all existing sales for this visit
       const { error: deleteError } = await supabase
         .from('sales')
         .delete()
