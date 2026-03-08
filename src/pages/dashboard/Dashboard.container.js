@@ -18,6 +18,7 @@ const DashboardContainer = () => {
     });
     const [recentVisits, setRecentVisits] = useState([]);
     const [salesData, setSalesData] = useState([]);
+    const [monthlySalesData, setMonthlySalesData] = useState([]);
     const [topContacts, setTopContacts] = useState([]);
 
     useEffect(() => {
@@ -206,6 +207,31 @@ const DashboardContainer = () => {
 
             setTopContacts(topContactsProcessed);
 
+            // Fetch monthly sales data (always last 12 months, independent of filter)
+            const twelveMonthsAgo = new Date();
+            twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
+            twelveMonthsAgo.setDate(1);
+
+            const { data: monthlySalesRaw } = await supabase
+                .from('sales')
+                .select('total_amount, visits!inner(visit_date)')
+                .gte('visits.visit_date', format(twelveMonthsAgo, 'yyyy-MM-dd'));
+
+            const monthlyBuckets = {};
+            monthlySalesRaw?.forEach(sale => {
+                const key = format(new Date(sale.visits.visit_date), 'MMM yyyy');
+                monthlyBuckets[key] = (monthlyBuckets[key] || 0) + parseFloat(sale.total_amount);
+            });
+
+            const months = [];
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date();
+                d.setMonth(d.getMonth() - i);
+                const key = format(d, 'MMM yyyy');
+                months.push({ month: key, sales: monthlyBuckets[key] || 0 });
+            }
+            setMonthlySalesData(months);
+
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
         }
@@ -240,6 +266,7 @@ const DashboardContainer = () => {
             stats={stats}
             recentVisits={recentVisits}
             salesData={salesData}
+            monthlySalesData={monthlySalesData}
             topContacts={topContacts}
             COLORS={COLORS}
             selectedMonth={selectedMonth}

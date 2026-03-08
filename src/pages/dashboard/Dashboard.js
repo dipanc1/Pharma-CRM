@@ -16,7 +16,7 @@ import { format } from 'date-fns';
 import { DashboardCard, Header } from '../../components';
 import { handleReload } from '../../helper';
 
-function Dashboard({ stats, recentVisits, salesData, topContacts, COLORS, selectedMonth, setSelectedMonth, monthOptions }) {
+function Dashboard({ stats, recentVisits, salesData, monthlySalesData, topContacts, COLORS, selectedMonth, setSelectedMonth, monthOptions }) {
   const currentMonth = format(new Date(), 'MMMM yyyy');
 
   const getDisplayTitle = () => {
@@ -194,6 +194,39 @@ function Dashboard({ stats, recentVisits, salesData, topContacts, COLORS, select
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Monthly Sales Trend */}
+      <div className="card">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">
+          Monthly Sales Trend (Last 12 Months)
+        </h3>
+        <div className="h-80">
+          {monthlySalesData && monthlySalesData.some(d => d.sales > 0) ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlySalesData} margin={{ top: 10, right: 30, left: 20, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="month"
+                  angle={-45}
+                  textAnchor="end"
+                  interval={0}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis tickFormatter={(v) => `₹${v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v}`} />
+                <Tooltip formatter={(value) => [`₹${value.toFixed(2)}`, 'Sales']} />
+                <Bar dataKey="sales" fill="#10B981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="text-center">
+                <ChartBarIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                <p>No monthly sales data available</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
