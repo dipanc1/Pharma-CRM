@@ -107,7 +107,7 @@ export const VOICE_CONTEXTS = {
       { name: 'name', type: 'string', description: 'Person name or description of the transaction', required: true },
       { name: 'type', type: 'enum', description: 'Category', options: ['sundry', 'person'], required: true },
       { name: 'amount', type: 'number', description: 'Amount in INR (just the number)', required: true },
-      { name: 'purpose', type: 'enum', description: 'Purpose of the transaction', options: [] },
+      { name: 'purpose', type: 'enum', description: 'Purpose of the transaction', options: ['advance', 'loan', 'other', 'debt_received', 'purchase', 'expense', 'gift', 'payment', 'daily_expense', 'travel_expense'] },
       { name: 'notes', type: 'string', description: 'Additional notes' },
       { name: 'doctor_id', type: 'string', description: 'The exact ID (UUID) of the linked doctor/chemist from the AVAILABLE CONTACTS list. If no match, return null.' },
       { name: 'doctor_name_display', type: 'string', description: 'Matched contact name for display. Null if no match.' }

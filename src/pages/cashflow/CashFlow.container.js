@@ -42,6 +42,7 @@ const CashFlowContainer = () => {
   // Doctor/Chemist linking state
   const [doctors, setDoctors] = useState([]);
   const [doctorSearch, setDoctorSearch] = useState('');
+  const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
 
   const { toast, showError, showSuccess, hideToast } = useToast();
 
@@ -164,6 +165,7 @@ const CashFlowContainer = () => {
   const handleAdd = () => {
     setEditingRecord(null);
     setDoctorSearch('');
+    setShowDoctorDropdown(false);
     setIsModalOpen(true);
   };
 
@@ -182,6 +184,7 @@ const CashFlowContainer = () => {
       setDoctorSearch(record.doctors.name);
     } else {
       setDoctorSearch('');
+      setShowDoctorDropdown(false);
     }
     
     setIsModalOpen(true);
@@ -276,6 +279,7 @@ const handleSubmit = async (formData) => {
     setIsModalOpen(false);
     setEditingRecord(null);
     setDoctorSearch('');
+    setShowDoctorDropdown(false);
 
     // Refetch all data to get updated records, analytics, and charts
     await Promise.all([
@@ -349,6 +353,7 @@ const handleDelete = async (id) => {
     setIsModalOpen(false);
     setEditingRecord(null);
     setDoctorSearch('');
+    setShowDoctorDropdown(false);
   };
 
   const fetchAnalytics = async () => {
@@ -495,9 +500,10 @@ const handleDelete = async (id) => {
     }
   };
 
-  const filteredDoctors = doctors.filter(d =>
-    (d.name || '').toLowerCase().includes(doctorSearch.toLowerCase())
-  );
+  // Don't filter doctors unless user is actively searching
+  const filteredDoctors = showDoctorDropdown && doctorSearch ? 
+    doctors.filter(d => (d.name || '').toLowerCase().includes(doctorSearch.toLowerCase())) :
+    doctors;
 
   // ─── Voice Command Integration ─────────────────────────────
   const voiceContext = VOICE_CONTEXTS.addCashFlow;
@@ -511,11 +517,22 @@ const handleDelete = async (id) => {
       throw new Error('A valid amount is required');
     }
 
-    // Resolve doctor contact by exact ID
+    // Find doctor by ID if provided and get fresh doctor list
     let doctorId = null;
+    let linkedDoctorName = '';
     if (data.doctor_id) {
-      const match = doctors.find(d => d.id === data.doctor_id);
-      if (match) doctorId = match.id;
+      // Re-fetch fresh doctors to handle newly added contacts
+      const { data: freshDoctors, error } = await supabase
+        .from('doctors')
+        .select('id, name, contact_type')
+        .eq('id', data.doctor_id);
+        
+      if (error) throw error;
+      
+      if (freshDoctors && freshDoctors.length > 0) {
+        doctorId = freshDoctors[0].id;
+        linkedDoctorName = freshDoctors[0].name;
+      }
     }
 
     const processedData = {
@@ -523,38 +540,17 @@ const handleDelete = async (id) => {
       cash_type: data.cash_type || 'out_flow',
       name: data.name.trim(),
       type: data.type || 'sundry',
-      amount: parseFloat(data.amount),
-      notes: data.notes?.trim() || null,
-      purpose: data.purpose || null,
-      doctor_id: doctorId,
+      amount: parseFloat(data.amount).toString(),
+      purpose: data.purpose || '',
+      notes: data.notes?.trim() || '',
+      doctor_id: doctorId || '',
+      doctor_name_display: linkedDoctorName
     };
 
-    // Insert directly into database
-    const { data: newRecord, error } = await supabase
-      .from('cash_flow')
-      .insert([processedData])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // Create ledger entry if doctor linked
-    if (doctorId) {
-      const isCredit = processedData.cash_type === 'in_flow';
-      await supabase.from('ledger_entries').insert({
-        doctor_id: doctorId,
-        entry_date: processedData.transaction_date,
-        source_type: 'cash',
-        source_id: newRecord.id,
-        description: `${processedData.cash_type === 'in_flow' ? 'Payment received' : 'Payment made'} - ${processedData.name}`,
-        debit: isCredit ? 0 : processedData.amount,
-        credit: isCredit ? processedData.amount : 0,
-      });
-    }
-
-    showSuccess('Cash flow entry added via voice!');
-    // Refresh all data
-    await Promise.all([fetchCashFlow(), fetchAnalytics(), fetchChartData()]);
+    // Set prefilled data and open form instead of direct save
+    setVoicePrefilledData(processedData);
+    handleAdd(); // This will open the form modal
+    
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doctors, showSuccess]);
 
@@ -598,6 +594,8 @@ const handleDelete = async (id) => {
         doctors={filteredDoctors}
         doctorSearch={doctorSearch}
         setDoctorSearch={setDoctorSearch}
+        showDoctorDropdown={showDoctorDropdown}
+        setShowDoctorDropdown={setShowDoctorDropdown}
         voicePrefilledData={voicePrefilledData}
         onVoicePrefilledConsumed={() => setVoicePrefilledData(null)}
       />

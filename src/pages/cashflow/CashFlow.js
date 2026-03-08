@@ -53,6 +53,8 @@ const CashFlow = ({
   doctors,
   doctorSearch,
   setDoctorSearch,
+  showDoctorDropdown,
+  setShowDoctorDropdown,
   voicePrefilledData,
   onVoicePrefilledConsumed
 }) => {
@@ -68,9 +70,8 @@ const CashFlow = ({
   });
 
   const [formErrors, setFormErrors] = useState({});
-  const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
 
-  // Initialize form data when modal opens or editing record changes
+  // Initialize form data when modal opens - only runs once when modal opens
   useEffect(() => {
     if (isModalOpen) {
       if (voicePrefilledData) {
@@ -84,6 +85,14 @@ const CashFlow = ({
           notes: voicePrefilledData.notes || '',
           doctor_id: voicePrefilledData.doctor_id || ''
         });
+        
+        // Set doctor search if linked contact from voice command
+        if (voicePrefilledData.doctor_name_display) {
+          setDoctorSearch(voicePrefilledData.doctor_name_display);
+        } else {
+          setDoctorSearch('');
+        }
+        
         if (onVoicePrefilledConsumed) onVoicePrefilledConsumed();
       } else if (editingRecord) {
         setFormData({
@@ -110,7 +119,7 @@ const CashFlow = ({
       }
       setFormErrors({});
     }
-  }, [editingRecord, isModalOpen, voicePrefilledData, onVoicePrefilledConsumed]);
+  }, [isModalOpen]);
 
   const validateForm = () => {
     const errors = {};
@@ -728,14 +737,15 @@ const CashFlow = ({
                   placeholder="Search doctor / chemist..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                {showDoctorDropdown && doctorSearch && doctors.length > 0 && (
+                {showDoctorDropdown && doctors.length > 0 && (
                   <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-56 overflow-auto">
                     {doctors.map(d => {
                       const isChemist = d.contact_type === 'chemist';
                       return (
                         <div
                           key={d.id}
-                          onClick={() => {
+                          onMouseDown={(e) => {
+                            e.preventDefault(); // Prevent input blur
                             setFormData(prev => ({ ...prev, doctor_id: d.id }));
                             setDoctorSearch(d.name);
                             setShowDoctorDropdown(false);
@@ -762,7 +772,7 @@ const CashFlow = ({
                 )}
                 {formData.doctor_id && (
                   <p className="mt-1 text-xs text-green-600 flex items-center justify-between">
-                    <span>✓ Linked to contact</span>
+                    <span>✓ {voicePrefilledData?.doctor_name_display ? `Linked to ${voicePrefilledData.doctor_name_display}` : 'Linked to contact'}</span>
                     <button
                       type="button"
                       onClick={() => {
