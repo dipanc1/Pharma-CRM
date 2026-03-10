@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, differenceInCalendarDays, addYears } from 'date-fns';
 
 import Dashboard from './Dashboard'
 
@@ -20,9 +20,11 @@ const DashboardContainer = () => {
     const [salesData, setSalesData] = useState([]);
     const [monthlySalesData, setMonthlySalesData] = useState([]);
     const [topContacts, setTopContacts] = useState([]);
+    const [upcomingDates, setUpcomingDates] = useState([]);
 
     useEffect(() => {
         fetchDashboardData();
+        fetchUpcomingDates();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedMonth]);
 
@@ -239,6 +241,39 @@ const DashboardContainer = () => {
 
     const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
+    const fetchUpcomingDates = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('doctor_important_dates')
+                .select('*, doctors(name, contact_type)');
+
+            if (error) throw error;
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const withUpcoming = (data || []).map(entry => {
+                const dateObj = new Date(entry.date + 'T00:00:00');
+                // Get this year's occurrence
+                let nextOccurrence = new Date(today.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+                // If already passed this year, use next year
+                if (nextOccurrence < today) {
+                    nextOccurrence = addYears(nextOccurrence, 1);
+                }
+                const daysUntil = differenceInCalendarDays(nextOccurrence, today);
+                return { ...entry, daysUntil, nextOccurrence };
+            });
+
+            const upcoming = withUpcoming
+                .filter(entry => entry.daysUntil <= 7)
+                .sort((a, b) => a.daysUntil - b.daysUntil);
+
+            setUpcomingDates(upcoming);
+        } catch (error) {
+            console.error('Error fetching upcoming dates:', error);
+        }
+    };
+
     const generateMonthOptions = () => {
         const now = new Date();
         const currentYear = now.getFullYear();
@@ -268,6 +303,7 @@ const DashboardContainer = () => {
             salesData={salesData}
             monthlySalesData={monthlySalesData}
             topContacts={topContacts}
+            upcomingDates={upcomingDates}
             COLORS={COLORS}
             selectedMonth={selectedMonth}
             setSelectedMonth={setSelectedMonth}

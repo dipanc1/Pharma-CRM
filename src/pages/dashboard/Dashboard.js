@@ -9,14 +9,16 @@ import {
   EyeIcon,
   ChartBarIcon,
   BuildingStorefrontIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  GiftIcon,
+  BellAlertIcon
 } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { format } from 'date-fns';
 import { DashboardCard, Header } from '../../components';
 import { handleReload } from '../../helper';
 
-function Dashboard({ stats, recentVisits, salesData, monthlySalesData, topContacts, COLORS, selectedMonth, setSelectedMonth, monthOptions }) {
+function Dashboard({ stats, recentVisits, salesData, monthlySalesData, topContacts, upcomingDates, COLORS, selectedMonth, setSelectedMonth, monthOptions }) {
   const currentMonth = format(new Date(), 'MMMM yyyy');
 
   const getDisplayTitle = () => {
@@ -89,6 +91,50 @@ function Dashboard({ stats, recentVisits, salesData, monthlySalesData, topContac
           </select>
         </div>
       </div>
+
+      {/* Upcoming Important Dates Alert */}
+      {upcomingDates && upcomingDates.length > 0 && (
+        <div className="card bg-amber-50 border border-amber-200">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0 p-2 bg-amber-100 rounded-full">
+              <BellAlertIcon className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-amber-800 mb-2">
+                Upcoming Important Dates ({upcomingDates.length})
+              </h3>
+              <div className="space-y-2">
+                {upcomingDates.map((entry) => {
+                  const isToday = entry.daysUntil === 0;
+                  return (
+                    <div key={entry.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <GiftIcon className={`h-4 w-4 flex-shrink-0 ${isToday ? 'text-red-500' : 'text-amber-500'}`} />
+                        <Link
+                          to={`/doctors/${entry.doctor_id}`}
+                          className="text-sm font-medium text-amber-900 hover:text-amber-700 truncate"
+                        >
+                          {entry.doctors?.name}
+                        </Link>
+                        <span className="text-sm text-amber-700">— {entry.label}</span>
+                      </div>
+                      <span className={`flex-shrink-0 inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                        isToday
+                          ? 'bg-red-100 text-red-800'
+                          : entry.daysUntil <= 3
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {isToday ? 'Today!' : entry.daysUntil === 1 ? 'Tomorrow' : `In ${entry.daysUntil} days`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">

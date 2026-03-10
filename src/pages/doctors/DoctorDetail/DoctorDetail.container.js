@@ -10,6 +10,7 @@ function DoctorDetailContainer() {
   const navigate = useNavigate();
   const [doctor, setDoctor] = useState(null);
   const [visits, setVisits] = useState([]);
+  const [importantDates, setImportantDates] = useState([]);
   const [loading, setLoading] = useState(true);
   const { toast, showSuccess, showError, hideToast } = useToast();
 
@@ -49,6 +50,16 @@ function DoctorDetailContainer() {
 
       if (visitsError) throw visitsError;
       setVisits(visitsData || []);
+
+      // Fetch important dates
+      const { data: datesData, error: datesError } = await supabase
+        .from('doctor_important_dates')
+        .select('*')
+        .eq('doctor_id', id)
+        .order('date', { ascending: true });
+
+      if (datesError) throw datesError;
+      setImportantDates(datesData || []);
 
     } catch (error) {
       console.error('Error fetching doctor data:', error);
@@ -109,11 +120,43 @@ function DoctorDetailContainer() {
 
   const formatCurrency = (amount) => `₹${amount.toFixed(2)}`;
 
+  const addImportantDate = async (dateEntry) => {
+    try {
+      const { error } = await supabase
+        .from('doctor_important_dates')
+        .insert([{ ...dateEntry, doctor_id: id }]);
+
+      if (error) throw error;
+      showSuccess('Important date added');
+      fetchDoctorData();
+    } catch (error) {
+      console.error('Error adding important date:', error);
+      showError('Error adding important date');
+    }
+  };
+
+  const deleteImportantDate = async (dateId) => {
+    try {
+      const { error } = await supabase
+        .from('doctor_important_dates')
+        .delete()
+        .eq('id', dateId);
+
+      if (error) throw error;
+      showSuccess('Important date removed');
+      setImportantDates(prev => prev.filter(d => d.id !== dateId));
+    } catch (error) {
+      console.error('Error deleting important date:', error);
+      showError('Error deleting important date');
+    }
+  };
+
   return (
     <>
       <DoctorDetail
         doctor={doctor}
         visits={visits}
+        importantDates={importantDates}
         loading={loading}
         deleteDoctor={deleteDoctor}
         calculateTotalSales={calculateTotalSales}
@@ -121,6 +164,8 @@ function DoctorDetailContainer() {
         getDoctorTypeStyle={getDoctorTypeStyle}
         getVisitStatusStyle={getVisitStatusStyle}
         formatCurrency={formatCurrency}
+        addImportantDate={addImportantDate}
+        deleteImportantDate={deleteImportantDate}
       />
       <Toast
         message={toast.message}
