@@ -10,6 +10,7 @@ function EditDoctorContainer() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [importantDates, setImportantDates] = useState([]);
   const { toast, showSuccess, showError, hideToast } = useToast();
   const [formData, setFormData] = useState({
     id: '',
@@ -137,6 +138,15 @@ function EditDoctorContainer() {
         doctor_class: data.doctor_class || '',
         doctor_type: data.doctor_type || ''
       });
+
+      // Fetch existing important dates
+      const { data: datesData } = await supabase
+        .from('doctor_important_dates')
+        .select('*')
+        .eq('doctor_id', id)
+        .order('date', { ascending: true });
+
+      setImportantDates((datesData || []).map(d => ({ ...d, _key: d.id })));
     } catch (error) {
       console.error('Error fetching doctor:', error);
       showError('Error loading contact details');
@@ -188,6 +198,25 @@ function EditDoctorContainer() {
 
       if (error) throw error;
 
+      // Sync important dates: delete removed, insert new
+      const existingIds = importantDates.filter(d => d.id).map(d => d.id);
+      // Delete dates that were removed
+      const { data: currentDates } = await supabase
+        .from('doctor_important_dates')
+        .select('id')
+        .eq('doctor_id', id);
+      const idsToDelete = (currentDates || []).map(d => d.id).filter(dbId => !existingIds.includes(dbId));
+      if (idsToDelete.length > 0) {
+        await supabase.from('doctor_important_dates').delete().in('id', idsToDelete);
+      }
+      // Insert new dates (ones without an id)
+      const newDates = importantDates.filter(d => !d.id);
+      if (newDates.length > 0) {
+        await supabase.from('doctor_important_dates').insert(
+          newDates.map(d => ({ doctor_id: id, label: d.label, date: d.date, is_recurring: d.is_recurring, notes: d.notes || null }))
+        );
+      }
+
       showSuccess(`${formData.contact_type === 'chemist' ? 'Chemist' : 'Doctor'} updated successfully!`);
       setTimeout(() => {
         navigate(`/doctors/${id}`);
@@ -214,6 +243,8 @@ function EditDoctorContainer() {
         saving={saving}
         onCancel={onCancel}
         FORM_FIELDS={FORM_FIELDS}
+        importantDates={importantDates}
+        setImportantDates={setImportantDates}
       />
       <Toast
         message={toast.message}

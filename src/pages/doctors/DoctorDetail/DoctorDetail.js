@@ -31,7 +31,7 @@ function DoctorDetail({
   const { id } = useParams();
   const visitTableHeaders = ['Visit Date', 'Status', 'Total Sales', 'Notes'];
   const [showAddDateForm, setShowAddDateForm] = useState(false);
-  const [newDate, setNewDate] = useState({ label: '', date: '', notes: '' });
+  const [newDate, setNewDate] = useState({ label: '', date: '', notes: '', is_recurring: false });
   const [addingDate, setAddingDate] = useState(false);
   
   const isChemist = doctor?.contact_type === 'chemist';
@@ -41,7 +41,7 @@ function DoctorDetail({
     e.preventDefault();
     setAddingDate(true);
     await addImportantDate(newDate);
-    setNewDate({ label: '', date: '', notes: '' });
+    setNewDate({ label: '', date: '', notes: '', is_recurring: false });
     setShowAddDateForm(false);
     setAddingDate(false);
   };
@@ -186,10 +186,22 @@ function DoctorDetail({
                 />
               </div>
             </div>
+            <div className="mt-3">
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 h-4 w-4"
+                  checked={newDate.is_recurring}
+                  onChange={(e) => setNewDate(prev => ({ ...prev, is_recurring: e.target.checked }))}
+                />
+                <span className="ml-2 text-sm text-gray-700">Recurring yearly</span>
+                <span className="ml-1 text-xs text-gray-400">(e.g., birthday, anniversary)</span>
+              </label>
+            </div>
             <div className="flex justify-end space-x-2 mt-3">
               <button
                 type="button"
-                onClick={() => { setShowAddDateForm(false); setNewDate({ label: '', date: '', notes: '' }); }}
+                onClick={() => { setShowAddDateForm(false); setNewDate({ label: '', date: '', notes: '', is_recurring: false }); }}
                 className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
               >
                 Cancel
@@ -233,6 +245,11 @@ function DoctorDetail({
                     <div>
                       <div className="flex items-center space-x-2">
                         <span className="font-medium text-gray-900">{dateEntry.label}</span>
+                        {dateEntry.is_recurring && (
+                          <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">
+                            Yearly
+                          </span>
+                        )}
                         {isToday && (
                           <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                             Today!

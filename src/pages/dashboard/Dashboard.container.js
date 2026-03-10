@@ -254,18 +254,23 @@ const DashboardContainer = () => {
 
             const withUpcoming = (data || []).map(entry => {
                 const dateObj = new Date(entry.date + 'T00:00:00');
-                // Get this year's occurrence
-                let nextOccurrence = new Date(today.getFullYear(), dateObj.getMonth(), dateObj.getDate());
-                // If already passed this year, use next year
-                if (nextOccurrence < today) {
-                    nextOccurrence = addYears(nextOccurrence, 1);
+                let nextOccurrence;
+                if (entry.is_recurring) {
+                    // Recurring: find next annual occurrence
+                    nextOccurrence = new Date(today.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+                    if (nextOccurrence < today) {
+                        nextOccurrence = addYears(nextOccurrence, 1);
+                    }
+                } else {
+                    // One-time: use the exact date
+                    nextOccurrence = dateObj;
                 }
                 const daysUntil = differenceInCalendarDays(nextOccurrence, today);
                 return { ...entry, daysUntil, nextOccurrence };
             });
 
             const upcoming = withUpcoming
-                .filter(entry => entry.daysUntil <= 7)
+                .filter(entry => entry.daysUntil >= 0 && entry.daysUntil <= 7)
                 .sort((a, b) => a.daysUntil - b.daysUntil);
 
             setUpcomingDates(upcoming);

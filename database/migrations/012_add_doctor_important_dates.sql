@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS public.doctor_important_dates (
   doctor_id UUID NOT NULL REFERENCES public.doctors(id) ON DELETE CASCADE,
   label VARCHAR(100) NOT NULL,
   date DATE NOT NULL,
+  is_recurring BOOLEAN NOT NULL DEFAULT false,
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

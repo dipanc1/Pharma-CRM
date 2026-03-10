@@ -14,6 +14,7 @@ function AddDoctorContainer() {
   
   const [loading, setLoading] = useState(false);
   const { toast, showSuccess, showError, hideToast } = useToast();
+  const [importantDates, setImportantDates] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     contact_type: typeFromUrl, // Set from URL
@@ -47,11 +48,28 @@ function AddDoctorContainer() {
         doctor_type: formData.contact_type === 'chemist' ? null : formData.doctor_type
       };
 
-      const { error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('doctors')
-        .insert([dataToInsert]);
+        .insert([dataToInsert])
+        .select('id')
+        .single();
 
       if (error) throw error;
+
+      // Save important dates if any
+      if (importantDates.length > 0) {
+        const datesToInsert = importantDates.map(d => ({
+          doctor_id: inserted.id,
+          label: d.label,
+          date: d.date,
+          is_recurring: d.is_recurring,
+          notes: d.notes || null
+        }));
+        const { error: datesError } = await supabase
+          .from('doctor_important_dates')
+          .insert(datesToInsert);
+        if (datesError) console.error('Error saving dates:', datesError);
+      }
 
       const contactLabel = formData.contact_type === 'chemist' ? 'Chemist' : 'Doctor';
       showSuccess(`${contactLabel} added successfully!`);
@@ -197,6 +215,8 @@ function AddDoctorContainer() {
         loading={loading}
         FORM_FIELDS={FORM_FIELDS}
         backPath={backPath}
+        importantDates={importantDates}
+        setImportantDates={setImportantDates}
       />
       <Toast
         message={toast.message}
