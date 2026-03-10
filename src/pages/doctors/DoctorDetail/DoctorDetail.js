@@ -12,7 +12,7 @@ import {
   InfoField,
   NoRecordsAddButtonLayout
 } from '../../../components';
-import { format, parseISO, isSameMonth, isSameDay } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 function DoctorDetail({ 
   doctor, 
@@ -44,13 +44,6 @@ function DoctorDetail({
     setNewDate({ label: '', date: '', notes: '' });
     setShowAddDateForm(false);
     setAddingDate(false);
-  };
-
-  const isUpcoming = (dateStr) => {
-    const today = new Date();
-    const date = parseISO(dateStr);
-    return isSameMonth(today, new Date(today.getFullYear(), date.getMonth(), date.getDate())) &&
-      date.getDate() >= today.getDate() && date.getDate() <= today.getDate() + 7;
   };
 
   return loading ? (
