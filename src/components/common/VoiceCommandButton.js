@@ -20,10 +20,10 @@ const VoiceCommandButton = ({
   const startPosRef = useRef({ x: 0, y: 0 });
   const buttonPosRef = useRef({ x: 0, y: 0 });
 
-  // Initialize position on mount (bottom-right)
+  // Initialize position on mount (bottom-left corner, clear of form elements)
   useEffect(() => {
     setPosition({
-      x: window.innerWidth - 80,
+      x: 16,
       y: window.innerHeight - 80,
     });
   }, []);
