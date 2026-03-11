@@ -23,7 +23,8 @@ function EditProductContainer() {
     { value: 'LSB LIFE SCIENCES', label: 'LSB LIFE SCIENCES' },
     { value: 'FLOWRICH PHARMA', label: 'FLOWRICH PHARMA' },
     { value: 'CRANIX PHARMA', label: 'CRANIX PHARMA' },
-    { value: 'BRVYMA', label: 'BRVYMA' }
+    { value: 'BRVYMA', label: 'BRVYMA' },
+    { value: 'RECHELIST PHARMA', label: 'RECHELIST PHARMA' }
   ];
 
   const FORM_FIELDS = [
