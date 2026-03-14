@@ -80,6 +80,31 @@ A comprehensive **Pharmaceutical Sales CRM** system that helps sales representat
 - ✅ **Company Distribution**: Visual breakdown of inventory value by pharmaceutical company
 - ✅ **Export Functionality**: CSV export for external analysis and reporting
 
+### 8. **Cash Flow Management** (`/cash-flow`)
+- ✅ **Complete Cash Tracking**: Record inflows and outflows with categorization
+- ✅ **Doctor/Chemist Linking**: Associate cash flow entries with specific contacts
+- ✅ **Advanced Analytics**: Visualize cash flow trends with charts and daily trends
+- ✅ **Multi-filter Support**: Filter by cash type, transaction type, purpose, and date range
+- ✅ **Voice Command Integration**: Record cash transactions using voice commands
+- ✅ **Purpose Categorization**: Organize transactions by purpose for better insights
+- ✅ **Pagination & Search**: Navigate large datasets with search capabilities
+
+### 9. **Ledger System** (`/ledger`)
+- ✅ **Accounting Ledger**: Complete double-entry accounting for all transactions
+- ✅ **Running Balance**: Automatic calculation of running balances per doctor/contact
+- ✅ **Trial Balance View**: Aggregate view of all contacts showing debit/credit summaries
+- ✅ **Invoice Integration**: Link ledger entries to specific invoices for reference
+- ✅ **Multi-filter Queries**: Filter by doctor, date range, and transaction source
+- ✅ **Dual Export**: Export individual ledger entries or complete trial balance as CSV
+- ✅ **Source Tracking**: Track transaction sources (sales, cash flow, adjustments)
+
+### 10. **Important Dates Management**
+- ✅ **Recurring Dates**: Track important dates for each doctor (birthdays, anniversaries)
+- ✅ **Automatic Tracking**: Set recurring dates that repeat yearly
+- ✅ **Calendar Integration**: View and manage dates directly in doctor profiles
+- ✅ **Add/Edit/Delete**: Full CRUD operations for important dates
+- ✅ **Smart Notifications**: Upcoming important dates displayed in dashboard
+
 ## 🎨 User Interface & Experience
 
 ### Design Philosophy
@@ -88,6 +113,7 @@ A comprehensive **Pharmaceutical Sales CRM** system that helps sales representat
 - **Intuitive Navigation**: Logical menu structure with clear visual hierarchy
 - **Data-Driven**: Beautiful charts and visualizations for actionable insights
 - **Consistent Branding**: Unified color scheme and typography throughout
+- **Voice-Enabled**: Draggable voice command button for hands-free data entry
 
 ### User Experience Features
 - **Smart Forms**: Intelligent form design with validation and auto-completion
@@ -95,6 +121,8 @@ A comprehensive **Pharmaceutical Sales CRM** system that helps sales representat
 - **Loading States**: Smooth loading indicators for better user feedback
 - **Error Handling**: Graceful error messages and recovery options
 - **Keyboard Navigation**: Full keyboard accessibility support
+- **Voice Commands**: Draggable, positioned voice command button for easy access
+- **Responsive Voice Modal**: Clear voice confirmation dialog for transaction types
 
 ### Visual Components
 - **Interactive Charts**: Hover effects and clickable elements in charts
@@ -108,9 +136,17 @@ A comprehensive **Pharmaceutical Sales CRM** system that helps sales representat
 ```sql
 doctors (id, name, specialization, hospital, contact_info, created_at)
 ├── visits (id, doctor_id, visit_date, notes, status, created_at)
-    ├── sales (id, visit_id, product_id, quantity, unit_price, total_amount)
+│   ├── sales (id, visit_id, product_id, quantity, unit_price, total_amount)
+│   └── ledger_entries (id, visit_id, debit, credit, running_balance)
+├── doctor_important_dates (id, doctor_id, date, occasion, recurring)
+└── cash_flow (id, doctor_id, cash_type, amount, date, created_at)
+
 products (id, name, description, price, company_name, current_stock)
-stock_transactions (id, product_id, transaction_type, quantity, date)
+├── sales (id, product_id, visit_id, quantity, unit_price, total_amount)
+└── stock_transactions (id, product_id, transaction_type, quantity, date)
+
+ledger_entries (id, doctor_id, debit, credit, entry_date, invoice_number, source_type)
+cash_flow (id, doctor_id, cash_type, type, purpose, amount, date)
 ```
 
 ### Key Relationships
@@ -154,6 +190,19 @@ npm start  # Launches on http://localhost:3000
 ```
 
 ## 📱 Key User Workflows & Business Logic
+
+### Navigation Menu Structure
+```
+Dashboard               - Overview and KPIs
+├── Doctors            - Doctor/Contact management
+├── Chemists           - Chemist contact management
+├── Visits             - Visit tracking
+├── Sales              - Sales analytics and reporting
+├── Products           - Product catalog management
+├── Inventory          - Stock tracking and management
+├── Cash Flow          - Cash inflow/outflow tracking
+└── Ledger             - Accounting ledger and trial balance
+```
 
 ### Complete Sales Visit Workflow
 1. **Pre-visit Planning**:

@@ -12,8 +12,11 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - **Sales Performance**: Monitor your sales metrics and top-performing relationships
 - **Inventory Management**: Real-time stock tracking with low-stock alerts
 - **Professional Reporting**: Beautiful charts and analytics for presentations
+- **Financial Management**: Track cash flow, maintain accounting ledger, and monitor doctor credit
+- **Important Dates**: Never miss important client occasions with automatic calendar tracking
 - **Mobile Responsive**: Works seamlessly on desktop, tablet, and mobile devices
 - **Data Protection**: Automated backup system with schema versioning
+- **Voice-Enabled**: Quick data entry using draggable voice command button
 
 ## Features
 
@@ -34,7 +37,7 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 
 ### 💊 Product Management
 - Comprehensive pharmaceutical product catalog
-- Organized by company/manufacturer (e.g., LSB LIFE SCIENCES, FLOWRICH PHARMA, CRANIX PHARMA, BRVYMA)
+- Organized by company/manufacturer (e.g., LSB LIFE SCIENCES, FLOWRICH PHARMA, CRANIX PHARMA, BRVYMA, RECHELIST PHARMA)
 - **Note**: Products are organized by pharmaceutical company rather than generic categories for better tracking
 - Batch number and expiry date tracking
 - Pricing management with discount support
@@ -66,6 +69,32 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - Inventory insights with stock value tracking
 - Trend analysis and forecasting
 - **Monthly and all-time performance views**
+- **Important dates calendar** for upcoming doctor events
+
+### 💳 Cash Flow Management
+- **Complete Cash Tracking**: Record inflows and outflows with specific categories
+- **Contact Linking**: Associate cash flow entries with doctors and chemists
+- **Advanced Analytics**: Visual representation of cash flow trends and patterns
+- **Voice Command Support**: Record cash transactions using voice commands
+- **Categorized Transactions**: Organize by cash type, transaction type, and purpose
+- **Multi-Period Reporting**: View cash flow across any date range
+- **Dashboard Integration**: Daily cash flow insights and analytics
+
+### 📋 Ledger & Accounting
+- **Double-Entry Accounting**: Complete accounting ledger for all transactions
+- **Running Balance**: Automatic balance calculations per doctor/contact
+- **Trial Balance**: Summary view of all contacts with debit/credit positions
+- **Invoice Tracking**: Link ledger entries to specific invoices
+- **Source Categorization**: Track transaction sources (sales, cash flow, adjustments)
+- **CSV Export**: Export ledger entries and trial balance reports
+- **Advanced Filtering**: Filter by contact, date range, and transaction source
+
+### 🎂 Important Dates Management
+- **Recurring Dates**: Track important dates for each doctor (birthdays, anniversaries, etc.)
+- **Annual Reminders**: Automatic recognition of recurring important dates each year
+- **Calendar View**: Integrated calendar display in doctor profiles
+- **Full CRUD Operations**: Add, edit, view, and delete important dates
+- **Dashboard Visibility**: Upcoming important dates displayed on main dashboard
 
 ### 🔄 Backup & Restore System
 - **Automated Database Backups**: Complete data and schema backup
@@ -132,6 +161,13 @@ Run each migration file in order in your Supabase SQL editor:
 3. **Stock Tracking** ([`database/migrations/003_add_stock_tracking.sql`](database/migrations/003_add_stock_tracking.sql))
 4. **Security Policies** ([`database/migrations/004_add_rls_policies.sql`](database/migrations/004_add_rls_policies.sql))
 5. **Performance Indexes** ([`database/migrations/005_add_indexes.sql`](database/migrations/005_add_indexes.sql))
+6. **Chemist Support** ([`database/migrations/006_add_chemist_support.sql`](database/migrations/006_add_chemist_support.sql))
+7. **Cash Flow Table** ([`database/migrations/007_add_cash_flow_table.sql`](database/migrations/007_add_cash_flow_table.sql))
+8. **RLS Policies Fix** ([`database/migrations/008_fix_rls_policies.sql`](database/migrations/008_fix_rls_policies.sql))
+9. **Link Doctor to Cash Flow** ([`database/migrations/009_add_link_doctor_cash_flow.sql`](database/migrations/009_add_link_doctor_cash_flow.sql))
+10. **Ledger Support** ([`database/migrations/010_ledger_support.sql`](database/migrations/010_ledger_support.sql))
+11. **Fix Invoice Number Type** ([`database/migrations/011_fix_invoice_number_type.sql`](database/migrations/011_fix_invoice_number_type.sql))
+12. **Doctor Important Dates** ([`database/migrations/012_add_doctor_important_dates.sql`](database/migrations/012_add_doctor_important_dates.sql))
 
 #### Option B: Complete Schema (All-in-One)
 Run the complete database schema in your Supabase SQL editor:

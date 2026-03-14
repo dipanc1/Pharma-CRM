@@ -2,15 +2,29 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import useToast from '../../hooks/useToast';
 import Ledger from './Ledger';
-import { format, startOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 import { calculateRunningBalance } from '../../utils/invoiceUtils';
 
 const LedgerContainer = () => {
   const [loading, setLoading] = useState(true);
   const [allEntries, setAllEntries] = useState([]);
   const [doctorFilter, setDoctorFilter] = useState('');
-  const initialStartDate = format(startOfMonth(new Date()), 'yyyy-MM-dd');
-  const initialEndDate = format(new Date(), 'yyyy-MM-dd');
+  // Calculate financial year (April 1 to March 31)
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth(); // 0-indexed
+  let financialYearStartDate, financialYearEndDate;
+  
+  if (currentMonth < 3) { // Jan (0), Feb (1), Mar (2)
+    financialYearStartDate = new Date(currentYear - 1, 3, 1); // Apr 1 of prev year
+    financialYearEndDate = new Date(currentYear, 2, 31); // Mar 31 of current year
+  } else { // Apr (3) onwards
+    financialYearStartDate = new Date(currentYear, 3, 1); // Apr 1 of current year
+    financialYearEndDate = new Date(currentYear + 1, 2, 31); // Mar 31 of next year
+  }
+  
+  const initialStartDate = format(financialYearStartDate, 'yyyy-MM-dd');
+  const initialEndDate = format(financialYearEndDate, 'yyyy-MM-dd');
   const [startDate, setStartDate] = useState(initialStartDate);
   const [endDate, setEndDate] = useState(initialEndDate);
   const [doctors, setDoctors] = useState([]);
