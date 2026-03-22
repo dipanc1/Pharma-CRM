@@ -35,7 +35,7 @@ const Layout = () => {
     { name: 'Cash Flow', href: '/cash-flow', icon: BanknotesIcon }, 
     { name: 'Ledger', href: '/ledger', icon: BookOpenIcon },
     { name: 'Cycle Planning', href: '/cycle-planning', icon: ClipboardDocumentListIcon },
-    { name: 'KOL', href: '/kol', icon: StarIcon }
+    { name: 'Core Doctors', href: '/kol', icon: StarIcon }
   ];
 
   return (

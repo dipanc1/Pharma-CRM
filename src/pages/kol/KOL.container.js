@@ -66,7 +66,7 @@ function KOLContainer() {
       if (error) throw error;
       setKolDoctors(data || []);
     } catch (error) {
-      showError('Failed to load KOL doctors.');
+      showError('Failed to load core doctors.');
       setKolDoctors([]);
     } finally {
       setLoading(false);
@@ -144,27 +144,27 @@ function KOLContainer() {
       if (error) throw error;
 
       const doctor = allDoctors.find(d => d.id === doctorId);
-      showSuccess(`${doctor?.name || 'Doctor'} marked as KOL.`);
+      showSuccess(`${doctor?.name || 'Doctor'} marked as core doctor.`);
       setDoctorSearch('');
       setShowDoctorDropdown(false);
       await Promise.all([fetchKOLDoctors(), fetchAllDoctors()]);
     } catch (error) {
-      showError('Failed to mark doctor as KOL.');
+      showError('Failed to mark doctor as core doctor.');
     }
   };
 
   const unmarkKOL = async (doctorId, doctorName) => {
-    if (!window.confirm(`Remove ${doctorName || 'this doctor'} from KOL list?`)) return;
+    if (!window.confirm(`Remove ${doctorName || 'this doctor'} from core doctors list?`)) return;
     try {
       const { error } = await supabase
         .from('doctors')
         .update({ is_kol: false })
         .eq('id', doctorId);
       if (error) throw error;
-      showSuccess(`${doctorName || 'Doctor'} removed from KOL list.`);
+      showSuccess(`${doctorName || 'Doctor'} removed from core doctors list.`);
       await Promise.all([fetchKOLDoctors(), fetchAllDoctors()]);
     } catch (error) {
-      showError('Failed to remove KOL status.');
+      showError('Failed to remove core doctor status.');
     }
   };
 

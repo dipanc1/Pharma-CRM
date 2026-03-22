@@ -25,7 +25,7 @@ import Ledger from './pages/ledger';
 // Cycle Planning pages
 import CyclePlanning from './pages/cycle-planning';
 
-// KOL Tracking pages
+// Core Doctors pages
 import KOL from './pages/kol';
 
 // Products pages
@@ -90,7 +90,7 @@ function App() {
             {/* Cycle Planning Route */}
             <Route path="cycle-planning" element={<CyclePlanning />} />
 
-            {/* KOL Tracking Route */}
+            {/* Core Doctors Route */}
             <Route path="kol" element={<KOL />} />
 
           </Route>

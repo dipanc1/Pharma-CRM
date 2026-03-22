@@ -42,7 +42,7 @@ function KOL({
   return (
     <div className="space-y-6">
       <Header
-        title="KOL Tracking"
+        title="Core Doctors"
         buttons={[
           { onClick: handleReload, icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, title: 'Refresh' }
         ]}
@@ -69,7 +69,7 @@ function KOL({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mark Doctor as KOL
+              Mark as Core Doctor
             </label>
             <div className="relative">
               <input
@@ -78,7 +78,7 @@ function KOL({
                 onChange={(e) => setDoctorSearch(e.target.value)}
                 onFocus={() => setShowDoctorDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDoctorDropdown(false), 200)}
-                placeholder="Search doctor to mark as KOL..."
+                placeholder="Search doctor to mark as core doctor..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               {showDoctorDropdown && filteredDoctors.length > 0 && (
@@ -117,7 +117,7 @@ function KOL({
       {kolDoctors.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <DashboardCard
-            title="Total KOLs"
+            title="Total Core Doctors"
             value={kolDoctors.length}
             icon={<UserGroupIcon className="h-8 w-8 text-purple-600" />}
           />
@@ -167,10 +167,10 @@ function KOL({
                 <button
                   onClick={() => unmarkKOL(doctor.id, doctor.name)}
                   className="text-red-500 hover:text-red-700 p-1 flex items-center text-sm"
-                  title="Remove KOL status"
+                  title="Remove core doctor status"
                 >
                   <XMarkIcon className="h-4 w-4 mr-1" />
-                  Remove KOL
+                  Remove
                 </button>
               </div>
 
@@ -267,7 +267,7 @@ function KOL({
       ) : (
         <div className="card text-center py-12">
           <div className="text-gray-500">
-            No doctors are marked as Key Opinion Leaders. Use the search above to mark doctors as KOL.
+            No core doctors selected. Use the search above to mark doctors as core doctors.
           </div>
         </div>
       )}
