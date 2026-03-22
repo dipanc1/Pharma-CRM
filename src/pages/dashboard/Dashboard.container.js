@@ -5,6 +5,7 @@ import { format, startOfMonth, endOfMonth, differenceInCalendarDays, addYears } 
 import Dashboard from './Dashboard'
 
 const DashboardContainer = () => {
+    const ANNUAL_TARGET = 25_00_000; // 25 lacs
     const [selectedMonth, setSelectedMonth] = useState('current');
     const [stats, setStats] = useState({
         totalDoctors: 0,
@@ -14,7 +15,10 @@ const DashboardContainer = () => {
         visitPercentage: 0,
         totalSales: 0,
         totalRevenue: 0,
-        totalProducts: 0
+        totalProducts: 0,
+        annualTarget: ANNUAL_TARGET,
+        daysLeftInFiscalYear: 0,
+        targetRemaining: ANNUAL_TARGET
     });
     const [recentVisits, setRecentVisits] = useState([]);
     const [salesData, setSalesData] = useState([]);
@@ -52,6 +56,18 @@ const DashboardContainer = () => {
         try {
             const { startDate, endDate } = getDateRange();
             const isOverall = selectedMonth === 'overall';
+
+            // Calculate fiscal year (April 1 - March 31)
+            const today = new Date();
+            let fiscalYearStart = new Date(today.getFullYear(), 3, 1); // April 1
+            let fiscalYearEnd = new Date(today.getFullYear() + 1, 2, 31); // March 31 next year
+            
+            if (today < fiscalYearStart) {
+                fiscalYearStart = new Date(today.getFullYear() - 1, 3, 1);
+                fiscalYearEnd = new Date(today.getFullYear(), 2, 31);
+            }
+
+            const daysLeftInFiscalYear = differenceInCalendarDays(fiscalYearEnd, today) + 1; // +1 to include today
 
             // Fetch all contacts with their types
             const { data: allContacts } = await supabase
@@ -106,6 +122,16 @@ const DashboardContainer = () => {
             // Calculate total revenue
             const totalRevenue = salesData?.reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0) || 0;
 
+            // Fetch fiscal year revenue (April 1 - today of fiscal year)
+            const { data: fiscalYearSalesData } = await supabase
+                .from('sales')
+                .select('total_amount, visits!inner(visit_date)')
+                .gte('visits.visit_date', format(fiscalYearStart, 'yyyy-MM-dd'))
+                .lte('visits.visit_date', format(today, 'yyyy-MM-dd'));
+
+            const fiscalYearRevenue = fiscalYearSalesData?.reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0) || 0;
+            const targetRemaining = Math.max(0, ANNUAL_TARGET - fiscalYearRevenue);
+
             setStats({
                 totalDoctors,
                 totalChemists,
@@ -114,7 +140,10 @@ const DashboardContainer = () => {
                 visitPercentage: parseFloat(visitPercentage),
                 totalSales: salesCount || 0,
                 totalRevenue,
-                totalProducts: totalProductsCount || 0
+                totalProducts: totalProductsCount || 0,
+                annualTarget: ANNUAL_TARGET,
+                daysLeftInFiscalYear,
+                targetRemaining
             });
 
             // Fetch recent visits from selected period

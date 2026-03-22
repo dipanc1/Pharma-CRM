@@ -11,7 +11,9 @@ import {
   BuildingStorefrontIcon,
   ArrowPathIcon,
   GiftIcon,
-  BellAlertIcon
+  BellAlertIcon,
+  ArrowTrendingUpIcon as TrendingUpIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { format } from 'date-fns';
@@ -135,6 +137,29 @@ function Dashboard({ stats, recentVisits, salesData, monthlySalesData, topContac
           </div>
         </div>
       )}
+
+      {/* Annual Target Card */}
+      <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <TrendingUpIcon className="h-8 w-8 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Fiscal Year Target (Apr 1 - Mar 31)</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">₹{(stats.annualTarget / 100000).toFixed(1)} Lacs</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="flex items-center space-x-1 text-blue-600 mb-2">
+              <ClockIcon className="h-5 w-5" />
+              <span className="text-lg font-semibold">{stats.daysLeftInFiscalYear} days left</span>
+            </div>
+            <p className="text-sm text-gray-600">Target Remaining</p>
+            <p className="text-2xl font-bold text-blue-600">₹{(stats.targetRemaining / 100000).toFixed(2)} Lacs</p>
+          </div>
+        </div>
+      </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
