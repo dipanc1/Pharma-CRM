@@ -9,7 +9,9 @@ import {
   ChartBarIcon,
   BuildingStorefrontIcon,
   BanknotesIcon,
-  BookOpenIcon
+  BookOpenIcon,
+  ClipboardDocumentListIcon,
+  StarIcon
 } from '@heroicons/react/24/outline';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,7 +33,9 @@ const Layout = () => {
     { name: 'Products', href: '/products', icon: CubeIcon },
     { name: 'Inventory', href: '/inventory', icon: ChartBarIcon },
     { name: 'Cash Flow', href: '/cash-flow', icon: BanknotesIcon }, 
-    { name: 'Ledger', href: '/ledger', icon: BookOpenIcon } 
+    { name: 'Ledger', href: '/ledger', icon: BookOpenIcon },
+    { name: 'Cycle Planning', href: '/cycle-planning', icon: ClipboardDocumentListIcon },
+    { name: 'KOL', href: '/kol', icon: StarIcon }
   ];
 
   return (

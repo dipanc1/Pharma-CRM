@@ -1,6 +1,6 @@
 {
   "name": "pharma-crm",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "CRM application for pharmaceutical sales representatives",
   "private": true,
   "dependencies": {

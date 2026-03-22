@@ -22,6 +22,12 @@ import CashFlow from './pages/cashflow';
 // Add Ledger pages
 import Ledger from './pages/ledger';
 
+// Cycle Planning pages
+import CyclePlanning from './pages/cycle-planning';
+
+// KOL Tracking pages
+import KOL from './pages/kol';
+
 // Products pages
 import Products from './pages/products/Products';
 import AddProduct from './pages/products/AddProduct';
@@ -80,6 +86,12 @@ function App() {
 
             {/* Ledger Route */}
             <Route path="ledger" element={<Ledger />} />
+
+            {/* Cycle Planning Route */}
+            <Route path="cycle-planning" element={<CyclePlanning />} />
+
+            {/* KOL Tracking Route */}
+            <Route path="kol" element={<KOL />} />
 
           </Route>
         </Routes>
