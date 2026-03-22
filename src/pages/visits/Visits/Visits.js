@@ -34,6 +34,9 @@ function Visits({
   cityOptions,
   doctorVisitCounts,
   countsLoading,
+  doctorPage,
+  setDoctorPage,
+  doctorPageSize,
   deleteVisit,
   calculateTotalSales,
   filteredVisits,
@@ -139,57 +142,118 @@ function Visits({
       </div>
 
       {/* Visit Frequency Section */}
-      {(startDate && endDate && endDate >= startDate && doctorVisitCounts.length > 0) && (
+      {(startDate && endDate && endDate >= startDate && doctorVisitCounts.filter(d => d.doctor?.contact_type !== 'chemist').length > 0) && (
         <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-gray-700">
-              Contact Visit Frequency in Selected Period
-              {cityFilter && (
-                <span className="ml-2 text-xs text-blue-600 font-normal">
-                  (City: {cityFilter})
-                </span>
-              )}
-            </h2>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-500">
-                Status: {statusFilter}
-                {cityFilter && ` • City: ${cityFilter}`}
-              </span>
-              {countsLoading && (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600" />
-              )}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(doctorVisitCounts || [])
-              .filter(d =>
-                !searchTerm
-                  ? true
-                  : (d.doctor?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  (d.doctor?.specialization || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  (d.doctor?.hospital || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  (d.doctor?.city || '').toLowerCase().includes(searchTerm.toLowerCase())
-              )
-              .map(d => {
-                const isChemist = d.doctor?.contact_type === 'chemist';
-                return (
-                  <span
-                    key={d.doctor_id}
-                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border ${d.count === 0
-                      ? 'bg-gray-50 text-gray-700 border-gray-200'
-                      : 'bg-blue-50 text-blue-700 border-blue-200'
-                      }`}
-                    title={`${d.doctor?.name || 'Unknown'} — ${d.count} visit(s) in period${d.doctor?.city ? ` • ${d.doctor.city}` : ''}`}
-                  >
-                    {d.doctor?.name || 'Unknown'}: {d.count}
-                    {isChemist && <span className="ml-1 text-teal-600">💊</span>}
-                    {d.doctor?.city && !cityFilter && (
-                      <span className="ml-1 text-gray-500">• {d.doctor.city}</span>
-                    )}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">
+                Doctor Visit Frequency
+                {cityFilter && (
+                  <span className="ml-2 text-xs text-blue-600 font-normal">
+                    (City: {cityFilter})
                   </span>
+                )}
+              </h3>
+              <div className="text-sm text-gray-600 mt-1">
+                {(() => {
+                  const filteredDoctors = (doctorVisitCounts || [])
+                    .filter(d => d.doctor?.contact_type !== 'chemist')
+                    .filter(d =>
+                      !searchTerm
+                        ? true
+                        : (d.doctor?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (d.doctor?.specialization || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (d.doctor?.hospital || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (d.doctor?.city || '').toLowerCase().includes(searchTerm.toLowerCase())
+                    );
+                  const totalDoctors = filteredDoctors.length;
+                  const showingStart = Math.min(doctorPageSize, Math.max(0, totalDoctors - (doctorPage - 1) * doctorPageSize));
+                  return `Showing ${showingStart} of ${totalDoctors} doctors`;
+                })()}
+              </div>
+            </div>
+
+            {(() => {
+              const filteredDoctors = (doctorVisitCounts || [])
+                .filter(d => d.doctor?.contact_type !== 'chemist')
+                .filter(d =>
+                  !searchTerm
+                    ? true
+                    : (d.doctor?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (d.doctor?.specialization || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (d.doctor?.hospital || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (d.doctor?.city || '').toLowerCase().includes(searchTerm.toLowerCase())
                 );
-              })}
+              const maxDoctorPage = Math.max(1, Math.ceil(filteredDoctors.length / doctorPageSize));
+              return (
+                <Pagination
+                  currentPage={doctorPage}
+                  totalPages={maxDoctorPage}
+                  onPageChange={setDoctorPage}
+                  showInfo={false}
+                />
+              );
+            })()}
           </div>
+
+          {countsLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Doctor Name
+                    </th>
+                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Visits
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Last Met
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {(() => {
+                    const filteredDoctors = (doctorVisitCounts || [])
+                      .filter(d => d.doctor?.contact_type !== 'chemist')
+                      .filter(d =>
+                        !searchTerm
+                          ? true
+                          : (d.doctor?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (d.doctor?.specialization || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (d.doctor?.hospital || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (d.doctor?.city || '').toLowerCase().includes(searchTerm.toLowerCase())
+                      );
+                    const paginatedDoctors = filteredDoctors.slice(
+                      (doctorPage - 1) * doctorPageSize,
+                      doctorPage * doctorPageSize
+                    );
+                    
+                    return paginatedDoctors.map(d => (
+                      <tr key={d.doctor_id}>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <div className="font-medium">{d.doctor?.name || 'Unknown'}</div>
+                          <div className="text-xs text-gray-500">{d.doctor?.specialization}</div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                          <span className="inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                            {d.count}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                          {d.lastVisitDate ? format(new Date(d.lastVisitDate), 'MMM dd, yyyy') : 'N/A'}
+                        </td>
+                      </tr>
+                    ));
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

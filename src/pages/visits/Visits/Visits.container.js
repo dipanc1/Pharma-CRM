@@ -13,6 +13,8 @@ function VisitsContainer() {
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
+  const [doctorPage, setDoctorPage] = useState(1);
+  const [doctorPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('');
@@ -23,8 +25,9 @@ function VisitsContainer() {
   const [allVisits, setAllVisits] = useState([]);
 
   useEffect(() => {
-    // Reset page when filters change
+    // Reset pages when filters change
     setPage(1);
+    setDoctorPage(1);
   }, [searchTerm, cityFilter]);
 
   useEffect(() => {
@@ -171,10 +174,11 @@ function VisitsContainer() {
         });
       }
 
-      // Step 2: Get visit counts for the date range (for ALL doctors, not just filtered ones)
+      // Step 2: Get visit counts and last visit date for the date range
       let visitQuery = supabase
         .from('visits')
-        .select('doctor_id, status');
+        .select('doctor_id, status, visit_date')
+        .order('visit_date', { ascending: false });
 
       if (startDate && endDate) {
         visitQuery = visitQuery.gte('visit_date', startDate).lte('visit_date', endDate);
@@ -193,15 +197,21 @@ function VisitsContainer() {
         return;
       }
 
-      // Step 3: Create a map of doctor visit counts
+      // Step 3: Create maps for doctor visit counts and last visit dates
       const visitCountMap = new Map();
+      const lastVisitDateMap = new Map();
       (visits || []).forEach((visit) => {
         if (!visit.doctor_id) return;
         const count = visitCountMap.get(visit.doctor_id) || 0;
         visitCountMap.set(visit.doctor_id, count + 1);
+        
+        // Set last visit date (only if not already set, since visits are ordered by date DESC)
+        if (!lastVisitDateMap.has(visit.doctor_id)) {
+          lastVisitDateMap.set(visit.doctor_id, visit.visit_date);
+        }
       });
 
-      // Step 4: Combine filtered doctors with their visit counts (including 0 visits)
+      // Step 4: Combine filtered doctors with their visit counts and last visit dates
       const doctorVisitCounts = filteredDoctors.map(doctor => ({
         doctor_id: doctor.id,
         doctor: {
@@ -211,7 +221,8 @@ function VisitsContainer() {
           city: doctor.address,
           contact_type: doctor.contact_type
         },
-        count: visitCountMap.get(doctor.id) || 0
+        count: visitCountMap.get(doctor.id) || 0,
+        lastVisitDate: lastVisitDateMap.get(doctor.id) || null
       }));
 
       // Sort by visit count (descending), then by name
@@ -392,6 +403,9 @@ function VisitsContainer() {
         cityOptions={cityOptions}
         doctorVisitCounts={doctorVisitCounts}
         countsLoading={countsLoading}
+        doctorPage={doctorPage}
+        setDoctorPage={setDoctorPage}
+        doctorPageSize={doctorPageSize}
         deleteVisit={deleteVisit}
         calculateTotalSales={calculateTotalSales}
         filteredVisits={paginatedVisits}
