@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowPathIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Header, Loader } from '../../components';
 import { format } from 'date-fns';
@@ -26,17 +26,24 @@ function CyclePlanning({
   submitting
 }) {
   const today = format(new Date(), 'yyyy-MM-dd');
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
 
   const getMonthStatus = (dates, monthRange) => {
-    // If month is entirely in the future, show as upcoming
     if (monthRange.start > today) return 'upcoming';
     return dates.length >= 3 ? 'achieved' : 'missed';
   };
 
-  const productOptions = products.map(p => ({
-    value: p.id,
-    label: `${p.name} (${p.company_name})`
-  }));
+  const selectedProduct = products.find(p => p.id === selectedProductId);
+
+  const filteredProducts = products.filter(p => {
+    if (!productSearch) return true;
+    const search = productSearch.toLowerCase();
+    return (
+      (p.name || '').toLowerCase().includes(search) ||
+      (p.company_name || '').toLowerCase().includes(search)
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -67,20 +74,68 @@ function CyclePlanning({
           </div>
 
           <div>
-            <label htmlFor="productSelect" className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Select Product
             </label>
-            <select
-              id="productSelect"
-              value={selectedProductId}
-              onChange={(e) => setSelectedProductId(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
-            >
-              <option value="">-- Select a product --</option>
-              {productOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <input
+                type="text"
+                value={selectedProductId ? (productSearch || selectedProduct?.name || '') : productSearch}
+                onChange={(e) => {
+                  setProductSearch(e.target.value);
+                  if (selectedProductId) setSelectedProductId('');
+                }}
+                onFocus={() => {
+                  setShowProductDropdown(true);
+                  if (selectedProductId) {
+                    setProductSearch('');
+                    setSelectedProductId('');
+                  }
+                }}
+                onBlur={() => setTimeout(() => setShowProductDropdown(false), 200)}
+                placeholder="Search product by name or company..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {showProductDropdown && filteredProducts.length > 0 && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-56 overflow-auto">
+                  {filteredProducts.map(p => (
+                    <div
+                      key={p.id}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setSelectedProductId(p.id);
+                        setProductSearch(p.name);
+                        setShowProductDropdown(false);
+                      }}
+                      className="px-3 py-2 cursor-pointer hover:bg-gray-50 border-b last:border-b-0"
+                    >
+                      <span className="text-sm font-medium text-gray-900">{p.name}</span>
+                      <span className="text-xs text-gray-500 ml-2">• {p.company_name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {showProductDropdown && filteredProducts.length === 0 && productSearch && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+                  <div className="px-3 py-2 text-sm text-gray-500">No matching products found</div>
+                </div>
+              )}
+              {selectedProductId && (
+                <p className="mt-1 text-xs text-green-600 flex items-center justify-between">
+                  <span>Selected: {selectedProduct?.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProductId('');
+                      setProductSearch('');
+                    }}
+                    className="text-red-600 hover:underline"
+                  >
+                    Clear
+                  </button>
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
