@@ -192,7 +192,7 @@ async function exportSchemaSQL() {
   const migrationsDir = path.join(__dirname, 'migrations');
   let fullSchema = `-- Database Schema Export
 -- Generated: ${new Date().toISOString()}
--- Pharma CRM Complete Schema
+-- DS Medical Agencies CRM Complete Schema
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

@@ -1,4 +1,4 @@
-# Pharma CRM - Project Summary
+# DS Medical Agencies CRM - Project Summary
 
 ## 🎯 What We Built
 

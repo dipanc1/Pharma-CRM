@@ -45,7 +45,7 @@ export async function parseVoiceInput(transcript, pageContext, existingData = {}
 }
 
 function buildSystemPrompt(pageContext, existingData) {
-  let prompt = `You are a data extraction assistant for a Pharmaceutical CRM application.
+  let prompt = `You are a data extraction assistant for the DS Medical Agencies CRM application.
 Your job is to extract structured form data from natural language voice input.
 
 CONTEXT: ${pageContext.description}

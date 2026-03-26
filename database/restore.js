@@ -105,7 +105,7 @@ async function performRestore(backupFile) {
 }
 
 async function main() {
-  console.log('🔧 Pharma CRM Database Restore Utility\n');
+  console.log('🔧 DS Medical Agencies Database Restore Utility\n');
 
   const backups = listBackups();
 

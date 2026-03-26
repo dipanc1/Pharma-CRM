@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🚀 Pharma CRM Setup');
+console.log('🚀 DS Medical Agencies Setup');
 console.log('===================\n');
 
 // Check if .env file exists

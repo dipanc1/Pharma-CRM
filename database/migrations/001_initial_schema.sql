@@ -1,6 +1,6 @@
 -- Migration: Initial Schema Setup
 -- Created: 2025-01-07
--- Description: Creates core tables for Pharma CRM
+-- Description: Creates core tables for DS Medical Agencies CRM
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

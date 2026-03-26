@@ -44,7 +44,7 @@ async function displaySchema(schemaFile) {
 }
 
 async function main() {
-  console.log('📋 Pharma CRM Schema Viewer\n');
+  console.log('📋 DS Medical Agencies Schema Viewer\n');
 
   const schemas = listSchemaBackups();
 

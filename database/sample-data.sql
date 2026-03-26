@@ -1,4 +1,4 @@
--- Sample data for Pharma CRM
+-- Sample data for DS Medical Agencies CRM
 -- Run these commands in your Supabase SQL editor after creating the tables
 
 -- Sample Doctors

@@ -1,4 +1,4 @@
-# Pharma CRM - Pharmaceutical Sales Management System
+# DS Medical Agencies CRM - Pharmaceutical Sales Management System
 
 A comprehensive Customer Relationship Management (CRM) system designed specifically for pharmaceutical sales representatives. This application helps sales reps track doctor visits, manage product sales, inventory, and analyze performance metrics.
 
@@ -476,7 +476,7 @@ REACT_APP_SUPABASE_URL=your_supabase_project_url
 REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # Optional
-REACT_APP_APP_NAME=Pharma CRM
+REACT_APP_APP_NAME=DS Medical Agencies
 REACT_APP_COMPANY_NAME=Your Company
 REACT_APP_SUPPORT_EMAIL=support@yourcompany.com
 ```
