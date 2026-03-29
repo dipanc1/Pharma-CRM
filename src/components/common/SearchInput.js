@@ -23,6 +23,10 @@ const SearchInput = ({
           placeholder={placeholder}
           value={value}
           onChange={onChange}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
         />
       </div>
     </div>

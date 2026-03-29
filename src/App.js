@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -46,6 +47,34 @@ import VisitDetail from './pages/visits/VisitDetail';
 import EditVisit from './pages/visits/EditVisit';
 
 function App() {
+  useEffect(() => {
+    const applyNoSuggestions = () => {
+      document.querySelectorAll('form').forEach((form) => {
+        form.setAttribute('autocomplete', 'off');
+      });
+
+      document.querySelectorAll('input, textarea').forEach((field) => {
+        field.setAttribute('autocomplete', 'off');
+        field.setAttribute('autocorrect', 'off');
+        field.setAttribute('autocapitalize', 'off');
+        field.setAttribute('spellcheck', 'false');
+      });
+    };
+
+    applyNoSuggestions();
+
+    const observer = new MutationObserver(() => {
+      applyNoSuggestions();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <AuthProvider>
       <div className="App">
