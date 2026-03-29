@@ -14,7 +14,7 @@ function VisitsContainer() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [doctorPage, setDoctorPage] = useState(1);
-  const [doctorPageSize] = useState(10);
+  const [doctorPageSize] = useState(5);
   const [totalCount, setTotalCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('');
