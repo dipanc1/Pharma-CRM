@@ -23,6 +23,7 @@ function AddProductContainer() {
   // Fetch companies on mount
   useEffect(() => {
     loadCompanies();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadCompanies = async () => {
