@@ -3,7 +3,7 @@ import { supabase } from '../../../lib/supabase';
 import { Toast } from '../../../components';
 import { handleAddStock, handleEditStock } from '../../../utils/stockUtils';
 import useToast from '../../../hooks/useToast';
-import { fetchCompanies, formatCompaniesForSelect } from '../../../utils/companiesUtils';
+import useCompanies from '../../../hooks/useCompanies';
 import Products from './Products';
 
 function ProductsContainer() {
@@ -11,7 +11,6 @@ function ProductsContainer() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompany, setSelectedCompany] = useState('');
-  const [companiesOptions, setCompaniesOptions] = useState([]);
 
   const [stockModal, setStockModal] = useState({
     isOpen: false,
@@ -21,23 +20,12 @@ function ProductsContainer() {
   });
 
   const { toast, showSuccess, showError, hideToast } = useToast();
+  const { companiesOptions } = useCompanies();
 
   useEffect(() => {
     fetchProducts();
-    loadCompanies();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const loadCompanies = async () => {
-    try {
-      const companies = await fetchCompanies();
-      const options = formatCompaniesForSelect(companies);
-      setCompaniesOptions(options);
-    } catch (error) {
-      console.error('Error loading companies:', error);
-      showError('Error loading companies');
-    }
-  };
 
   const filteredProducts = products.filter(product => {
     const matchesSearch =

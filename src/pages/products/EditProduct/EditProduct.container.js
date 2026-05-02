@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
-import { fetchCompanies, formatCompaniesForSelect } from '../../../utils/companiesUtils';
+import useCompanies from '../../../hooks/useCompanies';
 import EditProduct from './EditProduct';
 
 function EditProductContainer() {
@@ -11,8 +11,8 @@ function EditProductContainer() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [companiesOptions, setCompaniesOptions] = useState([]);
   const { toast, showSuccess, showError, hideToast } = useToast();
+  const { companiesOptions } = useCompanies();
   const [formData, setFormData] = useState({
     id: '',
     name: '',
@@ -20,23 +20,6 @@ function EditProductContainer() {
     price: '',
     company_name: ''
   });
-
-  useEffect(() => {
-    fetchProduct();
-    loadCompanies();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  const loadCompanies = async () => {
-    try {
-      const companies = await fetchCompanies();
-      const options = formatCompaniesForSelect(companies);
-      setCompaniesOptions(options);
-    } catch (error) {
-      console.error('Error loading companies:', error);
-      showError('Error loading companies');
-    }
-  };
 
   const FORM_FIELDS = [
     {
@@ -70,6 +53,11 @@ function EditProductContainer() {
       colSpan: 'md:col-span-2'
     }
   ];
+
+  useEffect(() => {
+    fetchProduct();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const fetchProduct = async () => {
     try {

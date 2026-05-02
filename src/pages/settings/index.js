@@ -1,34 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Companies from './Companies';
-import { fetchCompanies, addCompany, deleteCompany } from '../../utils/companiesUtils';
+import { addCompany, deleteCompany } from '../../utils/companiesUtils';
+import useCompanies from '../../hooks/useCompanies';
 import useToast from '../../hooks/useToast';
 
 function CompaniesContainer() {
-  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { showSuccess, showError } = useToast();
-
-  // Fetch companies on mount
-  useEffect(() => {
-    loadCompanies();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadCompanies = async () => {
-    try {
-      setLoading(true);
-      const data = await fetchCompanies();
-      setCompanies(data);
-      setError('');
-    } catch (err) {
-      console.error('Error loading companies:', err);
-      setError('Failed to load companies');
-      showError('Failed to load companies');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { companies, refreshCompanies } = useCompanies();
 
   const handleAddCompany = async (formData) => {
     try {
@@ -39,7 +19,7 @@ function CompaniesContainer() {
       
       if (result.success) {
         showSuccess(`Company "${formData.name}" added successfully!`);
-        await loadCompanies();
+        await refreshCompanies();
       }
     } catch (err) {
       console.error('Error adding company:', err);
@@ -64,7 +44,7 @@ function CompaniesContainer() {
       
       if (result.success) {
         showSuccess('Company deleted successfully!');
-        await loadCompanies();
+        await refreshCompanies();
       }
     } catch (err) {
       console.error('Error deleting company:', err);

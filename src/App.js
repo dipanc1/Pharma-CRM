@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { CompaniesProvider } from './contexts/CompaniesContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Layout from './components/layout/Layout';
@@ -80,14 +81,15 @@ function App() {
 
   return (
     <AuthProvider>
-      <div className="App">
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }>
+      <CompaniesProvider>
+        <div className="App">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }>
             <Route index element={<Dashboard />} />
 
             {/* Doctors Routes */}
@@ -130,7 +132,8 @@ function App() {
 
           </Route>
         </Routes>
-      </div>
+        </div>
+      </CompaniesProvider>
     </AuthProvider>
   );
 }

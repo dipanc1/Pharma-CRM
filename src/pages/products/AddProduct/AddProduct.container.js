@@ -1,41 +1,24 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 import { Toast, VoiceCommandButton, VoiceConfirmationModal } from '../../../components';
 import useToast from '../../../hooks/useToast';
+import useCompanies from '../../../hooks/useCompanies';
 import useVoiceCommand from '../../../hooks/useVoiceCommand';
 import { VOICE_CONTEXTS } from '../../../config/voiceContexts';
-import { fetchCompanies, formatCompaniesForSelect } from '../../../utils/companiesUtils';
 import AddProduct from './AddProduct';
 
 function AddProductContainer() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [companiesOptions, setCompaniesOptions] = useState([]);
   const { toast, showSuccess, showError, hideToast } = useToast();
+  const { companiesOptions } = useCompanies();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     company_name: ''
   });
-
-  // Fetch companies on mount
-  useEffect(() => {
-    loadCompanies();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadCompanies = async () => {
-    try {
-      const companies = await fetchCompanies();
-      const options = formatCompaniesForSelect(companies);
-      setCompaniesOptions(options);
-    } catch (error) {
-      console.error('Error loading companies:', error);
-      showError('Error loading companies');
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
