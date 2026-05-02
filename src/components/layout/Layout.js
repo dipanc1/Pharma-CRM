@@ -11,7 +11,8 @@ import {
   BanknotesIcon,
   BookOpenIcon,
   ClipboardDocumentListIcon,
-  StarIcon
+  StarIcon,
+  Cog6ToothIcon
 } from '@heroicons/react/24/outline';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -35,7 +36,8 @@ const Layout = () => {
     { name: 'Core Doctors', href: '/kol', icon: StarIcon },
     { name: 'Doctors', href: '/doctors?type=doctor', icon: UserGroupIcon },
     { name: 'Chemists', href: '/doctors?type=chemist', icon: BuildingStorefrontIcon },
-    { name: 'Products', href: '/products', icon: CubeIcon }
+    { name: 'Products', href: '/products', icon: CubeIcon },
+    { name: 'Companies', href: '/settings/companies', icon: Cog6ToothIcon }
   ];
 
   return (

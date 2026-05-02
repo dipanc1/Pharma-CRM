@@ -46,6 +46,9 @@ import AddVisit from './pages/visits/AddVisit';
 import VisitDetail from './pages/visits/VisitDetail';
 import EditVisit from './pages/visits/EditVisit';
 
+// Settings pages
+import CompaniesManagement from './pages/settings';
+
 function App() {
   useEffect(() => {
     const applyNoSuggestions = () => {
@@ -121,6 +124,9 @@ function App() {
 
             {/* Core Doctors Route */}
             <Route path="kol" element={<KOL />} />
+
+            {/* Settings Routes */}
+            <Route path="settings/companies" element={<CompaniesManagement />} />
 
           </Route>
         </Routes>

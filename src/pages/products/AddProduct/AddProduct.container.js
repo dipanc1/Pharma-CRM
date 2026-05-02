@@ -1,15 +1,17 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 import { Toast, VoiceCommandButton, VoiceConfirmationModal } from '../../../components';
 import useToast from '../../../hooks/useToast';
 import useVoiceCommand from '../../../hooks/useVoiceCommand';
 import { VOICE_CONTEXTS } from '../../../config/voiceContexts';
+import { fetchCompanies, formatCompaniesForSelect } from '../../../utils/companiesUtils';
 import AddProduct from './AddProduct';
 
 function AddProductContainer() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [companiesOptions, setCompaniesOptions] = useState([]);
   const { toast, showSuccess, showError, hideToast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
@@ -17,6 +19,22 @@ function AddProductContainer() {
     price: '',
     company_name: ''
   });
+
+  // Fetch companies on mount
+  useEffect(() => {
+    loadCompanies();
+  }, []);
+
+  const loadCompanies = async () => {
+    try {
+      const companies = await fetchCompanies();
+      const options = formatCompaniesForSelect(companies);
+      setCompaniesOptions(options);
+    } catch (error) {
+      console.error('Error loading companies:', error);
+      showError('Error loading companies');
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -52,14 +70,6 @@ function AddProductContainer() {
     }
   };
 
-  const COMPANIES = [
-    { value: 'LSB LIFE SCIENCES', label: 'LSB LIFE SCIENCES' },
-    { value: 'FLOWRICH PHARMA', label: 'FLOWRICH PHARMA' },
-    { value: 'CRANIX PHARMA', label: 'CRANIX PHARMA' },
-    { value: 'BRVYMA', label: 'BRVYMA' },
-    { value: 'RECHELIST PHARMA', label: 'RECHELIST PHARMA' }
-  ];
-
   const FORM_FIELDS = [
     {
       name: 'name',
@@ -74,7 +84,7 @@ function AddProductContainer() {
       label: 'Company Name',
       type: 'select',
       required: true,
-      options: COMPANIES,
+      options: companiesOptions,
       placeholder: 'Select company'
     },
     {
