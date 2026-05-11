@@ -5,8 +5,10 @@ import useToast from '../../../hooks/useToast';
 import { format, startOfMonth } from 'date-fns';
 import Visits from './Visits';
 import { updateProductStock } from '../../../utils/stockUtils';
+import { useAuth } from '../../../contexts/AuthContext';
 
 function VisitsContainer() {
+  const { role } = useAuth();
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -23,6 +25,8 @@ function VisitsContainer() {
   const [countsLoading, setCountsLoading] = useState(false);
   const { toast, showSuccess, showError, hideToast } = useToast();
   const [allVisits, setAllVisits] = useState([]);
+  const canViewSales = role === 'owner';
+  const showVisitStats = role === 'owner';
 
   useEffect(() => {
     // Reset pages when filters change
@@ -33,12 +37,12 @@ function VisitsContainer() {
   useEffect(() => {
     fetchVisits();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, statusFilter, cityFilter]);
+  }, [startDate, endDate, statusFilter, cityFilter, canViewSales]);
 
   useEffect(() => {
     fetchDoctorVisitCounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, statusFilter, cityFilter]);
+  }, [startDate, endDate, statusFilter, cityFilter, showVisitStats]);
 
   useEffect(() => {
     fetchCityOptions();
@@ -83,9 +87,8 @@ function VisitsContainer() {
         return;
       }
 
-      let query = supabase
-        .from('visits')
-        .select(`
+      const selectFields = canViewSales
+        ? `
           *,
           doctors (name, specialization, hospital, address, contact_type),
           sales (
@@ -94,7 +97,15 @@ function VisitsContainer() {
             total_amount,
             products (name)
           )
-        `)
+        `
+        : `
+          *,
+          doctors (name, specialization, hospital, address, contact_type)
+        `;
+
+      let query = supabase
+        .from('visits')
+        .select(selectFields)
         .order('visit_date', { ascending: false });
 
       if (startDate && endDate) {
@@ -118,6 +129,29 @@ function VisitsContainer() {
 
       let filteredData = data || [];
 
+      // Fetch creator profile info for each visit
+      if (filteredData.length > 0) {
+        const userIds = [...new Set(filteredData.map(v => v.user_id).filter(Boolean))];
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, display_name')
+            .in('id', userIds);
+          
+          if (profiles) {
+            const profileMap = profiles.reduce((acc, p) => {
+              acc[p.id] = p.display_name;
+              return acc;
+            }, {});
+            
+            filteredData = filteredData.map(visit => ({
+              ...visit,
+              created_by: profileMap[visit.user_id] || 'Unknown'
+            }));
+          }
+        }
+      }
+
       if (cityFilter) {
         filteredData = filteredData.filter(visit => {
           const visitCity = visit.doctors?.address?.trim();
@@ -140,6 +174,11 @@ function VisitsContainer() {
 
   const fetchDoctorVisitCounts = async () => {
     try {
+      if (!showVisitStats) {
+        setDoctorVisitCounts([]);
+        return;
+      }
+
       const justStart = !!(startDate && !endDate);
       const justEnd = !!(!startDate && endDate);
       const invalidRange = !!(startDate && endDate && endDate < startDate);
@@ -411,6 +450,7 @@ function VisitsContainer() {
         filteredVisits={paginatedVisits}
         totalFilteredCount={totalFilteredCount}
         maxPage={maxPage}
+        showSales={canViewSales}
       />
       <Toast
         message={toast.message}

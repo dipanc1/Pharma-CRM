@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CompaniesProvider } from './contexts/CompaniesContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import RoleRoute from './components/RoleRoute';
 
 import Layout from './components/layout/Layout';
 
@@ -90,45 +91,178 @@ function App() {
                 <Layout />
               </ProtectedRoute>
             }>
-            <Route index element={<Dashboard />} />
+            <Route
+              index
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <Dashboard />
+                </RoleRoute>
+              }
+            />
 
             {/* Doctors Routes */}
-            <Route path="doctors" element={<Doctors />} />
-            <Route path="doctors/add" element={<AddDoctor />} />
-            <Route path="doctors/:id" element={<DoctorDetail />} />
-            <Route path="doctors/:id/edit" element={<EditDoctor />} />
+            <Route
+              path="doctors"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <Doctors />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="doctors/add"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <AddDoctor />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="doctors/:id"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <DoctorDetail />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="doctors/:id/edit"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <EditDoctor />
+                </RoleRoute>
+              }
+            />
 
             {/* Visits Routes */}
-            <Route path="visits" element={<Visits />} />
-            <Route path="visits/add" element={<AddVisit />} />
-            <Route path="visits/:id" element={<VisitDetail />} />
-            <Route path="visits/:id/edit" element={<EditVisit />} />
+            <Route
+              path="visits"
+              element={
+                <RoleRoute allowedRoles={['owner', 'rep']}>
+                  <Visits />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="visits/add"
+              element={
+                <RoleRoute allowedRoles={['owner', 'rep']}>
+                  <AddVisit />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="visits/:id"
+              element={
+                <RoleRoute allowedRoles={['owner', 'rep']}>
+                  <VisitDetail />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="visits/:id/edit"
+              element={
+                <RoleRoute allowedRoles={['owner', 'rep']}>
+                  <EditVisit />
+                </RoleRoute>
+              }
+            />
 
             {/* Products Routes */}
-            <Route path="products" element={<Products />} />
-            <Route path="products/add" element={<AddProduct />} />
-            <Route path="products/:id/edit" element={<EditProduct />} />
+            <Route
+              path="products"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <Products />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="products/add"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <AddProduct />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="products/:id/edit"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <EditProduct />
+                </RoleRoute>
+              }
+            />
 
             {/* Sales Routes */}
-            <Route path="sales" element={<Sales />} />
+            <Route
+              path="sales"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <Sales />
+                </RoleRoute>
+              }
+            />
 
             {/* Inventory Route */}
-            <Route path="inventory" element={<InventoryDashboard />} />
+            <Route
+              path="inventory"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <InventoryDashboard />
+                </RoleRoute>
+              }
+            />
 
             {/* Cash-Flow Route */}
-            <Route path="cash-flow" element={<CashFlow />} />
+            <Route
+              path="cash-flow"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <CashFlow />
+                </RoleRoute>
+              }
+            />
 
             {/* Ledger Route */}
-            <Route path="ledger" element={<Ledger />} />
+            <Route
+              path="ledger"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <Ledger />
+                </RoleRoute>
+              }
+            />
 
             {/* Cycle Planning Route */}
-            <Route path="cycle-planning" element={<CyclePlanning />} />
+            <Route
+              path="cycle-planning"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <CyclePlanning />
+                </RoleRoute>
+              }
+            />
 
             {/* Core Doctors Route */}
-            <Route path="kol" element={<KOL />} />
+            <Route
+              path="kol"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <KOL />
+                </RoleRoute>
+              }
+            />
 
             {/* Settings Routes */}
-            <Route path="settings/companies" element={<CompaniesManagement />} />
+            <Route
+              path="settings/companies"
+              element={
+                <RoleRoute allowedRoles={['owner']}>
+                  <CompaniesManagement />
+                </RoleRoute>
+              }
+            />
 
           </Route>
         </Routes>

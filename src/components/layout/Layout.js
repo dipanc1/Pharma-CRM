@@ -22,23 +22,27 @@ import Navbar from './Navbar';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, signOut, role } = useAuth();
 
 
-  const navigation = [
-    { name: 'Dashboard', href: '/', icon: HomeIcon },
-    { name: 'Visits', href: '/visits', icon: CalendarIcon },
-    { name: 'Sales', href: '/sales', icon: CurrencyRupeeIcon },
-    { name: 'Inventory', href: '/inventory', icon: ChartBarIcon },
-    { name: 'Cash Flow', href: '/cash-flow', icon: BanknotesIcon },
-    { name: 'Ledger', href: '/ledger', icon: BookOpenIcon },
-    { name: 'Cycle Planning', href: '/cycle-planning', icon: ClipboardDocumentListIcon },
-    { name: 'Core Doctors', href: '/kol', icon: StarIcon },
-    { name: 'Doctors', href: '/doctors?type=doctor', icon: UserGroupIcon },
-    { name: 'Chemists', href: '/doctors?type=chemist', icon: BuildingStorefrontIcon },
-    { name: 'Products', href: '/products', icon: CubeIcon },
-    { name: 'Companies', href: '/settings/companies', icon: Cog6ToothIcon }
-  ];
+  const navigation = role === 'rep'
+    ? [
+        { name: 'Visits', href: '/visits', icon: CalendarIcon }
+      ]
+    : [
+        { name: 'Dashboard', href: '/', icon: HomeIcon },
+        { name: 'Visits', href: '/visits', icon: CalendarIcon },
+        { name: 'Sales', href: '/sales', icon: CurrencyRupeeIcon },
+        { name: 'Inventory', href: '/inventory', icon: ChartBarIcon },
+        { name: 'Cash Flow', href: '/cash-flow', icon: BanknotesIcon },
+        { name: 'Ledger', href: '/ledger', icon: BookOpenIcon },
+        { name: 'Cycle Planning', href: '/cycle-planning', icon: ClipboardDocumentListIcon },
+        { name: 'Core Doctors', href: '/kol', icon: StarIcon },
+        { name: 'Doctors', href: '/doctors?type=doctor', icon: UserGroupIcon },
+        { name: 'Chemists', href: '/doctors?type=chemist', icon: BuildingStorefrontIcon },
+        { name: 'Products', href: '/products', icon: CubeIcon },
+        { name: 'Companies', href: '/settings/companies', icon: Cog6ToothIcon }
+      ];
 
   return (
     <div className="min-h-screen bg-gray-50">

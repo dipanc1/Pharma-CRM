@@ -18,7 +18,8 @@ function VisitDetail({
   deleteVisit,
   calculateTotalSales,
   getVisitStatusStyle,
-  formatCurrency
+  formatCurrency,
+  canViewSales
 }) {
   const { id } = useParams();
   const salesTableHeaders = ['Product', 'Company Name', 'Quantity', 'Unit Price', 'Total'];
@@ -85,12 +86,18 @@ function VisitDetail({
               />
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-500">Total Sales</label>
-            <p className="mt-1 text-lg font-semibold text-gray-900">
-              {formatCurrency(calculateTotalSales(visit.sales))}
-            </p>
-          </div>
+          <InfoField
+            label="Added By"
+            value={visit.created_by || 'Unknown'}
+          />
+          {canViewSales && (
+            <div>
+              <label className="block text-sm font-medium text-gray-500">Total Sales</label>
+              <p className="mt-1 text-lg font-semibold text-gray-900">
+                {formatCurrency(calculateTotalSales(visit.sales))}
+              </p>
+            </div>
+          )}
           <div className="md:col-span-2">
             <InfoField
               label="Notes"
@@ -100,38 +107,39 @@ function VisitDetail({
         </div>
       </div>
 
-      {/* Sales Items */}
-      <div className="card">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Sales Items</h2>
+      {canViewSales && (
+        <div className="card">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Sales Items</h2>
 
-        {visit.sales && visit.sales.length > 0 ? (
-          <Table headers={salesTableHeaders}>
-            {visit.sales.map((sale) => (
-              <Table.Row key={sale.id}>
-                <Table.Cell className="font-medium">
-                  {sale.products?.name}
-                </Table.Cell>
-                <Table.Cell>
-                  {sale.products?.company_name || 'N/A'}
-                </Table.Cell>
-                <Table.Cell>
-                  {sale.quantity}
-                </Table.Cell>
-                <Table.Cell>
-                  {formatCurrency(parseFloat(sale.unit_price))}
-                </Table.Cell>
-                <Table.Cell className="font-medium">
-                  {formatCurrency(parseFloat(sale.total_amount))}
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table>
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-gray-500">No sales recorded for this visit</div>
-          </div>
-        )}
-      </div>
+          {visit.sales && visit.sales.length > 0 ? (
+            <Table headers={salesTableHeaders}>
+              {visit.sales.map((sale) => (
+                <Table.Row key={sale.id}>
+                  <Table.Cell className="font-medium">
+                    {sale.products?.name}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {sale.products?.company_name || 'N/A'}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {sale.quantity}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {formatCurrency(parseFloat(sale.unit_price))}
+                  </Table.Cell>
+                  <Table.Cell className="font-medium">
+                    {formatCurrency(parseFloat(sale.total_amount))}
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-gray-500">No sales recorded for this visit</div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

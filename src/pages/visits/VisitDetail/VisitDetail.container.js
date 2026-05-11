@@ -5,26 +5,28 @@ import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
 import VisitDetail from './VisitDetail';
 import { updateProductStock } from '../../../utils/stockUtils';
+import { useAuth } from '../../../contexts/AuthContext';
 
 function VisitDetailContainer() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { role } = useAuth();
   const [visit, setVisit] = useState(null);
   const [loading, setLoading] = useState(true);
   const { toast, showSuccess, showError, hideToast } = useToast();
+  const canViewSales = role === 'owner';
 
   useEffect(() => {
     fetchVisitData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, canViewSales]);
 
   const fetchVisitData = async () => {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from('visits')
-        .select(`
+      const selectFields = canViewSales
+        ? `
           *,
           doctors (name, specialization, hospital, address, contact_type),
           sales (
@@ -34,11 +36,31 @@ function VisitDetailContainer() {
             total_amount,
             products (name, company_name)
           )
-        `)
+        `
+        : `
+          *,
+          doctors (name, specialization, hospital, address, contact_type)
+        `;
+
+      const { data, error } = await supabase
+        .from('visits')
+        .select(selectFields)
         .eq('id', id)
         .single();
 
       if (error) throw error;
+
+      // Fetch creator profile info
+      if (data?.user_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', data.user_id)
+          .single();
+        
+        data.created_by = profile?.display_name || 'Unknown';
+      }
+
       setVisit(data);
 
     } catch (error) {
@@ -167,6 +189,7 @@ function VisitDetailContainer() {
         calculateTotalSales={calculateTotalSales}
         getVisitStatusStyle={getVisitStatusStyle}
         formatCurrency={formatCurrency}
+        canViewSales={canViewSales}
       />
       <Toast
         message={toast.message}

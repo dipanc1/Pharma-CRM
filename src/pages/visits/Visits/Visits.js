@@ -41,9 +41,12 @@ function Visits({
   calculateTotalSales,
   filteredVisits,
   totalFilteredCount,
-  maxPage
+  maxPage,
+  showSales
 }) {
-  const tableHeaders = ['Contact', 'Type', 'Visit Date', 'Status', 'Total Sales', 'Notes', 'Actions'];
+  const tableHeaders = showSales
+    ? ['Contact', 'Type', 'Visit Date', 'Status', 'Added By', 'Total Sales', 'Notes', 'Actions']
+    : ['Contact', 'Type', 'Visit Date', 'Status', 'Added By', 'Notes', 'Actions'];
 
   const statusOptions = [
     { value: 'completed', label: 'Completed' },
@@ -331,13 +334,20 @@ function Visits({
                     />
                   </Table.Cell>
                   <Table.Cell>
-                    <div className="font-medium text-gray-900">
-                      ₹{calculateTotalSales(visit.sales).toFixed(2)}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {visit.sales?.length || 0} items
-                    </div>
+                    <span className="text-sm text-gray-600">
+                      {visit.created_by || 'Unknown'}
+                    </span>
                   </Table.Cell>
+                  {showSales && (
+                    <Table.Cell>
+                      <div className="font-medium text-gray-900">
+                        ₹{calculateTotalSales(visit.sales).toFixed(2)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {visit.sales?.length || 0} items
+                      </div>
+                    </Table.Cell>
+                  )}
                   <Table.Cell className="max-w-xs">
                     {visit.notes ? (
                       <div className="truncate" title={visit.notes}>

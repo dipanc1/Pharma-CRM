@@ -6,10 +6,12 @@ import useToast from '../../../hooks/useToast';
 import EditVisit from './EditVisit';
 import { addStockTransaction, updateProductStock, TRANSACTION_TYPES, calculateStockSummary } from '../../../utils/stockUtils';
 import { generateInvoiceNumber } from '../../../utils/invoiceUtils';
+import { useAuth } from '../../../contexts/AuthContext';
 
 function EditVisitContainer() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { role } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast, showSuccess, showError, hideToast } = useToast();
@@ -32,19 +34,24 @@ function EditVisitContainer() {
     unit_price: ''
   })
   const [currentStock, setCurrentStock] = useState(null);
+  const canManageSales = role === 'owner';
 
   useEffect(() => {
     fetchDoctors();
-    fetchProducts();
+    if (canManageSales) {
+      fetchProducts();
+    } else {
+      setProducts([]);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [canManageSales]);
 
   useEffect(() => {
     if (doctors.length > 0) {
       fetchVisitData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctors, id]);
+  }, [doctors, id, canManageSales]);
 
   const formatDoctorDisplay = (doctor) => {
     const isChemist = doctor.contact_type === 'chemist';
@@ -65,9 +72,8 @@ function EditVisitContainer() {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from('visits')
-        .select(`
+      const selectFields = canManageSales
+        ? `
           *,
           sales (
             id,
@@ -77,7 +83,12 @@ function EditVisitContainer() {
             total_amount,
             products (name)
           )
-        `)
+        `
+        : `*`;
+
+      const { data, error } = await supabase
+        .from('visits')
+        .select(selectFields)
         .eq('id', id)
         .single();
 
@@ -91,16 +102,20 @@ function EditVisitContainer() {
       });
 
       // Set existing sales
-      const existingSales = data.sales?.map(sale => ({
-        id: sale.id,
-        product_id: sale.product_id,
-        quantity: sale.quantity,
-        unit_price: sale.unit_price,
-        total_amount: sale.total_amount,
-        product_name: sale.products?.name
-      })) || [];
+      if (canManageSales) {
+        const existingSales = data.sales?.map(sale => ({
+          id: sale.id,
+          product_id: sale.product_id,
+          quantity: sale.quantity,
+          unit_price: sale.unit_price,
+          total_amount: sale.total_amount,
+          product_name: sale.products?.name
+        })) || [];
 
-      setSales(existingSales);
+        setSales(existingSales);
+      } else {
+        setSales([]);
+      }
 
       // Set initial doctor search after both visit data and doctors are loaded
       if (data.doctor_id && doctors.length > 0) {
@@ -283,6 +298,26 @@ function EditVisitContainer() {
     setSaving(true);
 
     try {
+      if (!canManageSales) {
+        const { error: visitError } = await supabase
+          .from('visits')
+          .update({
+            doctor_id: formData.doctor_id,
+            visit_date: formData.visit_date,
+            notes: formData.notes,
+            status: formData.status
+          })
+          .eq('id', id);
+
+        if (visitError) throw visitError;
+
+        showSuccess('Visit updated successfully!');
+        setTimeout(() => {
+          navigate(`/visits/${id}`);
+        }, 1200);
+        return;
+      }
+
       // Pre-validate stock for new sales before any database operations
       // Always validate against current stock (today) since updateProductStock recalculates as of today
       if (sales.length > 0) {
@@ -467,6 +502,7 @@ function EditVisitContainer() {
         handleSubmit={handleSubmit}
         loading={loading}
         saving={saving}
+        canManageSales={canManageSales}
         onCancel={handleCancel}
         doctors={doctors}
         products={products}

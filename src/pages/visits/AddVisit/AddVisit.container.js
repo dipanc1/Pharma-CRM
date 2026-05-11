@@ -8,9 +8,11 @@ import { VOICE_CONTEXTS } from '../../../config/voiceContexts';
 import AddVisit from './AddVisit';
 import { addStockTransaction, updateProductStock, TRANSACTION_TYPES, calculateStockSummary } from '../../../utils/stockUtils';
 import { generateInvoiceNumber } from '../../../utils/invoiceUtils';
+import { useAuth } from '../../../contexts/AuthContext';
 
 function AddVisitContainer() {
   const navigate = useNavigate();
+  const { user, role } = useAuth();
   const [loading, setLoading] = useState(false);
   const { toast, showSuccess, showError, hideToast } = useToast();
   const [doctors, setDoctors] = useState([]);
@@ -32,12 +34,17 @@ function AddVisitContainer() {
     unit_price: ''
   })
   const [currentStock, setCurrentStock] = useState(null);
+  const canManageSales = role === 'owner';
 
   useEffect(() => {
     fetchDoctors();
-    fetchProducts();
+    if (canManageSales) {
+      fetchProducts();
+    } else {
+      setProducts([]);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [canManageSales]);
 
   const fetchDoctors = async () => {
     try {
@@ -167,10 +174,16 @@ function AddVisitContainer() {
 
   // Core save logic shared by both form submit and voice save
   const saveVisitData = async (visitFormData, visitSales) => {
+    const safeSales = canManageSales ? visitSales : [];
+    const visitPayload = {
+      ...visitFormData,
+      user_id: user?.id
+    };
+
     // Pre-validate stock
-    if (visitSales.length > 0) {
+    if (safeSales.length > 0) {
       const today = new Date().toISOString().split('T')[0];
-      for (const sale of visitSales) {
+      for (const sale of safeSales) {
         const stockSummary = await calculateStockSummary(sale.product_id, today);
         if (stockSummary.closingStock < sale.quantity) {
           throw new Error(`Insufficient stock for ${sale.product_name}. Available: ${stockSummary.closingStock}, Required: ${sale.quantity}`);
@@ -180,7 +193,7 @@ function AddVisitContainer() {
 
     // Generate invoice number
     let invoiceNumber = null;
-    if (visitSales.length > 0) {
+    if (safeSales.length > 0) {
       invoiceNumber = await generateInvoiceNumber();
       if (!invoiceNumber) {
         throw new Error('Failed to generate invoice number');
@@ -190,15 +203,15 @@ function AddVisitContainer() {
     // Insert visit
     const { data: visit, error: visitError } = await supabase
       .from('visits')
-      .insert([visitFormData])
+      .insert([visitPayload])
       .select()
       .single();
 
     if (visitError) throw visitError;
 
     // Insert sales and update stock if any
-    if (visitSales.length > 0 && invoiceNumber) {
-      const salesData = visitSales.map(sale => ({
+    if (safeSales.length > 0 && invoiceNumber) {
+      const salesData = safeSales.map(sale => ({
         visit_id: visit.id,
         product_id: sale.product_id,
         quantity: sale.quantity,
@@ -212,7 +225,7 @@ function AddVisitContainer() {
 
       if (salesError) throw salesError;
 
-      const totalSalesAmount = visitSales.reduce((sum, s) => sum + s.total_amount, 0);
+      const totalSalesAmount = safeSales.reduce((sum, s) => sum + s.total_amount, 0);
       
       // Create ledger entry for the sale (DEBIT - Customer owes us money)
       const { error: ledgerError } = await supabase.from('ledger_entries').insert({
@@ -232,7 +245,7 @@ function AddVisitContainer() {
       }
 
       // Add stock transactions for each sale
-      for (const sale of visitSales) {
+      for (const sale of safeSales) {
         await addStockTransaction({
           product_id: sale.product_id,
           transaction_type: TRANSACTION_TYPES.SALE,
@@ -342,7 +355,7 @@ function AddVisitContainer() {
     }
 
     // Add sale items — only matched products
-    if (data.sales && Array.isArray(data.sales) && data.sales.length > 0) {
+    if (canManageSales && data.sales && Array.isArray(data.sales) && data.sales.length > 0) {
       const newSales = [];
       for (const sale of data.sales) {
         const product = sale.product_id ? products.find(p => p.id === sale.product_id) : null;
@@ -366,7 +379,7 @@ function AddVisitContainer() {
 
     showSuccess('Voice data applied! You can add more items, edit quantities, then submit.');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctors, products, showSuccess]);
+  }, [canManageSales, doctors, products, showSuccess]);
 
   const voice = useVoiceCommand({
     pageContext: voiceContext,
@@ -389,6 +402,7 @@ function AddVisitContainer() {
         handleFormChange={handleFormChange}
         handleSubmit={handleSubmit}
         loading={loading}
+        canManageSales={canManageSales}
         doctorSearch={doctorSearch}
         setDoctorSearch={setDoctorSearch}
         handleDoctorSearchChange={handleDoctorSearchChange}
