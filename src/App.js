@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CompaniesProvider } from './contexts/CompaniesContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
@@ -51,6 +51,26 @@ import EditVisit from './pages/visits/EditVisit';
 // Settings pages
 import CompaniesManagement from './pages/settings';
 
+// Role-based redirect component
+function RoleRedirect() {
+  const { role, profile, profileLoading } = useAuth();
+
+  // Keep showing spinner until profile definitely loads
+  if (profileLoading || !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (role === 'owner') {
+    return <Dashboard />;
+  } else {
+    return <Navigate to="/visits" replace />;
+  }
+}
+
 function App() {
   useEffect(() => {
     const applyNoSuggestions = () => {
@@ -94,8 +114,8 @@ function App() {
             <Route
               index
               element={
-                <RoleRoute allowedRoles={['owner']}>
-                  <Dashboard />
+                <RoleRoute allowedRoles={['owner', 'rep']}>
+                  <RoleRedirect />
                 </RoleRoute>
               }
             />
