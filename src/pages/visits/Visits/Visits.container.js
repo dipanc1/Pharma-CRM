@@ -21,6 +21,8 @@ function VisitsContainer() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('');
   const [cityOptions, setCityOptions] = useState([]);
+  const [creatorFilter, setCreatorFilter] = useState('all');
+  const [creatorOptions, setCreatorOptions] = useState([]);
   const [doctorVisitCounts, setDoctorVisitCounts] = useState([]);
   const [countsLoading, setCountsLoading] = useState(false);
   const { toast, showSuccess, showError, hideToast } = useToast();
@@ -32,12 +34,12 @@ function VisitsContainer() {
     // Reset pages when filters change
     setPage(1);
     setDoctorPage(1);
-  }, [searchTerm, cityFilter]);
+  }, [searchTerm, cityFilter, creatorFilter]);
 
   useEffect(() => {
     fetchVisits();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, statusFilter, cityFilter, canViewSales]);
+  }, [startDate, endDate, statusFilter, cityFilter, creatorFilter, canViewSales]);
 
   useEffect(() => {
     fetchDoctorVisitCounts();
@@ -46,7 +48,32 @@ function VisitsContainer() {
 
   useEffect(() => {
     fetchCityOptions();
+    fetchCreatorOptions();
   }, []);
+
+  const fetchCreatorOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .order('display_name');
+
+      if (error) {
+        console.error('Error fetching creator options:', error);
+        return;
+      }
+
+      const uniqueCreators = [...new Set(
+        data
+          .map(profile => profile.display_name)
+          .filter(name => name && name.trim() !== '')
+      )].sort();
+
+      setCreatorOptions(uniqueCreators);
+    } catch (error) {
+      console.error('Error fetching creator options:', error);
+    }
+  };
 
   const fetchCityOptions = async () => {
     try {
@@ -158,6 +185,12 @@ function VisitsContainer() {
           const selectedCity = cityFilter.trim();
           return visitCity === selectedCity;
         });
+      }
+
+      if (creatorFilter && creatorFilter !== 'all') {
+        filteredData = filteredData.filter(visit => 
+          visit.created_by === creatorFilter
+        );
       }
 
       setAllVisits(filteredData);
@@ -425,6 +458,7 @@ function VisitsContainer() {
     <>
       <Visits
         loading={loading}
+        role={role}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         startDate={startDate}
@@ -440,6 +474,9 @@ function VisitsContainer() {
         cityFilter={cityFilter}
         setCityFilter={setCityFilter}
         cityOptions={cityOptions}
+        creatorFilter={creatorFilter}
+        setCreatorFilter={setCreatorFilter}
+        creatorOptions={creatorOptions}
         doctorVisitCounts={doctorVisitCounts}
         countsLoading={countsLoading}
         doctorPage={doctorPage}

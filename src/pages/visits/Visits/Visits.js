@@ -17,6 +17,7 @@ import { handleReload } from '../../../helper';
 
 function Visits({
   loading,
+  role,
   searchTerm,
   setSearchTerm,
   startDate,
@@ -32,6 +33,9 @@ function Visits({
   cityFilter,
   setCityFilter,
   cityOptions,
+  creatorFilter,
+  setCreatorFilter,
+  creatorOptions,
   doctorVisitCounts,
   countsLoading,
   doctorPage,
@@ -64,7 +68,7 @@ function Visits({
       : 'bg-yellow-100 text-yellow-800';
   };
 
-  const hasActiveFilters = searchTerm || startDate || endDate || statusFilter !== 'all' || cityFilter;
+  const hasActiveFilters = searchTerm || startDate || endDate || statusFilter !== 'all' || cityFilter || creatorFilter !== 'all';
 
   return loading ? (
     <Loader />
@@ -76,7 +80,7 @@ function Visits({
       ]} />
 
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className={`grid grid-cols-1 ${role === 'owner' ? 'md:grid-cols-6' : 'md:grid-cols-5'} gap-4`}>
 
           <SearchInput
             label="Search Visits"
@@ -141,6 +145,17 @@ function Visits({
             options={cityFilterOptions}
             placeholder="All Cities"
           />
+
+          {role === 'owner' && (
+            <FilterSelect
+              label="Added By"
+              id="creatorFilter"
+              value={creatorFilter}
+              onChange={(e) => { setCreatorFilter(e.target.value); setPage(1); }}
+              options={creatorOptions.map(creator => ({ value: creator, label: creator }))}
+              placeholder="All Users"
+            />
+          )}
         </div>
       </div>
 
