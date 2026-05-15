@@ -12,6 +12,17 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
+
+  useEffect(() => {
+    // Track page visibility to prevent unnecessary refetches
+    const handleVisibilityChange = () => {
+      setIsPageVisible(!document.hidden);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   useEffect(() => {
     // Get initial session
@@ -29,9 +40,19 @@ export const AuthProvider = ({ children }) => {
 
     getSession();
 
-    // Listen for auth changes
+    let previousSessionId = null;
+
+    // Listen for auth changes - only update if session actually changed
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        const currentSessionId = session?.user?.id;
+        
+        // Skip if this is just a visibility change (same session)
+        if (currentSessionId === previousSessionId && event !== 'SIGNED_IN' && event !== 'SIGNED_OUT') {
+          return;
+        }
+        
+        previousSessionId = currentSessionId;
         setUser(session?.user ?? null);
         setLoading(false);
       }
@@ -49,6 +70,11 @@ export const AuthProvider = ({ children }) => {
           setProfile(null);
           setProfileLoading(false);
         }
+        return;
+      }
+
+      // Skip loading if page is hidden (tab not active)
+      if (document.hidden) {
         return;
       }
 
@@ -143,6 +169,7 @@ export const AuthProvider = ({ children }) => {
     profile,
     role: profile?.role ?? 'rep',
     profileLoading,
+    isPageVisible,
     signIn,
     signUp,
     signOut,

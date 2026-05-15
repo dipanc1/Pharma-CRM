@@ -25,11 +25,15 @@ const FilterSelect = ({
         onChange={onChange}
       >
         <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
+        {options.map((option, index) => {
+          // Create a unique key combining value with index to handle duplicate values
+          const uniqueKey = `${option.value}-${index}`;
+          return (
+            <option key={uniqueKey} value={option.value}>
+              {option.label}
+            </option>
+          );
+        })}
       </select>
     </div>
   );
