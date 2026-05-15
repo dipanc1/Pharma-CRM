@@ -263,8 +263,6 @@ function AddVisitContainer() {
           transaction_type: TRANSACTION_TYPES.SALE,
           quantity: -sale.quantity,
           transaction_date: visitFormData.visit_date,
-          reference_type: 'visit',
-          reference_id: visit.id,
           notes: `Sale via visit to contact ID: ${visitFormData.doctor_id} - Invoice: ${invoiceNumber}`
         });
 

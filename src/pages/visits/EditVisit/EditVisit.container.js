@@ -395,8 +395,6 @@ function EditVisitContainer() {
             quantity: originalSale.quantity,
             transaction_date:
               originalSale.transaction_date || originalSale.visit_date || formData.visit_date,
-            reference_type: 'visit_edit_reversal',
-            reference_id: id,
             notes: `Sale reversal for visit edit - Restoring ${originalSale.quantity} units`
           });
         } catch (stockError) {
@@ -468,8 +466,6 @@ function EditVisitContainer() {
               transaction_type: TRANSACTION_TYPES.SALE,
               quantity: -sale.quantity,
               transaction_date: formData.visit_date,
-              reference_type: 'visit',
-              reference_id: id,
               notes: `Updated sale via visit edit - Invoice: ${newInvoiceNumber}`
             });
           } catch (stockError) {

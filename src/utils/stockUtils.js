@@ -35,7 +35,6 @@ export const handleAddStock = async (productId, quantity, notes) => {
             transaction_type: TRANSACTION_TYPES.PURCHASE, // or ADJUSTMENT
             quantity: parseInt(quantity, 10),
             transaction_date: new Date().toISOString().split('T')[0],
-            reference_type: 'manual_adjustment',
             notes: notes || 'Manual stock addition'
         });
 
@@ -63,7 +62,6 @@ export const handleEditStock = async (productId, newQuantity, notes) => {
                 transaction_type: TRANSACTION_TYPES.ADJUSTMENT,
                 quantity: difference, // Positive for increase, negative for decrease
                 transaction_date: new Date().toISOString().split('T')[0],
-                reference_type: 'manual_adjustment',
                 notes: notes || `Stock adjusted from ${currentStock} to ${newQuantity} (${difference > 0 ? '+' : ''}${difference})`
             });
 

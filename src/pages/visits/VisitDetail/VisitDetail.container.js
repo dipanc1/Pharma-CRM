@@ -4,7 +4,7 @@ import { supabase } from '../../../lib/supabase';
 import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
 import VisitDetail from './VisitDetail';
-import { updateProductStock } from '../../../utils/stockUtils';
+import { updateProductStock, addStockTransaction, TRANSACTION_TYPES } from '../../../utils/stockUtils';
 import { useAuth } from '../../../contexts/AuthContext';
 
 function VisitDetailContainer() {
@@ -110,25 +110,20 @@ function VisitDetailContainer() {
           }
         }
 
-        // Delete original stock transactions and add stock back
+        // Reverse stock transactions for all sales in this visit
         if (visitData?.sales) {
           for (const sale of visitData.sales) {
             try {
-              // First, delete the original stock transaction for this sale
-              const { error: deleteStockError } = await supabase
-                .from('stock_transactions')
-                .delete()
-                .eq('reference_type', 'visit')
-                .eq('reference_id', id)
-                .eq('product_id', sale.product_id);
-
-              if (deleteStockError) {
-                console.error('Stock transaction deletion error:', deleteStockError);
-                showError(`Failed to delete stock transaction for ${sale.products?.name}. Deletion aborted.`);
-                return;
-              }
+              // Add a SALE_REVERSAL transaction to restore stock
+              await addStockTransaction({
+                product_id: sale.product_id,
+                transaction_type: TRANSACTION_TYPES.SALE_REVERSAL,
+                quantity: sale.quantity,
+                transaction_date: new Date().toISOString().split('T')[0],
+                notes: `Sale reversal for deleted visit - Restoring ${sale.quantity} units`
+              });
             } catch (stockError) {
-              console.error('Stock deletion error:', stockError);
+              console.error('Stock reversal error:', stockError);
               showError(`Failed to reverse stock for ${sale.products?.name}. Deletion aborted.`);
               return;
             }
