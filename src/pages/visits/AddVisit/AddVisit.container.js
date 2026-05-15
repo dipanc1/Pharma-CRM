@@ -159,6 +159,7 @@ function AddVisitContainer() {
       product_name: product?.name
     }]);
 
+
     setNewSale({
       product_id: '',
       quantity: '',
