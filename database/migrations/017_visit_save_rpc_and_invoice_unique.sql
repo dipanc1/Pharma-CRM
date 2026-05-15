@@ -99,7 +99,7 @@ BEGIN
       INTO v_avail
       FROM public.stock_transactions
       WHERE product_id = v_product_id
-        AND transaction_date <= p_visit_date;
+        AND transaction_date <= CURRENT_DATE;
 
       IF v_avail < v_req_qty THEN
         RAISE EXCEPTION

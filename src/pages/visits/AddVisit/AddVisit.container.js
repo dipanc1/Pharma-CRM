@@ -191,7 +191,8 @@ function AddVisitContainer() {
       }, {});
 
       for (const productId of Object.keys(requestedByProduct)) {
-        const stockSummary = await calculateStockSummary(productId, visitFormData.visit_date);
+        const today = new Date().toISOString().split('T')[0];
+        const stockSummary = await calculateStockSummary(productId, today);
         const requested = requestedByProduct[productId];
         if (stockSummary.closingStock < requested) {
           const productName =
