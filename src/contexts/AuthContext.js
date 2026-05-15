@@ -12,17 +12,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
-
-  useEffect(() => {
-    // Track page visibility to prevent unnecessary refetches
-    const handleVisibilityChange = () => {
-      setIsPageVisible(!document.hidden);
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
 
   useEffect(() => {
     // Get initial session
@@ -70,11 +59,6 @@ export const AuthProvider = ({ children }) => {
           setProfile(null);
           setProfileLoading(false);
         }
-        return;
-      }
-
-      // Skip loading if page is hidden (tab not active)
-      if (document.hidden) {
         return;
       }
 
@@ -169,7 +153,6 @@ export const AuthProvider = ({ children }) => {
     profile,
     role: profile?.role ?? 'rep',
     profileLoading,
-    isPageVisible,
     signIn,
     signUp,
     signOut,
