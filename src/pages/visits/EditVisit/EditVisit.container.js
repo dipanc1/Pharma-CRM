@@ -318,7 +318,15 @@ function EditVisitContainer() {
         return;
       }
 
-      // Get original sales for reference (need them for stock validation too)
+      // Get original visit details and sales for reference
+      const { data: originalVisit, error: originalVisitError } = await supabase
+        .from('visits')
+        .select('visit_date')
+        .eq('id', id)
+        .single();
+
+      if (originalVisitError) throw originalVisitError;
+
       const { data: originalSales, error: originalSalesError } = await supabase
         .from('sales')
         .select('*')
@@ -382,24 +390,21 @@ function EditVisitContainer() {
 
       if (visitError) throw visitError;
 
-      // Reverse original stock transactions. Use the original sale's
-      // transaction_date (falling back to the original visit_date) so the
-      // reversal lands on the same date as the original SALE row — otherwise
-      // historical stock summaries between the original date and the new
-      // visit_date would be wrong.
+      // Reverse original stock transactions. Use the original sale's visit_date
+      // so the reversal lands on the same date as the original SALE — otherwise
+      // historical stock summaries would be wrong.
       for (const originalSale of originalSales || []) {
         try {
           await addStockTransaction({
             product_id: originalSale.product_id,
-            transaction_type: TRANSACTION_TYPES.SALE_REVERSAL,
+            transaction_type: TRANSACTION_TYPES.ADJUSTMENT,
             quantity: originalSale.quantity,
-            transaction_date:
-              originalSale.transaction_date || originalSale.visit_date || formData.visit_date,
+            transaction_date: originalVisit.visit_date,
             notes: `Sale reversal for visit edit - Restoring ${originalSale.quantity} units`
           });
         } catch (stockError) {
           console.error('Stock reversal error:', stockError);
-          throw new Error(`Failed to reverse stock for original sale`);
+          throw new Error(`Failed to reverse stock for original sale: ${stockError.message}`);
         }
       }
 

@@ -1,11 +1,10 @@
 import { supabase } from '../lib/supabase';
 
 export const TRANSACTION_TYPES = {
-    OPENING: 'opening',
     PURCHASE: 'purchase',
     SALE: 'sale',
     ADJUSTMENT: 'adjustment',
-    SALE_REVERSAL: 'sale_reversal'
+    RETURN: 'return'
 };
 
 // Get stock transactions for a product up to a specific date
@@ -86,8 +85,8 @@ export const calculateStockSummary = async (productId, date) => {
 
     transactions.forEach(transaction => {
         switch (transaction.transaction_type) {
-            case TRANSACTION_TYPES.OPENING:
             case TRANSACTION_TYPES.ADJUSTMENT:
+                // Positive adjustments add to stock, negative subtract
                 if (transaction.quantity > 0) {
                     openingStock += transaction.quantity;
                 } else {
@@ -100,8 +99,9 @@ export const calculateStockSummary = async (productId, date) => {
             case TRANSACTION_TYPES.SALE:
                 sales += Math.abs(transaction.quantity);
                 break;
-            case TRANSACTION_TYPES.SALE_REVERSAL:
-                sales -= Math.abs(transaction.quantity);
+            case TRANSACTION_TYPES.RETURN:
+                // Returns add back to stock
+                purchases += transaction.quantity;
                 break;
             default:
                 break;

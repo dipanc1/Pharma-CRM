@@ -114,10 +114,10 @@ function VisitDetailContainer() {
         if (visitData?.sales) {
           for (const sale of visitData.sales) {
             try {
-              // Add a SALE_REVERSAL transaction to restore stock
+              // Add an ADJUSTMENT transaction to restore stock
               await addStockTransaction({
                 product_id: sale.product_id,
-                transaction_type: TRANSACTION_TYPES.SALE_REVERSAL,
+                transaction_type: TRANSACTION_TYPES.ADJUSTMENT,
                 quantity: sale.quantity,
                 transaction_date: new Date().toISOString().split('T')[0],
                 notes: `Sale reversal for deleted visit - Restoring ${sale.quantity} units`
