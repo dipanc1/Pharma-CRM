@@ -1,34 +1,33 @@
 import { supabase } from '../lib/supabase';
 
-export const generateInvoiceNumber = async () => {
+// NOTE: This generates a candidate invoice number from the current max. It
+// remains racy under concurrent inserts — a DB-level UNIQUE constraint on
+// ledger_entries.invoice_number is required to fully eliminate collisions.
+// Add the offset attempt below to reduce the collision window when multiple
+// callers fire at once in the same session.
+export const generateInvoiceNumber = async (attempt = 0) => {
   try {
-    // Get current year and month
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
-    
-    // Format: INV-YYYY-MM-XXXX (string, not UUID)
     const prefix = `INV-${year}-${month}`;
-    
-    // Add retry logic for race conditions
+
     let attempts = 0;
     const maxAttempts = 3;
-    
+
     while (attempts < maxAttempts) {
       try {
-        // Get the last invoice number for this month
         const { data, error } = await supabase
           .from('ledger_entries')
           .select('invoice_number')
           .like('invoice_number', `${prefix}%`)
           .order('invoice_number', { ascending: false })
           .limit(1);
-        
+
         if (error) throw error;
-        
+
         let nextNumber = 1;
         if (data && data.length > 0 && data[0].invoice_number) {
-          // Extract the last 4 digits and increment
           const lastInvoice = data[0].invoice_number;
           const lastParts = lastInvoice.split('-');
           if (lastParts.length >= 4) {
@@ -38,29 +37,29 @@ export const generateInvoiceNumber = async () => {
             }
           }
         }
-        
-        // Format with leading zeros (4 digits)
+
+        // Offset by retry attempt to avoid producing the same candidate when
+        // upstream caller retries after a UNIQUE collision.
+        nextNumber += attempt;
+
         const invoiceNumber = `${prefix}-${String(nextNumber).padStart(4, '0')}`;
-        
-        // Validate the generated invoice number
+
         if (!invoiceNumber || invoiceNumber.length < 12) {
           throw new Error('Generated invoice number is invalid');
         }
-        
+
         return invoiceNumber;
       } catch (attemptError) {
         attempts++;
         if (attempts >= maxAttempts) {
           throw attemptError;
         }
-        // Wait a short time before retrying to avoid race conditions
         const delay = 100 * attempts;
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   } catch (error) {
     console.error('Error generating invoice number:', error);
-    // Enhanced fallback with timestamp and random component
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     return `INV-${timestamp}-${random}`;

@@ -318,34 +318,48 @@ function EditVisitContainer() {
         return;
       }
 
-      // Pre-validate stock for new sales before any database operations
-      // Always validate against current stock (today) since updateProductStock recalculates as of today
-      if (sales.length > 0) {
-        const today = new Date().toISOString().split('T')[0];
-        for (const sale of sales) {
-          try {
-            const stockSummary = await calculateStockSummary(sale.product_id, today);
-            // For existing sales, we need to account for the quantity that will be restored
-            const existingSale = sales.find(s => s.id === sale.id && s.id < 1000000000000); // Database IDs are smaller
-            const adjustedStock = existingSale ? stockSummary.closingStock + existingSale.quantity : stockSummary.closingStock;
-            
-            if (adjustedStock < sale.quantity) {
-              throw new Error(`Insufficient stock for ${sale.product_name}. Available: ${adjustedStock}, Required: ${sale.quantity}`);
-            }
-          } catch (stockError) {
-            showError(`Stock validation failed: ${stockError.message}`);
-            return;
-          }
-        }
-      }
-
-      // Get original sales for reference
+      // Get original sales for reference (need them for stock validation too)
       const { data: originalSales, error: originalSalesError } = await supabase
         .from('sales')
         .select('*')
         .eq('visit_id', id);
 
       if (originalSalesError) throw originalSalesError;
+
+      // Pre-validate stock for new sales before any database operations.
+      // Group by product_id so multiple line items of the same product sum up
+      // against available stock (aggregate validation).
+      // Available stock for this visit = closingStock as of visit_date + any
+      // quantity that will be restored from the original sales on this visit.
+      if (sales.length > 0) {
+        try {
+          const requestedByProduct = sales.reduce((acc, s) => {
+            acc[s.product_id] = (acc[s.product_id] || 0) + parseFloat(s.quantity || 0);
+            return acc;
+          }, {});
+
+          const restoredByProduct = (originalSales || []).reduce((acc, s) => {
+            acc[s.product_id] = (acc[s.product_id] || 0) + parseFloat(s.quantity || 0);
+            return acc;
+          }, {});
+
+          for (const productId of Object.keys(requestedByProduct)) {
+            const stockSummary = await calculateStockSummary(productId, formData.visit_date);
+            const available = stockSummary.closingStock + (restoredByProduct[productId] || 0);
+            const requested = requestedByProduct[productId];
+            if (available < requested) {
+              const productName =
+                sales.find(s => s.product_id === productId)?.product_name || 'product';
+              throw new Error(
+                `Insufficient stock for ${productName}. Available: ${available}, Required: ${requested}`
+              );
+            }
+          }
+        } catch (stockError) {
+          showError(`Stock validation failed: ${stockError.message}`);
+          return;
+        }
+      }
 
       // Generate invoice number for new sales
       let newInvoiceNumber = null;
@@ -368,14 +382,19 @@ function EditVisitContainer() {
 
       if (visitError) throw visitError;
 
-      // Reverse original stock transactions
+      // Reverse original stock transactions. Use the original sale's
+      // transaction_date (falling back to the original visit_date) so the
+      // reversal lands on the same date as the original SALE row — otherwise
+      // historical stock summaries between the original date and the new
+      // visit_date would be wrong.
       for (const originalSale of originalSales || []) {
         try {
           await addStockTransaction({
             product_id: originalSale.product_id,
             transaction_type: TRANSACTION_TYPES.SALE_REVERSAL,
             quantity: originalSale.quantity,
-            transaction_date: formData.visit_date,
+            transaction_date:
+              originalSale.transaction_date || originalSale.visit_date || formData.visit_date,
             reference_type: 'visit_edit_reversal',
             reference_id: id,
             notes: `Sale reversal for visit edit - Restoring ${originalSale.quantity} units`
@@ -482,6 +501,31 @@ function EditVisitContainer() {
       }, 1500);
     } catch (error) {
       console.error('Error updating visit:', error);
+      // Best-effort cleanup: the visit edit flow is multi-step (visit update,
+      // stock reversals, ledger delete+insert, sales delete+insert, new stock
+      // transactions). A failure mid-flow can leave products.current_stock out
+      // of sync with the stock_transactions table. Recompute current_stock for
+      // every product that could have been touched so the cached value matches
+      // the underlying ledger of stock_transactions.
+      try {
+        const { data: oSales } = await supabase
+          .from('sales')
+          .select('product_id')
+          .eq('visit_id', id);
+        const productIds = new Set([
+          ...(oSales || []).map(s => s.product_id),
+          ...sales.map(s => s.product_id)
+        ]);
+        for (const productId of productIds) {
+          try {
+            await updateProductStock(productId);
+          } catch (recoveryError) {
+            console.error('Stock recovery error:', recoveryError);
+          }
+        }
+      } catch (cleanupError) {
+        console.error('Cleanup error after failed visit edit:', cleanupError);
+      }
       showError(error.message || 'Error updating visit. Please try again.');
     } finally {
       setSaving(false);

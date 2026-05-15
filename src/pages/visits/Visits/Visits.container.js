@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
@@ -29,6 +29,14 @@ function VisitsContainer() {
   const [allVisits, setAllVisits] = useState([]);
   const canViewSales = role === 'owner';
   const showVisitStats = role === 'owner';
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     // Reset pages when filters change
@@ -109,8 +117,10 @@ function VisitsContainer() {
       const invalidRange = !!(startDate && endDate && endDate < startDate);
 
       if (justStart || justEnd || invalidRange) {
-        setAllVisits([]);
-        setTotalCount(0);
+        if (isMountedRef.current) {
+          setAllVisits([]);
+          setTotalCount(0);
+        }
         return;
       }
 
@@ -146,6 +156,8 @@ function VisitsContainer() {
       }
 
       const { data, error } = await query;
+
+      if (!isMountedRef.current) return;
 
       if (error) {
         showError('Failed to load visits. Please check your connection and try again.');
@@ -193,22 +205,26 @@ function VisitsContainer() {
         );
       }
 
+      if (!isMountedRef.current) return;
       setAllVisits(filteredData);
       setTotalCount(filteredData.length);
 
     } catch (error) {
+      if (!isMountedRef.current) return;
       showError('Error loading visits. Please try again.');
       setAllVisits([]);
       setTotalCount(0);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
   const fetchDoctorVisitCounts = async () => {
     try {
       if (!showVisitStats) {
-        setDoctorVisitCounts([]);
+        if (isMountedRef.current) setDoctorVisitCounts([]);
         return;
       }
 
@@ -217,11 +233,11 @@ function VisitsContainer() {
       const invalidRange = !!(startDate && endDate && endDate < startDate);
 
       if (justStart || justEnd || invalidRange) {
-        setDoctorVisitCounts([]);
+        if (isMountedRef.current) setDoctorVisitCounts([]);
         return;
       }
 
-      setCountsLoading(true);
+      if (isMountedRef.current) setCountsLoading(true);
 
       // Step 1: Get ALL doctors first, then filter by city if needed
       let doctorsQuery = supabase
@@ -305,12 +321,14 @@ function VisitsContainer() {
         return (a.doctor?.name || '').localeCompare(b.doctor?.name || '');
       });
 
+      if (!isMountedRef.current) return;
       setDoctorVisitCounts(sortedCounts);
     } catch (error) {
+      if (!isMountedRef.current) return;
       showError('Error loading visit statistics. Please try again.');
       setDoctorVisitCounts([]);
     } finally {
-      setCountsLoading(false);
+      if (isMountedRef.current) setCountsLoading(false);
     }
   };
 

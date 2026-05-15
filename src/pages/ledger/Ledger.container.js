@@ -38,21 +38,30 @@ const LedgerContainer = () => {
 
   useEffect(() => {
     fetchDoctors();
-    fetchAllEntries();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-fetch allEntries when the doctor filter or the view changes. When a
+  // doctor is selected we scope the fetch to that doctor (the common case for
+  // a CRM with many ledger rows). When viewing the trial balance or no doctor
+  // is selected, we must fetch all entries — running balance and trial balance
+  // are computed client-side.
+  useEffect(() => {
+    fetchAllEntries();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctorFilter, view]);
 
   useEffect(() => {
     fetchLedger();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctorFilter, startDate, endDate, sourceType, allEntries]); // Added allEntries dependency
+  }, [doctorFilter, startDate, endDate, sourceType, allEntries]);
 
   const fetchDoctors = async () => {
     const { data, error } = await supabase
       .from('doctors')
       .select('id, name, contact_type, hospital, specialization')
       .order('name');
-    if (error) { 
+    if (error) {
       console.error(error);
       showError('Failed to load contacts');
     }
@@ -61,12 +70,20 @@ const LedgerContainer = () => {
 
   const fetchAllEntries = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('ledger_entries')
         .select(`
           *,
           doctors:doctor_id (id, name, contact_type, hospital, specialization)
         `);
+
+      // Scope to the selected doctor unless we need the full set for the
+      // trial-balance view. Trial balance aggregates across all contacts.
+      if (doctorFilter && view !== 'trialBalance') {
+        query = query.eq('doctor_id', doctorFilter);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setAllEntries(data || []);
     } catch (e) {
@@ -150,9 +167,8 @@ const LedgerContainer = () => {
 
   const handleRefresh = async () => {
     setPage(1);
-    // Fetch allEntries first, then ledger will be fetched due to dependency
     await fetchAllEntries();
-    await fetchLedger();
+    // fetchLedger reruns automatically via the allEntries effect dependency.
     showSuccess('Ledger refreshed successfully');
   };
   const filteredForDisplay = useMemo(() => {

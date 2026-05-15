@@ -67,6 +67,14 @@ const CashFlowContainer = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.startDate, filters.endDate, filters.cashType, filters.type, filters.purpose]);
 
+  // Clamp page if a deletion or filter change leaves us past the last page.
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(totalRecords / recordsPerPage));
+    if (currentPage > maxPage) {
+      setCurrentPage(maxPage);
+    }
+  }, [totalRecords, currentPage, recordsPerPage]);
+
   const fetchDoctors = async () => {
     try {
       const { data, error } = await supabase
@@ -258,10 +266,12 @@ const handleSubmit = async (formData) => {
 
       if (error) throw error;
 
-      // Create ledger entry if doctor_id exists
+      // Create ledger entry if doctor_id exists. If the ledger insert fails,
+      // roll back the cash_flow row so we don't leave an orphan transaction
+      // with no matching ledger entry.
       if (processedData.doctor_id) {
         const isCredit = processedData.cash_type === 'in_flow';
-        await supabase.from('ledger_entries').insert({
+        const { error: ledgerError } = await supabase.from('ledger_entries').insert({
           doctor_id: processedData.doctor_id,
           entry_date: processedData.transaction_date,
           source_type: 'cash',
@@ -270,6 +280,15 @@ const handleSubmit = async (formData) => {
           debit: isCredit ? 0 : processedData.amount,
           credit: isCredit ? processedData.amount : 0
         });
+
+        if (ledgerError) {
+          try {
+            await supabase.from('cash_flow').delete().eq('id', newRecord.id);
+          } catch (rollbackError) {
+            console.error('Cash flow rollback failed:', rollbackError);
+          }
+          throw ledgerError;
+        }
       }
 
       showSuccess('Record added successfully');
@@ -322,15 +341,7 @@ const handleDelete = async (id) => {
       fetchAnalytics(),
       fetchChartData()
     ]);
-
-    // Check if current page becomes empty after deletion and adjust if needed
-    setTimeout(() => {
-      const newTotalRecords = totalRecords - 1;
-      const maxPage = Math.ceil(newTotalRecords / recordsPerPage);
-      if (currentPage > maxPage && maxPage > 0) {
-        setCurrentPage(maxPage);
-      }
-    }, 100);
+    // currentPage is clamped by the useEffect that watches totalRecords below.
   } catch (error) {
     console.error('Error deleting record:', error);
     showError('Failed to delete record');

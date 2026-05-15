@@ -181,13 +181,24 @@ function AddVisitContainer() {
       user_id: user?.id
     };
 
-    // Pre-validate stock
+    // Pre-validate stock — group by product_id so multiple line items for the
+    // same product sum up and are validated against the available stock as of
+    // the visit_date (not "today", since the visit can be back- or forward-dated).
     if (safeSales.length > 0) {
-      const today = new Date().toISOString().split('T')[0];
-      for (const sale of safeSales) {
-        const stockSummary = await calculateStockSummary(sale.product_id, today);
-        if (stockSummary.closingStock < sale.quantity) {
-          throw new Error(`Insufficient stock for ${sale.product_name}. Available: ${stockSummary.closingStock}, Required: ${sale.quantity}`);
+      const requestedByProduct = safeSales.reduce((acc, s) => {
+        acc[s.product_id] = (acc[s.product_id] || 0) + parseFloat(s.quantity || 0);
+        return acc;
+      }, {});
+
+      for (const productId of Object.keys(requestedByProduct)) {
+        const stockSummary = await calculateStockSummary(productId, visitFormData.visit_date);
+        const requested = requestedByProduct[productId];
+        if (stockSummary.closingStock < requested) {
+          const productName =
+            safeSales.find(s => s.product_id === productId)?.product_name || 'product';
+          throw new Error(
+            `Insufficient stock for ${productName}. Available: ${stockSummary.closingStock}, Required: ${requested}`
+          );
         }
       }
     }
@@ -227,7 +238,7 @@ function AddVisitContainer() {
       if (salesError) throw salesError;
 
       const totalSalesAmount = safeSales.reduce((sum, s) => sum + s.total_amount, 0);
-      
+
       // Create ledger entry for the sale (DEBIT - Customer owes us money)
       const { error: ledgerError } = await supabase.from('ledger_entries').insert({
         doctor_id: visitFormData.doctor_id,

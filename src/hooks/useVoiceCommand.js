@@ -38,6 +38,25 @@ export default function useVoiceCommand({ pageContext, existingData = {}, onConf
     }
   }, []);
 
+  // Stop recognition on unmount so the mic doesn't stay active and state updates
+  // don't fire on an unmounted component.
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        isStoppedManuallyRef.current = true;
+        try {
+          recognitionRef.current.onresult = null;
+          recognitionRef.current.onerror = null;
+          recognitionRef.current.onend = null;
+          recognitionRef.current.stop();
+        } catch (e) {
+          // recognition may already be stopped
+        }
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
+
   // Check if Gemini API key is configured
   const isConfigured = !!process.env.REACT_APP_GEMINI_API_KEY;
 

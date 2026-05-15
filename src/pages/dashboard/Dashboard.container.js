@@ -183,17 +183,22 @@ const DashboardContainer = () => {
 
             const { data: sales } = await salesQueryForCharts;
 
-            // Process sales data for charts
+            // Process sales data for charts - keep sortKey separate from display label
             const salesByDate = {};
             sales?.forEach(sale => {
-                const date = format(new Date(sale.visits.visit_date), 'MMM dd');
-                salesByDate[date] = (salesByDate[date] || 0) + parseFloat(sale.total_amount);
+                const visitDate = new Date(sale.visits.visit_date);
+                const sortKey = format(visitDate, 'yyyy-MM-dd');
+                const label = format(visitDate, 'MMM dd');
+                if (!salesByDate[sortKey]) {
+                    salesByDate[sortKey] = { date: label, amount: 0, sortKey };
+                }
+                salesByDate[sortKey].amount += parseFloat(sale.total_amount);
             });
 
-            const processedSalesData = Object.entries(salesByDate)
-                .map(([date, amount]) => ({ date, amount }))
-                .sort((a, b) => new Date(`2024 ${a.date}`) - new Date(`2024 ${b.date}`))
-                .slice(-10);
+            const processedSalesData = Object.values(salesByDate)
+                .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+                .slice(-10)
+                .map(({ date, amount }) => ({ date, amount }));
 
             setSalesData(processedSalesData);
 

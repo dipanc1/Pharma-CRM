@@ -33,7 +33,7 @@ export const handleAddStock = async (productId, quantity, notes) => {
         await addStockTransaction({
             product_id: productId,
             transaction_type: TRANSACTION_TYPES.PURCHASE, // or ADJUSTMENT
-            quantity: parseInt(quantity),
+            quantity: parseInt(quantity, 10),
             transaction_date: new Date().toISOString().split('T')[0],
             reference_type: 'manual_adjustment',
             notes: notes || 'Manual stock addition'
@@ -45,6 +45,7 @@ export const handleAddStock = async (productId, quantity, notes) => {
         return true;
     } catch (error) {
         console.error('Error adding stock:', error);
+        return false;
     }
 };
 
@@ -123,46 +124,52 @@ export const calculateStockSummary = async (productId, date) => {
 
 // Add stock transaction
 export const addStockTransaction = async (transaction) => {
-    try {
-        const { data } = await supabase
-            .from('stock_transactions')
-            .insert([transaction])
-            .select()
-            .single();
+    const { data, error } = await supabase
+        .from('stock_transactions')
+        .insert([transaction])
+        .select()
+        .single();
 
-        return data;
-    } catch (error) {
+    if (error) {
         console.error('Error adding stock transaction:', error);
+        throw error;
     }
+
+    return data;
 };
 
-// Update current stock in products table
+// Update current stock in products table - includes all transactions (incl. future-dated)
 export const updateProductStock = async (productId) => {
     try {
-        const today = new Date().toISOString().split('T')[0];
-        const stockSummary = await calculateStockSummary(productId, today);
+        const farFuture = '9999-12-31';
+        const stockSummary = await calculateStockSummary(productId, farFuture);
 
-        const { data } = await supabase
+        const { error } = await supabase
             .from('products')
             .update({ current_stock: stockSummary.closingStock })
             .eq('id', productId);
 
-        console.log('Product stock updated:', data);
+        if (error) {
+            console.error('Error updating product stock:', error);
+            throw error;
+        }
         return stockSummary.closingStock;
     } catch (error) {
         console.error('Error updating product stock:', error);
+        throw error;
     }
 };
 
 // Get current stock for a product
 export const getCurrentStock = async (productId) => {
     try {
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('products')
             .select('current_stock')
             .eq('id', productId)
-            .single();
+            .maybeSingle();
 
+        if (error) throw error;
         return data?.current_stock || 0;
     } catch (error) {
         console.error('Error getting current stock:', error);
