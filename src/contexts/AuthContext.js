@@ -29,20 +29,14 @@ export const AuthProvider = ({ children }) => {
 
     getSession();
 
-    let previousSessionId = null;
-
-    // Listen for auth changes - only update if session actually changed
+    // Listen for auth changes - only update if the user actually changed.
+    // Supabase fires SIGNED_IN / TOKEN_REFRESHED on tab refocus with a new
+    // session object; bailing out when the id is unchanged keeps the `user`
+    // state reference stable and avoids a profile reload / route unmount.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        const currentSessionId = session?.user?.id;
-        
-        // Skip if this is just a visibility change (same session)
-        if (currentSessionId === previousSessionId && event !== 'SIGNED_IN' && event !== 'SIGNED_OUT') {
-          return;
-        }
-        
-        previousSessionId = currentSessionId;
-        setUser(session?.user ?? null);
+      async (_event, session) => {
+        const nextUser = session?.user ?? null;
+        setUser((prev) => (prev?.id === nextUser?.id ? prev : nextUser));
         setLoading(false);
       }
     );
