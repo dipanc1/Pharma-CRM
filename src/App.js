@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CompaniesProvider } from './contexts/CompaniesContext';
-import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 
 import Layout from './components/layout/Layout';
+
+// Public landing page
+import Landing from './pages/landing';
 
 // Auth pages
 import Login from './pages/auth/Login';
@@ -50,6 +52,25 @@ import EditVisit from './pages/visits/EditVisit';
 
 // Settings pages
 import CompaniesManagement from './pages/settings';
+
+function RootRoute() {
+  const { user, loading } = useAuth();
+  const { pathname } = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return pathname === '/' ? <Landing /> : <Navigate to="/login" replace />;
+  }
+
+  return <Layout />;
+}
 
 // Role-based redirect component
 function RoleRedirect() {
@@ -106,11 +127,7 @@ function App() {
         <div className="App">
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }>
+            <Route path="/" element={<RootRoute />}>
             <Route
               index
               element={
