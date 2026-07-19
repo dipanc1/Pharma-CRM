@@ -192,7 +192,6 @@ function AddVisitContainer() {
       user_id: user?.id
     };
 
-    // Persist the discount % on the contact so it's remembered for next time.
     if (canManageSales && visitFormData.doctor_id && visitDiscount !== '' && visitDiscount != null) {
       const pct = parseFloat(visitDiscount);
       if (!isNaN(pct)) {
@@ -206,9 +205,6 @@ function AddVisitContainer() {
       }
     }
 
-    // Pre-validate stock — group by product_id so multiple line items for the
-    // same product sum up and are validated against the available stock as of
-    // the visit_date (not "today", since the visit can be back- or forward-dated).
     if (safeSales.length > 0) {
       const requestedByProduct = safeSales.reduce((acc, s) => {
         acc[s.product_id] = (acc[s.product_id] || 0) + parseFloat(s.quantity || 0);
@@ -348,8 +344,6 @@ function AddVisitContainer() {
     }
   };
 
-  // Recompute the in-progress line item's unit price when the discount changes.
-  // Already-added rows keep their price (discount applies to new rows only).
   const handleDiscountChange = (e) => {
     const value = e.target.value;
     setDiscountPercentage(value);
@@ -373,10 +367,8 @@ function AddVisitContainer() {
     setFormData(prev => ({ ...prev, doctor_id: doctor.id }));
     setDoctorSearch(formatDoctorDisplay(doctor));
     setShowDoctorDropdown(false);
-    // Load this contact's saved discount so unit prices default to MRP − discount.
     const savedDiscount = doctor.discount_percentage != null ? doctor.discount_percentage.toString() : '';
     setDiscountPercentage(savedDiscount);
-    // Re-price the in-progress line item, if any, against the new discount.
     if (newSale.product_id) {
       const product = products.find(p => p.id === newSale.product_id);
       if (product) {

@@ -37,8 +37,6 @@ function EditVisitContainer() {
   const [discountPercentage, setDiscountPercentage] = useState('');
   const canManageSales = role === 'owner';
 
-  // Unit price = MRP minus the contact's discount %. Fall back to the product's
-  // price if no MRP is set. Returns a 2-decimal string for the price input.
   const computeUnitPrice = (product, discountPct) => {
     const base = parseFloat(product?.mrp) || parseFloat(product?.price) || 0;
     const pct = parseFloat(discountPct) || 0;
@@ -180,7 +178,6 @@ function EditVisitContainer() {
     setFormData(prev => ({ ...prev, doctor_id: doctor.id }));
     setDoctorSearch(formatDoctorDisplay(doctor));
     setShowDoctorDropdown(false);
-    // Load this contact's saved discount so unit prices default to MRP − discount.
     const savedDiscount = doctor.discount_percentage != null ? doctor.discount_percentage.toString() : '';
     setDiscountPercentage(savedDiscount);
     if (newSale.product_id) {
@@ -200,8 +197,6 @@ function EditVisitContainer() {
     }
   };
 
-  // Recompute the in-progress line item's unit price when the discount changes.
-  // Already-added rows keep their price (discount applies to new rows only).
   const handleDiscountChange = (e) => {
     const value = e.target.value;
     setDiscountPercentage(value);
