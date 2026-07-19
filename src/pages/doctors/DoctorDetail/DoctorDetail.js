@@ -134,6 +134,10 @@ function DoctorDetail({
           <InfoField label="Contact Number" value={doctor.contact_number || 'N/A'} />
           <InfoField label="Email" value={doctor.email || 'N/A'} />
           <InfoField label="Address" value={doctor.address || 'N/A'} />
+          <InfoField
+            label="Discount"
+            value={doctor.discount_percentage ? `${parseFloat(doctor.discount_percentage)}%` : 'N/A'}
+          />
         </div>
       </div>
 
