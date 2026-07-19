@@ -34,7 +34,16 @@ function EditVisitContainer() {
     unit_price: ''
   })
   const [currentStock, setCurrentStock] = useState(null);
+  const [discountPercentage, setDiscountPercentage] = useState('');
   const canManageSales = role === 'owner';
+
+  // Unit price = MRP minus the contact's discount %. Fall back to the product's
+  // price if no MRP is set. Returns a 2-decimal string for the price input.
+  const computeUnitPrice = (product, discountPct) => {
+    const base = parseFloat(product?.mrp) || parseFloat(product?.price) || 0;
+    const pct = parseFloat(discountPct) || 0;
+    return (base * (1 - pct / 100)).toFixed(2);
+  };
 
   useEffect(() => {
     fetchDoctors();
@@ -120,6 +129,10 @@ function EditVisitContainer() {
       // Set initial doctor search after both visit data and doctors are loaded
       if (data.doctor_id && doctors.length > 0) {
         setInitialDoctorSearch(data.doctor_id);
+        const doctor = doctors.find(d => d.id === data.doctor_id);
+        setDiscountPercentage(
+          doctor && doctor.discount_percentage != null ? doctor.discount_percentage.toString() : ''
+        );
       }
 
     } catch (error) {
@@ -135,7 +148,7 @@ function EditVisitContainer() {
     try {
       const { data, error } = await supabase
         .from('doctors')
-        .select('id, name, specialization, hospital, doctor_type, doctor_class, contact_type')
+        .select('id, name, specialization, hospital, doctor_type, doctor_class, contact_type, discount_percentage')
         .order('name');
 
       if (error) throw error;
@@ -167,6 +180,15 @@ function EditVisitContainer() {
     setFormData(prev => ({ ...prev, doctor_id: doctor.id }));
     setDoctorSearch(formatDoctorDisplay(doctor));
     setShowDoctorDropdown(false);
+    // Load this contact's saved discount so unit prices default to MRP − discount.
+    const savedDiscount = doctor.discount_percentage != null ? doctor.discount_percentage.toString() : '';
+    setDiscountPercentage(savedDiscount);
+    if (newSale.product_id) {
+      const product = products.find(p => p.id === newSale.product_id);
+      if (product) {
+        setNewSale(prev => ({ ...prev, unit_price: computeUnitPrice(product, savedDiscount) }));
+      }
+    }
   };
 
   const handleDoctorSearchChange = (e) => {
@@ -174,6 +196,20 @@ function EditVisitContainer() {
     setShowDoctorDropdown(true);
     if (!e.target.value) {
       setFormData(prev => ({ ...prev, doctor_id: '' }));
+      setDiscountPercentage('');
+    }
+  };
+
+  // Recompute the in-progress line item's unit price when the discount changes.
+  // Already-added rows keep their price (discount applies to new rows only).
+  const handleDiscountChange = (e) => {
+    const value = e.target.value;
+    setDiscountPercentage(value);
+    if (newSale.product_id) {
+      const product = products.find(p => p.id === newSale.product_id);
+      if (product) {
+        setNewSale(prev => ({ ...prev, unit_price: computeUnitPrice(product, value) }));
+      }
     }
   };
 
@@ -181,7 +217,7 @@ function EditVisitContainer() {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, price, current_stock')
+        .select('id, name, price, mrp, current_stock')
         .order('name');
 
       if (error) throw error;
@@ -231,12 +267,14 @@ function EditVisitContainer() {
   };
 
   const handleProductSelect = async (product) => {
-    setNewSale(prev => ({ 
-      ...prev, 
+    const unitPrice = computeUnitPrice(product, discountPercentage);
+    const mrpLabel = product.mrp ? parseFloat(product.mrp).toFixed(2) : parseFloat(product.price || 0).toFixed(2);
+    setNewSale(prev => ({
+      ...prev,
       product_id: product.id,
-      unit_price: product.price.toString()
+      unit_price: unitPrice
     }));
-    setProductSearch(`${product.name} - ₹${product.price} (Stock: ${product.current_stock || 0})`);
+    setProductSearch(`${product.name} - MRP ₹${mrpLabel} (Stock: ${product.current_stock || 0})`);
     setShowProductDropdown(false);
 
     try {
@@ -298,6 +336,20 @@ function EditVisitContainer() {
     setSaving(true);
 
     try {
+      // Persist the discount % on the contact so it's remembered for next time.
+      if (canManageSales && formData.doctor_id && discountPercentage !== '' && discountPercentage != null) {
+        const pct = parseFloat(discountPercentage);
+        if (!isNaN(pct)) {
+          const { error: discountError } = await supabase
+            .from('doctors')
+            .update({ discount_percentage: pct })
+            .eq('id', formData.doctor_id);
+          if (discountError) {
+            console.error('Error saving contact discount:', discountError);
+          }
+        }
+      }
+
       if (!canManageSales) {
         const { error: visitError } = await supabase
           .from('visits')
@@ -571,6 +623,8 @@ function EditVisitContainer() {
         filteredProducts={filteredProducts}
         handleProductSelect={handleProductSelect}
         currentStock={currentStock}
+        discountPercentage={discountPercentage}
+        handleDiscountChange={handleDiscountChange}
       />
       <Toast
         message={toast.message}

@@ -18,6 +18,7 @@ function EditProductContainer() {
     name: '',
     description: '',
     price: '',
+    mrp: '',
     company_name: ''
   });
 
@@ -40,6 +41,13 @@ function EditProductContainer() {
     {
       name: 'price',
       label: 'Price (₹)',
+      type: 'number',
+      required: true,
+      placeholder: '0.00'
+    },
+    {
+      name: 'mrp',
+      label: 'MRP (₹)',
       type: 'number',
       required: true,
       placeholder: '0.00'
@@ -79,6 +87,7 @@ function EditProductContainer() {
         name: data.name || '',
         description: data.description || '',
         price: data.price ? data.price.toString() : '',
+        mrp: data.mrp ? data.mrp.toString() : '',
         company_name: data.company_name || ''
       });
     } catch (error) {
@@ -107,7 +116,8 @@ function EditProductContainer() {
         .from('products')
         .update({
           ...formData,
-          price: parseFloat(formData.price) || 0
+          price: parseFloat(formData.price) || 0,
+          mrp: parseFloat(formData.mrp) || 0
         })
         .eq('id', id);
 

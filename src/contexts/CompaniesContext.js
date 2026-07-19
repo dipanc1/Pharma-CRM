@@ -1,19 +1,15 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { fetchCompanies, formatCompaniesForSelect } from '../utils/companiesUtils';
+import { useAuth } from './AuthContext';
 
 export const CompaniesContext = createContext();
 
 export const CompaniesProvider = ({ children }) => {
+  const { user, loading: authLoading } = useAuth();
   const [companies, setCompanies] = useState([]);
   const [companiesOptions, setCompaniesOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Load companies on mount
-  useEffect(() => {
-    loadCompanies();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const loadCompanies = useCallback(async () => {
     try {
@@ -30,6 +26,18 @@ export const CompaniesProvider = ({ children }) => {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (user) {
+      loadCompanies();
+    } else {
+      setCompanies([]);
+      setCompaniesOptions([]);
+      setLoading(false);
+    }
+  }, [user, authLoading, loadCompanies]);
 
   const refreshCompanies = useCallback(async () => {
     await loadCompanies();

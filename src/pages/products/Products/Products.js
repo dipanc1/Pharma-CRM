@@ -29,7 +29,7 @@ function Products({
   setSelectedCompany,
   companyOptions
 }) {
-  const tableHeaders = ['Product Name', 'Company Name', 'Price', 'Current Stock', 'Stock Actions', 'Description', 'Actions'];
+  const tableHeaders = ['Product Name', 'Company Name', 'Price', 'MRP', 'Current Stock', 'Stock Actions', 'Description', 'Actions'];
 
   return loading ? (
     <Loader />
@@ -83,6 +83,9 @@ function Products({
                 </Table.Cell>
                 <Table.Cell className="font-medium text-gray-900">
                   ₹{product.price ? parseFloat(product.price).toFixed(2) : '0.00'}
+                </Table.Cell>
+                <Table.Cell className="font-medium text-gray-900">
+                  ₹{product.mrp ? parseFloat(product.mrp).toFixed(2) : '0.00'}
                 </Table.Cell>
                 <Table.Cell>
                   <div className="flex items-center space-x-2">

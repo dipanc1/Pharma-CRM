@@ -17,6 +17,7 @@ function AddProductContainer() {
     name: '',
     description: '',
     price: '',
+    mrp: '',
     company_name: ''
   });
 
@@ -37,7 +38,8 @@ function AddProductContainer() {
         .from('products')
         .insert([{
           ...formData,
-          price: parseFloat(formData.price) || 0
+          price: parseFloat(formData.price) || 0,
+          mrp: parseFloat(formData.mrp) || 0
         }]);
 
       if (error) {
@@ -79,6 +81,13 @@ function AddProductContainer() {
       placeholder: '0.00'
     },
     {
+      name: 'mrp',
+      label: 'MRP (₹)',
+      type: 'number',
+      required: true,
+      placeholder: '0.00'
+    },
+    {
       name: 'description',
       label: 'Description',
       type: 'textarea',
@@ -96,6 +105,7 @@ function AddProductContainer() {
       name: data.name || '',
       company_name: data.company_name || '',
       price: parseFloat(data.price) || 0,
+      mrp: parseFloat(data.mrp) || 0,
       description: data.description || '',
     };
 

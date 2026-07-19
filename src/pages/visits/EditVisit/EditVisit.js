@@ -37,7 +37,9 @@ function EditVisit({
   setShowProductDropdown,
   filteredProducts,
   handleProductSelect,
-  currentStock
+  currentStock,
+  discountPercentage,
+  handleDiscountChange
 }) {
   const tableHeaders = ['Product', 'Quantity', 'Unit Price', 'Total', 'Actions'];
   const statusOptions = [
@@ -173,6 +175,28 @@ function EditVisit({
           <div className="card">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Sales Items</h3>
 
+            {/* Contact Discount */}
+            <div className="mb-6 max-w-xs">
+              <label htmlFor="discount_percentage" className="block text-sm font-medium text-gray-700 mb-2">
+                Discount % (for this contact)
+              </label>
+              <input
+                type="number"
+                id="discount_percentage"
+                name="discount_percentage"
+                min="0"
+                max="100"
+                step="0.01"
+                className="input-field"
+                placeholder="0"
+                value={discountPercentage}
+                onChange={handleDiscountChange}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Unit price auto-fills as MRP − discount. Saved for this contact on submit.
+              </p>
+            </div>
+
             {/* Add Sale Form */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               {/* Product Selection */}
@@ -197,7 +221,7 @@ function EditVisit({
                         >
                           <div className="font-medium text-gray-900">{product.name}</div>
                           <div className="text-sm text-gray-600 flex justify-between items-center">
-                            <span>₹{product.price}</span>
+                            <span>MRP ₹{product.mrp ?? product.price}</span>
                             <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
                               (product.current_stock || 0) > 0
                                 ? 'bg-green-100 text-green-800'
