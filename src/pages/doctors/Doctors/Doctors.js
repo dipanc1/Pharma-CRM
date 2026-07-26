@@ -75,10 +75,9 @@ function Doctors({
 
   const addressOptions = uniqueAddresses.map(city => ({ value: city, label: city }));
 
-  // Dynamic headers based on view type
-  const tableHeaders = isChemistView 
-    ? ['Name', 'Shop Location', 'Address', 'Contact', 'Actions']
-    : ['Name', 'Specialization', 'Hospital/Clinic', 'Address', 'Class', 'Type', 'Contact', 'Actions'];
+  const tableHeaders = isChemistView
+    ? ['Name', 'Shop Location', 'Address', 'Discount', 'Contact', 'Actions']
+    : ['Name', 'Specialization', 'Hospital/Clinic', 'Address', 'Class', 'Type', 'Discount', 'Contact', 'Actions'];
 
   const pageTitle = isChemistView ? 'Chemists' : 'Doctors';
   const addButtonText = isChemistView ? 'Add Chemist' : 'Add Doctor';
@@ -235,6 +234,9 @@ function Doctors({
                     <Table.Cell className="max-w-xs truncate">
                       {doctor.address || 'N/A'}
                     </Table.Cell>
+                    <Table.Cell>
+                      {doctor.discount_percentage ? `${parseFloat(doctor.discount_percentage)}%` : 'N/A'}
+                    </Table.Cell>
                   </>
                 ) : (
                   <>
@@ -260,9 +262,12 @@ function Doctors({
                         getStyleFunction={getDoctorTypeStyle}
                       />
                     </Table.Cell>
+                    <Table.Cell>
+                      {doctor.discount_percentage ? `${parseFloat(doctor.discount_percentage)}%` : 'N/A'}
+                    </Table.Cell>
                   </>
                 )}
-                
+
                 <Table.Cell>
                   {doctor.contact_number || 'N/A'}
                 </Table.Cell>
