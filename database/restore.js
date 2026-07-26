@@ -4,12 +4,46 @@ const path = require('path');
 const readline = require('readline');
 require('dotenv').config();
 
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY;
+
+const RESTORE_TABLES = [
+  'companies',
+  'doctors',
+  'products',
+  'visits',
+  'sales',
+  'stock_transactions',
+  'cash_flow',
+  'ledger_entries',
+  'cycle_plans',
+  'kol_notes',
+  'doctor_important_dates',
+  'profiles'
+];
 
 const BACKUP_DIR = path.join(__dirname, 'backups');
+
+function createSupabaseClient() {
+  if (!SUPABASE_URL) {
+    throw new Error('REACT_APP_SUPABASE_URL not found in .env');
+  }
+
+  const key = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+
+  if (!key) {
+    throw new Error('Missing Supabase key. Set REACT_APP_SUPABASE_SERVICE_ROLE_KEY for complete restores or REACT_APP_SUPABASE_ANON_KEY for limited restores.');
+  }
+
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn('⚠️  REACT_APP_SUPABASE_SERVICE_ROLE_KEY is not set. Restore may miss RLS-protected tables.');
+  }
+
+  return createClient(SUPABASE_URL, key);
+}
+
+const supabase = createSupabaseClient();
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -92,8 +126,12 @@ async function performRestore(backupFile) {
 
   console.log('\n🚀 Starting restoration...\n');
 
-  // Restore tables in order (respect foreign keys)
-  const restoreOrder = ['doctors', 'products', 'visits', 'sales', 'stock_transactions', 'cash_flow', 'ledger_entries'];
+  // Restore tables in dependency-safe order, then any future tables not in the core list.
+  const backupTableNames = Object.keys(backup.tables || {});
+  const restoreOrder = [
+    ...RESTORE_TABLES.filter(tableName => backupTableNames.includes(tableName)),
+    ...backupTableNames.filter(tableName => !RESTORE_TABLES.includes(tableName))
+  ];
 
   for (const tableName of restoreOrder) {
     if (backup.tables[tableName] && backup.tables[tableName].data) {

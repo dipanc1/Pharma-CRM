@@ -13,6 +13,7 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - **Inventory Management**: Real-time stock tracking with low-stock alerts
 - **Professional Reporting**: Beautiful charts and analytics for presentations
 - **Financial Management**: Track cash flow, maintain accounting ledger, and monitor doctor credit
+- **Operational Planning**: Manage cycle plans, core doctors, and company records
 - **Important Dates**: Never miss important client occasions with automatic calendar tracking
 - **Mobile Responsive**: Works seamlessly on desktop, tablet, and mobile devices
 - **Data Protection**: Automated backup system with schema versioning
@@ -24,7 +25,6 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - Add and manage doctor profiles with complete contact information
 - Store specialization, hospital details, and personal notes
 - Advanced search and filter functionality
-- Import/export doctor data (CSV support)
 - Doctor classification (Type: Prescriber/Dispenser, Class: A/B/C)
 
 ### 📅 Visit Tracking
@@ -32,15 +32,13 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - Add detailed visit notes and outcomes
 - Track visit status (completed, scheduled, cancelled, rescheduled)
 - Associate multiple sales transactions with each visit
-- Set follow-up reminders and notifications
 - Filter by date range, city, and status
 
 ### 💊 Product Management
 - Comprehensive pharmaceutical product catalog
 - Organized by company/manufacturer (e.g., LSB LIFE SCIENCES, FLOWRICH PHARMA, CRANIX PHARMA, BRVYMA, RECHELIST PHARMA)
 - **Note**: Products are organized by pharmaceutical company rather than generic categories for better tracking
-- Batch number and expiry date tracking
-- Pricing management with discount support
+- MRP pricing with doctor-specific discount support
 - Product performance analytics
 
 ### 📦 Inventory Management
@@ -49,16 +47,13 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - Interactive stock movement charts and company distribution
 - **Filter by product, company, and date range**
 - Automated low stock alerts and reorder notifications
-- Export detailed inventory reports to CSV/Excel
-- Batch tracking and expiry management
+- Export inventory reports
 - Visual company-wise stock distribution
 
 ### 💰 Sales Tracking
 - Record detailed sales during doctor visits
-- Track quantities, unit prices, discounts, and total amounts
+- Track quantities, unit prices derived from MRP and discounts, and total amounts
 - Multi-product sales in single visits
-- Commission calculations and reporting
-- Target vs achievement tracking
 - **Filter by doctor, product, and company**
 
 ### 📊 Dashboard & Analytics
@@ -141,55 +136,19 @@ npm run setup  # Creates .env file automatically
 ```
 
 ### 2. Supabase Configuration
-1. Visit [supabase.com](https://supabase.com) and create a new project
-2. Navigate to Settings > API in your Supabase dashboard
-3. Copy your Project URL and anon/public key
-4. Update the generated `.env` file with your credentials:
-
-```env
-REACT_APP_SUPABASE_URL=https://your-project.supabase.co
-REACT_APP_SUPABASE_ANON_KEY=your-anon-key-here
-```
-
 ### 3. Database Setup
 
-#### Option A: Using Migration Files (Recommended)
-Run each migration file in order in your Supabase SQL editor:
-
-1. **Initial Schema** ([`database/migrations/001_initial_schema.sql`](database/migrations/001_initial_schema.sql))
-2. **Doctor Fields** ([`database/migrations/002_add_doctor_fields.sql`](database/migrations/002_add_doctor_fields.sql))
-3. **Stock Tracking** ([`database/migrations/003_add_stock_tracking.sql`](database/migrations/003_add_stock_tracking.sql))
 4. **Security Policies** ([`database/migrations/004_add_rls_policies.sql`](database/migrations/004_add_rls_policies.sql))
 5. **Performance Indexes** ([`database/migrations/005_add_indexes.sql`](database/migrations/005_add_indexes.sql))
-6. **Chemist Support** ([`database/migrations/006_add_chemist_support.sql`](database/migrations/006_add_chemist_support.sql))
-7. **Cash Flow Table** ([`database/migrations/007_add_cash_flow_table.sql`](database/migrations/007_add_cash_flow_table.sql))
-8. **RLS Policies Fix** ([`database/migrations/008_fix_rls_policies.sql`](database/migrations/008_fix_rls_policies.sql))
-9. **Link Doctor to Cash Flow** ([`database/migrations/009_add_link_doctor_cash_flow.sql`](database/migrations/009_add_link_doctor_cash_flow.sql))
-10. **Ledger Support** ([`database/migrations/010_ledger_support.sql`](database/migrations/010_ledger_support.sql))
-11. **Fix Invoice Number Type** ([`database/migrations/011_fix_invoice_number_type.sql`](database/migrations/011_fix_invoice_number_type.sql))
 12. **Doctor Important Dates** ([`database/migrations/012_add_doctor_important_dates.sql`](database/migrations/012_add_doctor_important_dates.sql))
 
-#### Option B: Complete Schema (All-in-One)
-Run the complete database schema in your Supabase SQL editor:
-
-```sql
--- Enable necessary extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Create doctors table
 CREATE TABLE doctors (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name VARCHAR NOT NULL,
-  specialization VARCHAR,
-  hospital VARCHAR,
-  contact_number VARCHAR,
-  email VARCHAR,
-  address TEXT,
-  doctor_type VARCHAR DEFAULT 'prescriber' CHECK (doctor_type IN ('prescriber', 'stockist')),
   doctor_class VARCHAR DEFAULT 'C' CHECK (doctor_class IN ('A', 'B', 'C')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+REACT_APP_SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 -- Create visits table
 CREATE TABLE visits (
@@ -198,6 +157,10 @@ CREATE TABLE visits (
   visit_date DATE NOT NULL,
   notes TEXT,
   status VARCHAR DEFAULT 'completed',
+│   │   ├── cashflow/          # Cash flow management
+│   │   ├── cycle-planning/    # Cycle planning
+│   │   ├── kol/               # Core doctor / KOL management
+│   │   └── settings/          # Company management
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -320,6 +283,9 @@ npm run backup
 # Format: backup_YYYY-MM-DDTHH-MM-SS.json
 ```
 
+Full backups and restores use `REACT_APP_SUPABASE_SERVICE_ROLE_KEY` when it is available so RLS-protected tables are included. Without it, the scripts fall back to the anon key and may miss restricted data.
+The current backup set covers doctors, visits, products, sales, stock_transactions, cash_flow, ledger_entries, cycle_plans, kol_notes, companies, profiles, and doctor_important_dates.
+
 ### Schema-Only Export
 ```bash
 # Export complete schema as executable SQL
@@ -333,6 +299,8 @@ npm run backup:schema
 # Backup data without schema information
 npm run backup:no-schema
 ```
+
+This skips schema and migration exports entirely.
 
 ### Restore from Backup
 ```bash
@@ -362,18 +330,20 @@ Each backup includes:
 ```json
 {
   "timestamp": "2025-01-07T10:30:00.000Z",
-  "version": "2.0",
+  "version": "2.1",
   "type": "full",
   "tables": {
     "doctors": { "count": 50, "data": [...] },
     "products": { "count": 120, "data": [...] },
     "visits": { "count": 300, "data": [...] },
     "sales": { "count": 450, "data": [...] },
-    "stock_transactions": { "count": 600, "data": [...] }
+    "stock_transactions": { "count": 600, "data": [...] },
+    "cycle_plans": { "count": 40, "data": [...] }
   },
   "schema": {
-    "schema": {...},
-    "type": "fallback"
+    "type": "sql",
+    "exported": true,
+    "file": "schema_2025-01-07T10-30-00-000Z.sql"
   },
   "migrations": {
     "001_initial_schema.sql": "CREATE TABLE...",
@@ -403,6 +373,7 @@ node database/schedule-backup.js
 - ✅ **Data integrity** with record counts
 - ✅ **Easy comparison** between backups
 - ✅ **JSON format** for easy inspection
+- ✅ **Service role support** for complete backups/restores when configured
 
 ### Backup Best Practices
 1. **Regular Backups**: Run daily backups in production (`npm run backup`)
@@ -483,19 +454,8 @@ REACT_APP_SUPPORT_EMAIL=support@yourcompany.com
 
 ### Customization Options
 
-#### Adding New Product Companies
-Edit the company options in [`src/pages/products/AddProduct/AddProduct.container.js`](src/pages/products/AddProduct/AddProduct.container.js):
-```javascript
-const COMPANIES = [
-  { value: 'LSB LIFE SCIENCES', label: 'LSB LIFE SCIENCES' },
-  { value: 'FLOWRICH PHARMA', label: 'FLOWRICH PHARMA' },
-  { value: 'CRANIX PHARMA', label: 'CRANIX PHARMA' },
-  { value: 'BRVYMA', label: 'BRVYMA' },
-  { value: 'YOUR NEW COMPANY', label: 'YOUR NEW COMPANY' }  // Add here
-];
-```
-
-Also update in [`src/pages/products/EditProduct/EditProduct.container.js`](src/pages/products/EditProduct/EditProduct.container.js)
+#### Managing Product Companies
+Companies are managed from [`src/pages/settings/Companies.js`](src/pages/settings/Companies.js) and are loaded automatically into product forms. Add or remove companies there rather than editing hardcoded lists.
 
 #### Modifying Dashboard Metrics
 Update statistics in [`src/pages/dashboard/Dashboard.container.js`](src/pages/dashboard/Dashboard.container.js):
@@ -504,19 +464,6 @@ Update statistics in [`src/pages/dashboard/Dashboard.container.js`](src/pages/da
 const customMetrics = {
   // Your custom calculations
 };
-```
-
-#### Customizing Backup Schedule
-Edit [`database/schedule-backup.js`](database/schedule-backup.js):
-```javascript
-// Change backup frequency
-cron.schedule('0 2 * * *', () => {  // Daily at 2 AM
-  performBackup();
-});
-
-cron.schedule('0 */6 * * *', () => { // Every 6 hours
-  performBackup({ includeSchema: false });
-});
 ```
 
 #### Styling and Branding
@@ -567,7 +514,6 @@ pharma-crm/
 │   ├── restore.js             # Restore utility script
 │   ├── restore-schema.js      # Schema viewer utility
 │   ├── compare-schema.js      # Backup comparison utility
-│   ├── schedule-backup.js     # Automated backup scheduler
 │   ├── sample-data.sql        # Sample data for testing
 │   └── auth-policies.sql      # Authentication policies
 ├── .env.example               # Environment variables template

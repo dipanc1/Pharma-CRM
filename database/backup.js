@@ -3,12 +3,46 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY;
+
+const BACKUP_TABLES = [
+  'doctors',
+  'visits',
+  'products',
+  'sales',
+  'stock_transactions',
+  'cash_flow',
+  'ledger_entries',
+  'cycle_plans',
+  'kol_notes',
+  'companies',
+  'profiles',
+  'doctor_important_dates'
+];
 
 const BACKUP_DIR = path.join(__dirname, 'backups');
+
+function createSupabaseClient() {
+  if (!SUPABASE_URL) {
+    throw new Error('REACT_APP_SUPABASE_URL not found in .env');
+  }
+
+  const key = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+
+  if (!key) {
+    throw new Error('Missing Supabase key. Set REACT_APP_SUPABASE_SERVICE_ROLE_KEY for complete backups or REACT_APP_SUPABASE_ANON_KEY for limited backups.');
+  }
+
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn('⚠️  REACT_APP_SUPABASE_SERVICE_ROLE_KEY is not set. Backup may miss RLS-protected tables.');
+  }
+
+  return createClient(SUPABASE_URL, key);
+}
+
+const supabase = createSupabaseClient();
 
 // Ensure backup directory exists
 if (!fs.existsSync(BACKUP_DIR)) {
@@ -38,58 +72,25 @@ async function backupTable(tableName) {
 
 async function backupSchema() {
   console.log('\n📋 Backing up database schema...');
-  
-  try {
-    // Get table structures
-    const { data: tables, error: tablesError } = await supabase
-      .rpc('get_table_info');
 
-    if (tablesError) {
-      console.log('⚠️  RPC function not available, using fallback schema backup');
-      return await fallbackSchemaBackup();
-    }
+  const schemaFile = await exportSchemaSQL();
 
+  if (!schemaFile) {
     return {
-      tables: tables,
-      timestamp: new Date().toISOString()
+      type: 'sql',
+      exported: false,
+      file: null,
+      path: null,
+      note: 'Schema export skipped because no migrations directory was found.'
     };
-  } catch (error) {
-    console.log('⚠️  Could not fetch schema dynamically, using fallback');
-    return await fallbackSchemaBackup();
-  }
-}
-
-async function fallbackSchemaBackup() {
-  // Fallback: Get column information from each table
-  const tables = ['doctors', 'visits', 'products', 'sales', 'stock_transactions' , 'cash_flow', 'ledger_entries'];
-  const schema = {};
-
-  for (const tableName of tables) {
-    try {
-      // Get a sample row to understand structure
-      const { data, error } = await supabase
-        .from(tableName)
-        .select('*')
-        .limit(1);
-
-      if (!error && data && data.length > 0) {
-        schema[tableName] = {
-          columns: Object.keys(data[0]),
-          sample: data[0]
-        };
-      } else {
-        schema[tableName] = { columns: [], sample: null };
-      }
-    } catch (err) {
-      console.log(`   ⚠️  Could not analyze ${tableName}`);
-      schema[tableName] = { error: err.message };
-    }
   }
 
   return {
-    schema: schema,
-    type: 'fallback',
-    note: 'Schema inferred from table data. For complete schema, use pg_dump or migration files.'
+    type: 'sql',
+    exported: true,
+    file: path.basename(schemaFile),
+    path: schemaFile,
+    note: 'Schema exported from local migration files.'
   };
 }
 
@@ -124,20 +125,10 @@ async function performBackup(options = {}) {
   console.log('🚀 Starting database backup...\n');
   console.log(`   Schema backup: ${includeSchema ? 'Enabled' : 'Disabled'}\n`);
 
-  const tables = [
-    'doctors',
-    'visits',
-    'products',
-    'sales',
-    'stock_transactions',
-    'cash_flow',
-    'ledger_entries'
-  ];
-
   const backup = {
     timestamp: new Date().toISOString(),
-    version: '2.0', // Updated version
-    type: 'full',
+    version: '2.1',
+    type: includeSchema ? 'full' : 'data-only',
     tables: {},
     schema: null,
     migrations: null
@@ -145,7 +136,7 @@ async function performBackup(options = {}) {
 
   // Backup table data
   console.log('📊 Backing up table data...');
-  for (const table of tables) {
+  for (const table of BACKUP_TABLES) {
     const result = await backupTable(table);
     backup.tables[table] = result;
     console.log(`   ✅ ${table}: ${result.count} records`);
@@ -155,10 +146,8 @@ async function performBackup(options = {}) {
   if (includeSchema) {
     backup.schema = await backupSchema();
     console.log('   ✅ Schema information captured');
+    backup.migrations = await backupMigrations();
   }
-
-  // Backup migration files
-  backup.migrations = await backupMigrations();
 
   // Save backup file
   fs.writeFileSync(backupFile, JSON.stringify(backup, null, 2));
