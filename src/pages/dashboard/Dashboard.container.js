@@ -262,6 +262,7 @@ const DashboardContainer = () => {
             const months = [];
             for (let i = 11; i >= 0; i--) {
                 const d = new Date();
+                d.setDate(1);
                 d.setMonth(d.getMonth() - i);
                 const key = format(d, 'MMM yyyy');
                 months.push({ month: key, sales: monthlyBuckets[key] || 0 });
