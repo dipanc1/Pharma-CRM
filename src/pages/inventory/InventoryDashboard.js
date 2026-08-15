@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import {
     XAxis,
@@ -22,7 +22,9 @@ import {
     ScaleIcon,
     DocumentArrowDownIcon,
     ExclamationTriangleIcon,
-    ChartBarIcon
+    ChartBarIcon,
+    ChevronRightIcon,
+    ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { handleReload } from '../../helper';
 
@@ -78,6 +80,70 @@ function InventoryDashboard({
         if (stock <= 10) return 'text-red-600 bg-red-50';
         if (stock <= 25) return 'text-yellow-600 bg-yellow-50';
         return 'text-green-600 bg-green-50';
+    };
+
+    const getLowStockStatus = (stock) => {
+        if (stock <= 0) return { label: 'Out of Stock', className: 'bg-red-600 text-white' };
+        if (stock <= 5) return { label: 'Critical', className: 'bg-red-100 text-red-800' };
+        return { label: 'Low', className: 'bg-yellow-100 text-yellow-800' };
+    };
+
+    // Group the low stock products company-wise, worst offenders first
+    const lowStockByCompany = useMemo(() => {
+        const groups = new Map();
+
+        (lowStockProducts || []).forEach(product => {
+            const company = product.company_name || 'Unspecified Company';
+            if (!groups.has(company)) groups.set(company, []);
+            groups.get(company).push(product);
+        });
+
+        return Array.from(groups.entries())
+            .map(([company, items]) => ({
+                company,
+                items: [...items].sort((a, b) => (a.current_stock || 0) - (b.current_stock || 0)),
+                criticalCount: items.filter(p => (p.current_stock || 0) <= 5).length
+            }))
+            .sort((a, b) =>
+                b.criticalCount - a.criticalCount ||
+                b.items.length - a.items.length ||
+                a.company.localeCompare(b.company)
+            );
+    }, [lowStockProducts]);
+
+    const [expandedCompanies, setExpandedCompanies] = useState(() => new Set());
+    const companyKeys = lowStockByCompany.map(group => group.company).join('|');
+
+    // Open the companies that need attention first; fall back to the top group
+    useEffect(() => {
+        if (lowStockByCompany.length === 0) {
+            setExpandedCompanies(new Set());
+            return;
+        }
+        const withCritical = lowStockByCompany
+            .filter(group => group.criticalCount > 0)
+            .map(group => group.company);
+
+        setExpandedCompanies(new Set(withCritical.length > 0 ? withCritical : [lowStockByCompany[0].company]));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [companyKeys]);
+
+    const toggleCompany = (company) => {
+        setExpandedCompanies(prev => {
+            const next = new Set(prev);
+            if (next.has(company)) {
+                next.delete(company);
+            } else {
+                next.add(company);
+            }
+            return next;
+        });
+    };
+
+    const allExpanded = lowStockByCompany.length > 0 && expandedCompanies.size === lowStockByCompany.length;
+
+    const toggleAllCompanies = () => {
+        setExpandedCompanies(allExpanded ? new Set() : new Set(lowStockByCompany.map(group => group.company)));
     };
 
     const safeStats = summaryStats || {
@@ -394,26 +460,103 @@ function InventoryDashboard({
                         <ExclamationTriangleIcon className="h-5 w-5 text-red-600 mr-2" />
                         <h3 className="text-lg font-medium text-red-800">Low Stock Alert</h3>
                         <span className="ml-auto bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                            {lowStockProducts.length} items
+                            {lowStockProducts.length} items across {lowStockByCompany.length} {lowStockByCompany.length === 1 ? 'company' : 'companies'}
                         </span>
                     </div>
                     <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                        <p className="text-sm text-red-700 mb-3">The following products are running low on stock (≤ 10 units):</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                            {lowStockProducts.map(product => (
-                                <div
-                                    key={product.id}
-                                    className="flex items-center justify-between bg-white border border-red-200 rounded-lg p-3"
-                                >
-                                    <div>
-                                        <p className="font-medium text-red-900">{product.name}</p>
-                                        <p className="text-sm text-red-600">{product.current_stock} units left</p>
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-sm text-red-700">
+                                The following products are running low on stock (≤ 10 units), grouped by company:
+                            </p>
+                            <button
+                                onClick={toggleAllCompanies}
+                                className="text-sm text-red-700 hover:text-red-900 font-medium whitespace-nowrap ml-4"
+                            >
+                                {allExpanded ? 'Collapse All' : 'Expand All'}
+                            </button>
+                        </div>
+
+                        <div className="space-y-2">
+                            {lowStockByCompany.map(({ company, items, criticalCount }) => {
+                                const isExpanded = expandedCompanies.has(company);
+
+                                return (
+                                    <div key={company} className="bg-white border border-red-200 rounded-lg overflow-hidden">
+                                        <button
+                                            onClick={() => toggleCompany(company)}
+                                            aria-expanded={isExpanded}
+                                            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-red-50 transition-colors"
+                                        >
+                                            <div className="flex items-center min-w-0">
+                                                {isExpanded ? (
+                                                    <ChevronDownIcon className="h-4 w-4 text-red-600 mr-2 flex-shrink-0" />
+                                                ) : (
+                                                    <ChevronRightIcon className="h-4 w-4 text-red-600 mr-2 flex-shrink-0" />
+                                                )}
+                                                <span className="font-medium text-red-900 truncate">{company}</span>
+                                            </div>
+                                            <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
+                                                {criticalCount > 0 && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                        {criticalCount} critical
+                                                    </span>
+                                                )}
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                    {items.length} {items.length === 1 ? 'product' : 'products'}
+                                                </span>
+                                            </div>
+                                        </button>
+
+                                        {isExpanded && (
+                                            <div className="overflow-x-auto border-t border-red-100">
+                                                <table className="min-w-full divide-y divide-red-100">
+                                                    <thead className="bg-red-50">
+                                                        <tr>
+                                                            <th className="px-4 py-2 text-left text-xs font-medium text-red-700 uppercase tracking-wider">
+                                                                Product
+                                                            </th>
+                                                            <th className="px-4 py-2 text-right text-xs font-medium text-red-700 uppercase tracking-wider">
+                                                                Current Stock
+                                                            </th>
+                                                            <th className="px-4 py-2 text-right text-xs font-medium text-red-700 uppercase tracking-wider">
+                                                                Price
+                                                            </th>
+                                                            <th className="px-4 py-2 text-right text-xs font-medium text-red-700 uppercase tracking-wider">
+                                                                Status
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="bg-white divide-y divide-red-100">
+                                                        {items.map(product => {
+                                                            const stock = product.current_stock || 0;
+                                                            const status = getLowStockStatus(stock);
+
+                                                            return (
+                                                                <tr key={product.id} className="hover:bg-red-50 transition-colors">
+                                                                    <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                                                                        {product.name}
+                                                                    </td>
+                                                                    <td className="px-4 py-2 text-sm text-right font-medium text-red-700">
+                                                                        {stock.toLocaleString()}
+                                                                    </td>
+                                                                    <td className="px-4 py-2 text-sm text-right text-gray-900">
+                                                                        {formatCurrency(product.price || 0)}
+                                                                    </td>
+                                                                    <td className="px-4 py-2 text-right">
+                                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.className}`}>
+                                                                            {status.label}
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
                                     </div>
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                        Critical
-                                    </span>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
