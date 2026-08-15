@@ -56,7 +56,6 @@ function buildDraft(parsed, products) {
 
     return {
         company_name: parsed.company_name || '',
-        bill_number: parsed.bill_number || '',
         bill_date: isValidDate(parsed.bill_date) ? parsed.bill_date : today(),
         bill_total: parsed.bill_total || 0,
         lines
@@ -91,31 +90,13 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
     const [state, setState] = useState(BILL_STATES.IDLE);
     const [draft, setDraft] = useState(null);
     const [error, setError] = useState(null);
-    const [duplicateOf, setDuplicateOf] = useState(null);
     const [saveResult, setSaveResult] = useState(null);
 
     const reset = useCallback(() => {
         setState(BILL_STATES.IDLE);
         setDraft(null);
         setError(null);
-        setDuplicateOf(null);
         setSaveResult(null);
-    }, []);
-
-    // Warn if this bill number was already imported, but don't block it —
-    // suppliers do reuse numbers across years.
-    const checkDuplicate = useCallback(async (billNumber) => {
-        if (!billNumber?.trim()) return null;
-
-        const { data, error: dupError } = await supabase
-            .from('stock_transactions')
-            .select('transaction_date')
-            .eq('reference_number', billNumber.trim())
-            .order('transaction_date', { ascending: false })
-            .limit(1);
-
-        if (dupError || !data?.length) return null;
-        return data[0].transaction_date;
     }, []);
 
     const scanBill = useCallback(async (file) => {
@@ -123,7 +104,6 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
 
         setState(BILL_STATES.PROCESSING);
         setError(null);
-        setDuplicateOf(null);
         setSaveResult(null);
 
         const result = await parseBillImage(file, products);
@@ -141,9 +121,8 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
         }
 
         setDraft(buildDraft(result.data, products));
-        setDuplicateOf(await checkDuplicate(result.data.bill_number));
         setState(BILL_STATES.CONFIRMING);
-    }, [products, checkDuplicate]);
+    }, [products]);
 
     const updateHeader = useCallback((field, value) => {
         setDraft(prev => (prev ? { ...prev, [field]: value } : prev));
@@ -190,9 +169,7 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
         setState(BILL_STATES.SAVING);
 
         const company = normaliseCompany(draft.company_name, companies);
-        const billNumber = draft.bill_number?.trim() || null;
         const billDate = isValidDate(draft.bill_date) ? draft.bill_date : today();
-        const noteSuffix = billNumber ? ` (Bill ${billNumber})` : '';
 
         const toSave = draft.lines.filter(
             line => line.action !== LINE_ACTIONS.SKIP && line.action !== null && line.quantity > 0
@@ -235,8 +212,7 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
                     transaction_type: TRANSACTION_TYPES.PURCHASE,
                     quantity: Math.round(Number(line.quantity)),
                     transaction_date: billDate,
-                    reference_number: billNumber,
-                    notes: `Purchase from ${company || 'supplier'}${noteSuffix}`
+                    notes: `Purchase from ${company || 'supplier'}`
                 });
 
                 // Price refresh is opt-in per line and only for existing products;
@@ -274,7 +250,7 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
                 name: company || 'Supplier',
                 purpose: 'purchase',
                 amount: total,
-                notes: `Bill import${noteSuffix} - ${savedCount} item${savedCount === 1 ? '' : 's'}`
+                notes: `Bill import - ${savedCount} item${savedCount === 1 ? '' : 's'}`
                 // reference_type / reference_id are both left unset: the
                 // chk_reference_consistency constraint needs them both-null or both-set.
             }]);
@@ -300,7 +276,6 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
 
         setState(BILL_STATES.IDLE);
         setDraft(null);
-        setDuplicateOf(null);
     }, [draft, companies, onSaved]);
 
     // Derived helpers for the modal
@@ -318,7 +293,6 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
         state,
         draft,
         error,
-        duplicateOf,
         saveResult,
         unresolvedCount,
         lineSum,

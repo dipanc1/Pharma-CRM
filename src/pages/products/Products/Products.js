@@ -183,7 +183,6 @@ function Products({
         state={bill.state}
         draft={bill.draft}
         error={bill.error}
-        duplicateOf={bill.duplicateOf}
         unresolvedCount={bill.unresolvedCount}
         lineSum={bill.lineSum}
         isSaving={bill.isSaving}

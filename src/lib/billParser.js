@@ -54,7 +54,6 @@ const BILL_SCHEMA = {
     type: 'object',
     properties: {
         company_name: { type: 'string' },
-        bill_number: { type: 'string' },
         bill_date: { type: 'string' },
         bill_total: { type: 'number' },
         line_items: {
@@ -73,7 +72,7 @@ const BILL_SCHEMA = {
             }
         }
     },
-    required: ['company_name', 'bill_number', 'bill_date', 'bill_total', 'line_items']
+    required: ['company_name', 'bill_date', 'bill_total', 'line_items']
 };
 
 function buildBillPrompt(products) {
@@ -84,7 +83,6 @@ Extract the bill into structured data.
 
 BILL-LEVEL FIELDS:
 - company_name: the SELLER / supplier / manufacturer the bill is FROM (not the buyer, not "DS Medical Agencies").
-- bill_number: the invoice or bill number exactly as printed.
 - bill_date: the invoice date in YYYY-MM-DD format. Indian bills are usually DD/MM/YYYY — read them that way. Today is ${today}. If no date is legible, use "".
 - bill_total: the final payable amount (grand total after tax and round-off). A number only, no currency symbol.
 
@@ -171,7 +169,6 @@ export async function parseBillImage(file, products = []) {
             success: true,
             data: {
                 company_name: parsed.company_name || '',
-                bill_number: parsed.bill_number || '',
                 bill_date: parsed.bill_date || '',
                 bill_total: Number(parsed.bill_total) || 0,
                 line_items: lineItems

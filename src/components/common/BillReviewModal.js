@@ -164,7 +164,6 @@ const BillReviewModal = ({
     state,
     draft,
     error,
-    duplicateOf,
     unresolvedCount,
     lineSum,
     isSaving,
@@ -238,17 +237,7 @@ const BillReviewModal = ({
 
                         {draft && (state === BILL_STATES.CONFIRMING || state === BILL_STATES.SAVING) && (
                             <div className="space-y-5">
-                                {duplicateOf && (
-                                    <div className="flex items-start gap-2 p-3 rounded-md bg-yellow-50 border border-yellow-200">
-                                        <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 flex-shrink-0" />
-                                        <p className="text-xs text-yellow-800">
-                                            Bill <span className="font-medium">{draft.bill_number}</span> was already imported on {duplicateOf}.
-                                            Saving again will add the stock a second time.
-                                        </p>
-                                    </div>
-                                )}
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div>
                                         <label className="block text-xs font-medium text-gray-600 mb-1">Company</label>
                                         <input
@@ -262,7 +251,6 @@ const BillReviewModal = ({
                                             {companies.map(c => <option key={c.id || c.name} value={c.name} />)}
                                         </datalist>
                                     </div>
-                                    {headerField('Bill Number', 'bill_number')}
                                     {headerField('Bill Date', 'bill_date', 'date')}
                                     {headerField('Total Paid (₹)', 'bill_total', 'number', { step: '0.01', min: '0' })}
                                 </div>
