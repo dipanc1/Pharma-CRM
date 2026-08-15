@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { parseBillImage } from '../lib/billParser';
-import { addStockTransaction, TRANSACTION_TYPES } from '../utils/stockUtils';
+import { addStockTransaction, updateProductStock, TRANSACTION_TYPES } from '../utils/stockUtils';
 
 export const BILL_STATES = {
     IDLE: 'idle',
@@ -184,6 +184,8 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
                     transaction_date: billDate,
                     notes: `Purchase from ${company || 'supplier'}`
                 });
+
+                await updateProductStock(productId);
 
                 if (line.action === LINE_ACTIONS.STOCK) {
                     const priceUpdate = {};

@@ -51,8 +51,13 @@ function compareBackups(backup1Path, backup2Path) {
     notes.forEach(note => console.log(`   - ${note}`));
   }
 
-  const dump1 = backup1.schema?.live?.path;
-  const dump2 = backup2.schema?.live?.path;
+  const resolveDump = (live) => {
+    if (!live?.file && !live?.path) return null;
+    return path.join(BACKUP_DIR, path.basename(live.file || live.path));
+  };
+
+  const dump1 = resolveDump(backup1.schema?.live);
+  const dump2 = resolveDump(backup2.schema?.live);
 
   console.log('\n📋 Schema Comparison:');
 

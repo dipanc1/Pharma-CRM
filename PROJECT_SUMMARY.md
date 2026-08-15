@@ -72,8 +72,9 @@ Photograph a supplier purchase bill; one upload becomes stock, price updates and
 **Commit order** — no transaction or RPC is available, so lines are written one at a time and the cash outflow goes in last, only if at least one line landed. Money recorded therefore never exceeds stock recorded, which is the safer way to fail. A failing line is collected and the loop continues; one bad line should not abandon the other fourteen. The outcome is reported honestly — a partial import says "Imported 12 of 15" and names the failures, and stock-succeeded-but-cashflow-failed is called out explicitly.
 
 **Two schema facts shape the writes**:
-- `trigger_update_stock` (migration 003) recomputes `current_stock` on insert, so `updateProductStock()` is deliberately **not** called afterwards. Note this is only safe because `purchase` is the one transaction type the trigger signs correctly — see Known Issues.
+- The live database has **no** stock trigger, so `updateProductStock()` is called explicitly after each transaction insert. An earlier version relied on `trigger_update_stock` from migration 003, which turned out never to have been applied — see Known Issues.
 - `chk_reference_consistency` on `cash_flow` requires `reference_type`/`reference_id` to be both-null or both-set, so both are left unset.
+- `stock_transactions` has no `reference_number` column — only `reference_type`/`reference_id` — so bills are not linked back by number and there is no duplicate-import guard.
 
 The outflow uses values already present in the Cash Flow page's own filter lists (`cash_type: 'out_flow'`, `type: 'sundry'`, `purpose: 'purchase'`), so it appears there with no changes to that page.
 
@@ -356,9 +357,13 @@ Dashboard               - Overview and KPIs
 
 Recorded, not fixed.
 
-**`trigger_update_stock` disagrees with the JavaScript on sign.** Migration 003 computes `WHEN transaction_type IN ('sale','adjustment') THEN -quantity`, which does not match how `updateProductStock()` treats those types. In practice the contradiction is masked: every visit and stock path calls `updateProductStock()` immediately after the insert, overwriting the trigger's value with the correct figure. The exposure is the millisecond window between the two writes, plus any future path that skips the recompute.
+**`trigger_update_stock` does not exist in the live database.** Migration 003 defines the `update_product_stock()` function and the trigger, but the live catalog dump shows `stock_transactions` carries no triggers at all, and no such function is installed. The migration was evidently never applied to this project. Nothing in the app may assume the database recomputes `current_stock` on its own — every write path must call `updateProductStock()` explicitly. `handleAddStock` and `handleEditStock` always did; the bill scanner did not, and was fixed.
 
-The bill scanner is one such path — it deliberately relies on the trigger alone. That is safe today only because `purchase` is the one transaction type of the four that the trigger signs correctly. Any new code that writes a `sale` or `adjustment` without calling `updateProductStock()` will corrupt stock.
+This is the drift that the old `schema_*.sql` "backups" could never reveal, because they were concatenated migrations and therefore agreed with the migrations by construction. Only `live_schema_*.sql` can show it.
+
+**`TRANSACTION_TYPES.RETURN` (`'return'`) violates the live CHECK constraint,** which admits only `opening`, `purchase`, `sale`, `adjustment`. Nothing inserts it today — it appears solely as a read-side branch in `calculateStockSummary` — so it is dead rather than broken, but any code that tries to write it will be rejected by the database.
+
+**`cycle_plans` and `kol_notes` have RLS enabled with zero policies,** which denies every query except via `service_role`. Confirmed against the live catalog, not inferred from migrations.
 
 **Backups predating the pagination fix are truncated at 1000 rows per table.** Every file currently in `database/backups/` is affected, `stock_transactions` most visibly. See `README.md`.
 
