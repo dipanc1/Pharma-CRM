@@ -23,6 +23,7 @@
     "backup": "set NODE_OPTIONS=--dns-result-order=ipv4first && node database/backup.js",
     "backup:schema": "set NODE_OPTIONS=--dns-result-order=ipv4first && node database/backup.js --schema-only",
     "backup:no-schema": "set NODE_OPTIONS=--dns-result-order=ipv4first && node database/backup.js --no-schema",
+    "schema:dump": "set NODE_OPTIONS=--dns-result-order=ipv4first && node database/schema-dump.js",
     "restore": "set NODE_OPTIONS=--dns-result-order=ipv4first && node database/restore.js",
     "restore:schema": "set NODE_OPTIONS=--dns-result-order=ipv4first && node database/restore-schema.js"
   },
@@ -46,6 +47,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.16",
+    "pg": "^8.23.0",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.3.6"
   }

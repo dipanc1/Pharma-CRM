@@ -1,6 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
+const { dumpLiveSchema } = require('./schema-dump');
 require('dotenv').config();
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
@@ -49,20 +50,48 @@ if (!fs.existsSync(BACKUP_DIR)) {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
 }
 
+// PostgREST caps an unbounded select at 1000 rows and returns them without any
+// error, so a plain .select('*') silently truncates. Every backup taken before
+// this was fixed lost everything past row 1000 of stock_transactions.
+const PAGE_SIZE = 1000;
+
 async function backupTable(tableName) {
   console.log(`📦 Backing up ${tableName}...`);
-  
-  try {
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('*');
 
-    if (error) throw error;
+  try {
+    // Ask the server how many rows there are, so the page loop has something
+    // independent to check itself against at the end.
+    const { count: expected, error: countError } = await supabase
+      .from(tableName)
+      .select('*', { count: 'exact', head: true });
+
+    if (countError) throw countError;
+
+    const rows = [];
+
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .range(from, from + PAGE_SIZE - 1);
+
+      if (error) throw error;
+
+      rows.push(...data);
+
+      if (data.length < PAGE_SIZE) break;
+    }
+
+    // A row written between the count and the last page is a benign mismatch;
+    // a shortfall is not. Either way the run refuses to call itself complete.
+    if (typeof expected === 'number' && rows.length !== expected) {
+      throw new Error(`expected ${expected} rows, read ${rows.length}`);
+    }
 
     return {
       table: tableName,
-      count: data.length,
-      data: data
+      count: rows.length,
+      data: rows
     };
   } catch (error) {
     console.error(`❌ Error backing up ${tableName}:`, error.message);
@@ -73,25 +102,31 @@ async function backupTable(tableName) {
 async function backupSchema() {
   console.log('\n📋 Backing up database schema...');
 
-  const schemaFile = await exportSchemaSQL();
+  const migrationsFile = await exportSchemaSQL();
 
-  if (!schemaFile) {
-    return {
-      type: 'sql',
-      exported: false,
-      file: null,
-      path: null,
-      note: 'Schema export skipped because no migrations directory was found.'
-    };
+  const result = {
+    type: 'sql',
+    migrations_combined: migrationsFile
+      ? { exported: true, file: path.basename(migrationsFile), path: migrationsFile }
+      : { exported: false, file: null, path: null, note: 'No migrations directory found.' },
+    live: { exported: false, file: null, path: null, note: null }
+  };
+
+  // The migrations concatenation says what the schema should be. This says what
+  // it is. Needs DATABASE_URL; a missing one is not a reason to fail the data
+  // backup, so it degrades to a note.
+  try {
+    const dump = await dumpLiveSchema();
+    result.live = { exported: true, file: dump.file, path: dump.path, note: null };
+    console.log(`✅ Live schema read from Postgres: ${dump.file}`);
+  } catch (error) {
+    result.live.note = error.code === 'NO_DATABASE_URL'
+      ? 'Skipped: DATABASE_URL is not set in .env, so the live schema could not be read.'
+      : `Skipped: ${error.message}`;
+    console.warn(`⚠️  Live schema not captured. ${result.live.note}`);
   }
 
-  return {
-    type: 'sql',
-    exported: true,
-    file: path.basename(schemaFile),
-    path: schemaFile,
-    note: 'Schema exported from local migration files.'
-  };
+  return result;
 }
 
 async function backupMigrations() {
@@ -136,11 +171,25 @@ async function performBackup(options = {}) {
 
   // Backup table data
   console.log('📊 Backing up table data...');
+  const failedTables = [];
+
   for (const table of BACKUP_TABLES) {
     const result = await backupTable(table);
     backup.tables[table] = result;
-    console.log(`   ✅ ${table}: ${result.count} records`);
+
+    if (result.error) {
+      failedTables.push(table);
+      console.log(`   ❌ ${table}: FAILED — ${result.error}`);
+    } else {
+      console.log(`   ✅ ${table}: ${result.count} records`);
+    }
   }
+
+  // A table that errored is recorded as zero rows. Restoring from that would
+  // delete the real rows and put nothing back, so an incomplete run is marked
+  // in the file itself rather than being left to look like a good backup.
+  backup.complete = failedTables.length === 0;
+  backup.failedTables = failedTables;
 
   // Backup schema information
   if (includeSchema) {
@@ -152,12 +201,19 @@ async function performBackup(options = {}) {
   // Save backup file
   fs.writeFileSync(backupFile, JSON.stringify(backup, null, 2));
 
-  console.log(`\n✅ Backup completed successfully!`);
-  console.log(`📁 Backup saved to: ${backupFile}`);
-
   // Calculate total records
   const totalRecords = Object.values(backup.tables)
     .reduce((sum, table) => sum + table.count, 0);
+
+  if (backup.complete) {
+    console.log(`\n✅ Backup completed successfully!`);
+  } else {
+    console.log(`\n⚠️  BACKUP IS INCOMPLETE — do not rely on it.`);
+    console.log(`   These tables were NOT captured: ${failedTables.join(', ')}`);
+    console.log(`   Restoring from this file would delete those tables' rows and put nothing back.`);
+  }
+
+  console.log(`📁 Backup saved to: ${backupFile}`);
   console.log(`📊 Total records backed up: ${totalRecords}`);
 
   if (includeSchema) {
@@ -165,23 +221,40 @@ async function performBackup(options = {}) {
     console.log(`📜 Migration files backed up: ${migrationCount}`);
   }
 
-  // Clean old backups (keep last 10)
-  cleanOldBackups();
+  // Only prune older backups when this one is actually good. Otherwise a run
+  // that failed would evict a working backup and replace it with a broken one.
+  if (backup.complete) {
+    cleanOldBackups();
+  } else {
+    console.log(`\n🛑 Old backups left untouched — the last good one is still your fallback.`);
+  }
 
-  return backupFile;
+  return { file: backupFile, complete: backup.complete, failedTables };
 }
 
+/**
+ * Concatenate the migrations into one runnable script.
+ *
+ * This is NOT a picture of the live database — it is the migrations replayed in
+ * order, so it agrees with the migrations by construction and cannot reveal
+ * drift. It used to be written as `schema_*.sql`, which made it look like a
+ * dump; it is named for what it is now. For the real thing see schema-dump.js.
+ */
 async function exportSchemaSQL() {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const schemaFile = path.join(BACKUP_DIR, `schema_${timestamp}.sql`);
+  const schemaFile = path.join(BACKUP_DIR, `migrations_combined_${timestamp}.sql`);
 
-  console.log('\n📋 Exporting complete schema as SQL...');
+  console.log('\n📋 Combining migration files into a rebuild script...');
 
   // Read all migration files and combine them
   const migrationsDir = path.join(__dirname, 'migrations');
-  let fullSchema = `-- Database Schema Export
+  let fullSchema = `-- Combined migrations — a rebuild script, NOT a live schema dump.
 -- Generated: ${new Date().toISOString()}
--- DS Medical Agencies CRM Complete Schema
+-- DS Medical Agencies CRM
+--
+-- This is every file in database/migrations concatenated in order. It shows
+-- what the schema SHOULD be. To see what the database actually contains,
+-- run: npm run schema:dump  (produces live_schema_*.sql)
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -201,7 +274,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
     }
 
     fs.writeFileSync(schemaFile, fullSchema);
-    console.log(`✅ Schema SQL exported to: ${schemaFile}`);
+    console.log(`✅ Rebuild script written to: ${schemaFile}`);
     return schemaFile;
   } else {
     console.log('❌ No migrations directory found');
@@ -209,42 +282,34 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
   }
 }
 
-function cleanOldBackups() {
+/**
+ * Delete all but the newest `keep` files matching `prefix`.
+ *
+ * Ordered by the ISO timestamp in the filename, not by mtime. A git checkout
+ * stamps every file with the clone time, which made mtime ordering arbitrary —
+ * it could just as easily have deleted the newest backup as the oldest.
+ */
+function pruneByName(prefix, extension, keep, label) {
   const files = fs.readdirSync(BACKUP_DIR)
-    .filter(f => f.startsWith('backup_') && f.endsWith('.json'))
-    .map(f => ({
-      name: f,
-      path: path.join(BACKUP_DIR, f),
-      time: fs.statSync(path.join(BACKUP_DIR, f)).mtime.getTime()
-    }))
-    .sort((a, b) => b.time - a.time);
+    .filter(f => f.startsWith(prefix) && f.endsWith(extension))
+    .sort()
+    .reverse();
 
-  // Keep only the 10 most recent backups
-  if (files.length > 10) {
-    console.log(`\n🧹 Cleaning old backups (keeping last 10)...`);
-    files.slice(10).forEach(file => {
-      fs.unlinkSync(file.path);
-      console.log(`   🗑️  Deleted: ${file.name}`);
-    });
-  }
+  if (files.length <= keep) return;
 
-  // Also clean old schema exports (keep last 5)
-  const schemaFiles = fs.readdirSync(BACKUP_DIR)
-    .filter(f => f.startsWith('schema_') && f.endsWith('.sql'))
-    .map(f => ({
-      name: f,
-      path: path.join(BACKUP_DIR, f),
-      time: fs.statSync(path.join(BACKUP_DIR, f)).mtime.getTime()
-    }))
-    .sort((a, b) => b.time - a.time);
+  console.log(`\n🧹 Cleaning old ${label} (keeping last ${keep})...`);
+  files.slice(keep).forEach(name => {
+    fs.unlinkSync(path.join(BACKUP_DIR, name));
+    console.log(`   🗑️  Deleted: ${name}`);
+  });
+}
 
-  if (schemaFiles.length > 5) {
-    console.log(`🧹 Cleaning old schema exports (keeping last 5)...`);
-    schemaFiles.slice(5).forEach(file => {
-      fs.unlinkSync(file.path);
-      console.log(`   🗑️  Deleted: ${file.name}`);
-    });
-  }
+function cleanOldBackups() {
+  pruneByName('backup_', '.json', 10, 'data backups');
+  pruneByName('migrations_combined_', '.sql', 5, 'rebuild scripts');
+  pruneByName('live_schema_', '.sql', 5, 'live schema dumps');
+  // Pre-rename `schema_*.sql` files are deliberately left alone — they are the
+  // only record of what the migrations looked like before, and there are five.
 }
 
 // Run backup if called directly
@@ -262,7 +327,9 @@ if (require.main === module) {
       });
   } else {
     performBackup({ includeSchema: !noSchema })
-      .then(() => process.exit(0))
+      // Exit non-zero on a partial backup too, so a scheduled run cannot report
+      // success while silently missing tables.
+      .then(result => process.exit(result.complete ? 0 : 1))
       .catch(error => {
         console.error('❌ Backup failed:', error);
         process.exit(1);
