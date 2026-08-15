@@ -48,7 +48,6 @@ function Products({
         { onClick: handleReload, icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, title: 'Refresh' }
       ]} />
 
-      {/* Camera on mobile, gallery/file browser on desktop */}
       <input
         ref={fileInputRef}
         type="file"

@@ -19,16 +19,12 @@ function listSchemaBackups() {
     return [];
   }
 
-  // Only rebuild scripts, never live_schema_*.sql — the live dump is a report
-  // meant for reading, and pasting it into the SQL editor would do nothing.
-  // `schema_*` is the pre-rename name for the same rebuild scripts.
   const files = fs.readdirSync(BACKUP_DIR)
     .filter(f => (f.startsWith('migrations_combined_') || f.startsWith('schema_')) && f.endsWith('.sql'))
     .map(f => ({
       name: f,
       path: path.join(BACKUP_DIR, f)
     }))
-    // Sorted by the timestamp in the filename; mtime is reset by a git checkout.
     .sort((a, b) => b.name.localeCompare(a.name));
 
   return files;

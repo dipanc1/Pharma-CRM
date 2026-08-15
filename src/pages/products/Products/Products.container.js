@@ -37,8 +37,6 @@ function ProductsContainer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Report the outcome of a bill import. A partial import is reported as a
-  // partial import — never as a success.
   useEffect(() => {
     const result = bill.saveResult;
     if (!result) return;
@@ -61,7 +59,6 @@ function ProductsContainer() {
 
   const handleBillFileChange = async (e) => {
     const file = e.target.files?.[0];
-    // Reset so picking the same file twice still fires a change event.
     e.target.value = '';
     if (file) await bill.scanBill(file);
   };

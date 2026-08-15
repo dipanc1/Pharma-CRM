@@ -1,14 +1,8 @@
 import { ai, GEMINI_MODEL } from './gemini';
 
-// Long edge cap for the uploaded photo. Phone cameras produce 4000px+ images;
-// bill text stays legible well below that and the upload is far quicker.
 const MAX_EDGE = 1600;
 const JPEG_QUALITY = 0.8;
 
-/**
- * Downscale an image File to a base64 JPEG payload for Gemini.
- * Returns { data, mimeType } — `data` is bare base64 with no `data:` prefix.
- */
 export function compressImage(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -45,11 +39,6 @@ export function compressImage(file) {
     });
 }
 
-// Gemini enforces this shape, so the response needs no fence-stripping or repair.
-// This is standard JSON Schema (lowercase types), which is what
-// response_format.schema takes — not the older uppercase OpenAPI Type enum.
-// matched_product_id is a plain string (empty when unmatched) rather than a
-// nullable field — one less thing for the model to get subtly wrong.
 const BILL_SCHEMA = {
     type: 'object',
     properties: {
@@ -118,13 +107,6 @@ Match each line to an existing product ONLY when you are confident it is the sam
     return prompt;
 }
 
-/**
- * Send a bill image to Gemini and get back structured bill data.
- *
- * @param {File} file - the image chosen from camera or gallery
- * @param {Array} products - existing products, used for matching
- * @returns {{success: boolean, data?: object, error?: string}}
- */
 export async function parseBillImage(file, products = []) {
     if (!process.env.REACT_APP_GEMINI_API_KEY) {
         return {
@@ -154,7 +136,6 @@ export async function parseBillImage(file, products = []) {
 
         const parsed = JSON.parse(interaction.output_text);
 
-        // Guard against a hallucinated ID slipping through the schema.
         const validIds = new Set((products || []).map(p => p.id));
         const lineItems = (parsed.line_items || []).map(item => ({
             item_name: item.item_name || '',

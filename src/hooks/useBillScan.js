@@ -11,22 +11,16 @@ export const BILL_STATES = {
     ERROR: 'error'
 };
 
-// What to do with a single bill line at save time.
 export const LINE_ACTIONS = {
-    STOCK: 'stock',   // add to an existing product
-    CREATE: 'create', // create the product, then add stock
-    SKIP: 'skip'      // ignore this line entirely
+    STOCK: 'stock',
+    CREATE: 'create',
+    SKIP: 'skip'
 };
 
 const today = () => new Date().toISOString().split('T')[0];
 
 const isValidDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value || '');
 
-/**
- * Build the editable draft from what Gemini returned.
- * Matched lines are ready to go; unmatched lines start unresolved so the user
- * has to consciously choose create-or-skip before saving.
- */
 function buildDraft(parsed, products) {
     const byId = new Map((products || []).map(p => [p.id, p]));
 
@@ -42,14 +36,9 @@ function buildDraft(parsed, products) {
             amount: item.amount || 0,
             product_id: product ? product.id : null,
             product,
-            // Unmatched lines are deliberately left null — the footer blocks saving
-            // until every one of them is resolved.
             action: product ? LINE_ACTIONS.STOCK : null,
-            // Only offer to overwrite a price when the bill actually disagrees
-            // with what's on file. Blanket overwrites would clobber manual edits.
             updateMrp: !!product && (item.mrp || 0) > 0 && Number(product.mrp || 0) !== Number(item.mrp),
             updateRate: !!product && (item.rate || 0) > 0 && Number(product.price || 0) !== Number(item.rate),
-            // Company for a to-be-created product; prefilled from the bill header.
             new_company_name: parsed.company_name || ''
         };
     });
@@ -62,10 +51,6 @@ function buildDraft(parsed, products) {
     };
 }
 
-/**
- * Normalise the typed company against the companies table so "Cipla" and
- * "cipla" don't end up as two separate vendors. Falls back to what was typed.
- */
 function normaliseCompany(name, companies) {
     const trimmed = (name || '').trim();
     if (!trimmed) return '';
@@ -78,14 +63,6 @@ function normaliseCompany(name, companies) {
     return caseInsensitive ? caseInsensitive.name : trimmed;
 }
 
-/**
- * Scan a purchase bill and turn it into stock, price updates and a cash outflow.
- *
- * @param {object} options
- * @param {Array}  options.products  - existing products, for matching
- * @param {Array}  options.companies - existing companies, for name normalisation
- * @param {Function} options.onSaved - called after a save that wrote something
- */
 export default function useBillScan({ products = [], companies = [], onSaved } = {}) {
     const [state, setState] = useState(BILL_STATES.IDLE);
     const [draft, setDraft] = useState(null);
@@ -138,8 +115,6 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
         });
     }, []);
 
-    // Map an unmatched line onto an existing product instead of creating a
-    // near-duplicate — the common case when the OCR misreads a name.
     const assignProduct = useCallback((key, productId) => {
         const product = products.find(p => p.id === productId);
         if (!product) return;
@@ -178,9 +153,6 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
         const failures = [];
         let savedCount = 0;
 
-        // No transaction or RPC is available, so this runs line by line and the
-        // cash outflow goes in last. Money recorded then never exceeds stock
-        // recorded, which is the safer way to fail.
         for (const line of toSave) {
             try {
                 let productId = line.product_id;
@@ -205,8 +177,6 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
                     throw new Error('No product selected');
                 }
 
-                // The trigger_update_stock DB trigger recomputes current_stock on
-                // insert, so there is deliberately no updateProductStock() call here.
                 await addStockTransaction({
                     product_id: productId,
                     transaction_type: TRANSACTION_TYPES.PURCHASE,
@@ -215,8 +185,6 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
                     notes: `Purchase from ${company || 'supplier'}`
                 });
 
-                // Price refresh is opt-in per line and only for existing products;
-                // a newly created one already carries the bill's values.
                 if (line.action === LINE_ACTIONS.STOCK) {
                     const priceUpdate = {};
                     if (line.updateMrp && Number(line.mrp) > 0) priceUpdate.mrp = Number(line.mrp);
@@ -241,7 +209,6 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
         let cashFlowSaved = false;
         const total = Number(draft.bill_total) || 0;
 
-        // Only record the payment if at least one line actually landed.
         if (savedCount > 0 && total > 0) {
             const { error: cashError } = await supabase.from('cash_flow').insert([{
                 transaction_date: billDate,
@@ -251,8 +218,6 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
                 purpose: 'purchase',
                 amount: total,
                 notes: `Bill import - ${savedCount} item${savedCount === 1 ? '' : 's'}`
-                // reference_type / reference_id are both left unset: the
-                // chk_reference_consistency constraint needs them both-null or both-set.
             }]);
 
             if (cashError) {
@@ -278,7 +243,6 @@ export default function useBillScan({ products = [], companies = [], onSaved } =
         setDraft(null);
     }, [draft, companies, onSaved]);
 
-    // Derived helpers for the modal
     const unresolvedCount = draft
         ? draft.lines.filter(line => line.action === null).length
         : 0;

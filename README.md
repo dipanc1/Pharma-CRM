@@ -282,16 +282,66 @@ npm run backup
 # Format: backup_YYYY-MM-DDTHH-MM-SS.json
 ```
 
-Full backups and restores use `REACT_APP_SUPABASE_SERVICE_ROLE_KEY` when it is available so RLS-protected tables are included. Without it, the scripts fall back to the anon key and may miss restricted data.
+Full backups and restores use `REACT_APP_SUPABASE_SERVICE_ROLE_KEY` when it is available so RLS-protected tables are included. Without it, the scripts fall back to the anon key and may miss restricted data. **Set the service role key.** The row-count check described below catches truncation and pagination faults, but it cannot detect RLS filtering — the count query is filtered by the same policies as the data query, so both agree and the backup looks complete.
+
 The current backup set covers doctors, visits, products, sales, stock_transactions, cash_flow, ledger_entries, cycle_plans, kol_notes, companies, profiles, and doctor_important_dates.
 
-### Schema-Only Export
+### The 1000-row cap
+
+PostgREST caps an unbounded `select` at 1000 rows and returns them **without any error**. Every backup taken before this was fixed silently lost everything past row 1000 — in practice, `stock_transactions`, which sat at exactly 1000 across every historical backup while every other table grew.
+
+`backupTable` now pages through with `.range()` and separately asks the server for an exact count, then refuses to call the run complete if the two disagree. A row written between the count and the last page produces a benign mismatch; a shortfall does not. Either way the run flags itself rather than guessing.
+
+**Any backup file in `database/backups/` showing exactly 1000 rows for a table predates this fix and is incomplete.** `npm run restore` will warn about them and require a typed confirmation.
+
+### A failed backup must not look like a good one
+
+A table that errors is recorded as `count: 0, data: []`. Left unchecked, that produced a file that looked ordinary, a `✅ Backup completed successfully!` message, and a pruning pass that deleted a genuinely good older backup to make room for it.
+
+Now:
+- the file records `complete: false` and a `failedTables` list
+- the run prints an explicit incomplete warning naming the tables
+- **pruning is skipped entirely**, so the last good backup survives
+- the process exits non-zero, so a scheduled run cannot report green
+
+### Pruning order
+
+Old backups are pruned by the ISO timestamp **in the filename**, not by mtime. A git checkout stamps every file with the clone time, which made mtime ordering arbitrary — it could just as easily have deleted the newest backup as the oldest.
+
+Kept: last 10 data backups, last 5 rebuild scripts, last 5 live schema dumps. Pre-rename `schema_*.sql` files are left alone.
+
+### Schema: two different artifacts
+
+These are not interchangeable, and conflating them caused a real misdiagnosis — a column was reported as existing in the live database on the strength of a file that was only ever a copy of the migrations.
+
+| File | Produced by | What it is |
+|---|---|---|
+| `migrations_combined_*.sql` | `npm run backup:schema` | Every file in `database/migrations` concatenated in order. Runnable — paste into the Supabase SQL Editor to rebuild from scratch. Says what the schema **should** be. |
+| `live_schema_*.sql` | `npm run schema:dump` | Read from `pg_catalog` over a direct Postgres connection. A report, not runnable. Says what the database **actually contains**. |
+
+The combined migrations file agrees with the migrations by construction, so it can never reveal drift between the migrations and the real database. It was previously written as `schema_*.sql`, which made it look like a dump; it is now named for what it is.
+
 ```bash
-# Export complete schema as executable SQL
+# Rebuild script (concatenated migrations)
 npm run backup:schema
 
-# Creates: database/backups/schema_YYYY-MM-DDTHH-MM-SS.sql
+# Live schema read straight from Postgres
+npm run schema:dump
 ```
+
+`npm run backup` produces both. If `DATABASE_URL` is unset the live dump is skipped with a note and the data backup proceeds normally.
+
+### Why `DATABASE_URL` is separate from the Supabase keys
+
+`REACT_APP_SUPABASE_URL` + anon/service key talk to **PostgREST**, the HTTP API. It serves rows from tables in the exposed schemas. It does not expose `pg_catalog` or `information_schema` at all. Through that connection you can ask "give me every row in `stock_transactions`" but not "what columns does `stock_transactions` have" — which is exactly the question that needs answering to detect drift.
+
+`DATABASE_URL` is a raw Postgres connection (port 5432), which is what lets `schema-dump.js` read the catalog. Get it from **Supabase → Settings → Database → Connection string → URI**.
+
+It is **optional** — everything except `npm run schema:dump` works without it.
+
+⚠️ It must **not** carry a `REACT_APP_` prefix. Create React App inlines every `REACT_APP_` variable into the public browser bundle, and this URL contains your database password. Same reason the existing `REACT_APP_SUPABASE_SERVICE_ROLE_KEY` name is a hazard worth revisiting.
+
+The dump captures columns with exact declared types (`varchar(50)`, `numeric(10,2)` — `information_schema` would only say "character varying"), defaults, all constraints including CHECKs, indexes, triggers, functions, and RLS policies. It explicitly flags any table with RLS **enabled and zero policies**, which denies every request except via `service_role` and is otherwise invisible.
 
 ### Data-Only Backup
 ```bash
@@ -309,14 +359,20 @@ npm run restore
 # Follow the prompts to select and restore a backup
 ```
 
+Restore is destructive: each table is emptied before the backup rows are inserted. Safeguards:
+
+- **A table that failed to back up is skipped, not wiped.** Its rows were recorded as an empty array; wiping the live table and inserting that would destroy the only remaining copy.
+- **Partial inserts are reported as loss.** The rows are already deleted by that point, so `12 of 400 rows restored — 388 LOST` is the truth and is printed as such. Previously a run where every insert failed still printed a success line.
+- **Row counts are shown before you confirm**, with failed tables and any table sitting at exactly 1000 flagged.
+- **A second typed confirmation** (`RESTORE ANYWAY`) is required for an incomplete or suspected-truncated backup.
+
 ### View Schema from Backup
 ```bash
-# Interactive schema viewer
+# Interactive rebuild-script viewer
 npm run restore:schema
-
-# Select a backup to view its schema
-# Option to save schema to a file
 ```
+
+Lists `migrations_combined_*.sql` and legacy `schema_*.sql` only — never `live_schema_*.sql`, which is a report and would do nothing if pasted into the SQL editor.
 
 ### Compare Backups
 ```bash
@@ -324,63 +380,65 @@ npm run restore:schema
 node database/compare-schema.js backup_2025-01-07.json backup_2025-01-08.json
 ```
 
+Shows per-table row deltas, flags counts that should not be trusted (failed tables, anything at exactly 1000), and diffs the two live schema dumps if both backups have one and the files are still on disk. The diff is line-set based rather than positional, so reordering is ignored but an appearing or disappearing column is not.
+
+Backups store only the *path* of the live dump, so the comparison is skipped if a dump has since been pruned.
+
 ### Backup File Structure
-Each backup includes:
 ```json
 {
   "timestamp": "2025-01-07T10:30:00.000Z",
   "version": "2.1",
   "type": "full",
+  "complete": true,
+  "failedTables": [],
   "tables": {
-    "doctors": { "count": 50, "data": [...] },
-    "products": { "count": 120, "data": [...] },
-    "visits": { "count": 300, "data": [...] },
-    "sales": { "count": 450, "data": [...] },
-    "stock_transactions": { "count": 600, "data": [...] },
-    "cycle_plans": { "count": 40, "data": [...] }
+    "doctors": { "table": "doctors", "count": 50, "data": [...] },
+    "products": { "table": "products", "count": 120, "data": [...] },
+    "stock_transactions": { "table": "stock_transactions", "count": 1600, "data": [...] }
   },
   "schema": {
     "type": "sql",
-    "exported": true,
-    "file": "schema_2025-01-07T10-30-00-000Z.sql"
+    "migrations_combined": {
+      "exported": true,
+      "file": "migrations_combined_2025-01-07T10-30-00-000Z.sql"
+    },
+    "live": {
+      "exported": true,
+      "file": "live_schema_2025-01-07T10-30-00-000Z.sql"
+    }
   },
   "migrations": {
     "001_initial_schema.sql": "CREATE TABLE...",
-    "002_add_doctor_fields.sql": "ALTER TABLE...",
-    ...
+    "002_add_doctor_fields.sql": "ALTER TABLE..."
   }
 }
 ```
 
-### Automated Backups (Production)
-```bash
-# Install cron dependency
-npm install node-cron
-
-# Run automated backup scheduler
-node database/schedule-backup.js
-
-# Backups run automatically:
-# - Daily at 2:00 AM (full backup with schema)
-# - Every 6 hours (data only)
-```
+A table that failed carries an `error` string and `count: 0`; `complete` is then `false`.
 
 ### Backup Management Features
-- ✅ **Last 10 backups** kept automatically (older ones deleted)
-- ✅ **Schema exports** (last 5 kept)
-- ✅ **Migration history** included in each backup
-- ✅ **Data integrity** with record counts
-- ✅ **Easy comparison** between backups
-- ✅ **JSON format** for easy inspection
+- ✅ **Paginated reads** — no silent 1000-row truncation
+- ✅ **Row counts verified** against a server-side exact count
+- ✅ **Incomplete runs marked** in the file, on stdout, and in the exit code
+- ✅ **Pruning skipped** when a run fails, so the last good backup survives
+- ✅ **Last 10 backups** kept, ordered by filename timestamp
+- ✅ **Live schema dump** with constraints, triggers, functions and RLS policies
+- ✅ **Restore refuses** to wipe a table that failed to back up
 - ✅ **Service role support** for complete backups/restores when configured
 
 ### Backup Best Practices
 1. **Regular Backups**: Run daily backups in production (`npm run backup`)
-2. **Schema Versioning**: Export schema after major database changes
-3. **Off-site Storage**: Copy backups to cloud storage (Google Drive, Dropbox, etc.)
-4. **Test Restores**: Regularly test backup restoration process
-5. **Before Migrations**: Always backup before running new migrations
-6. **Document Changes**: Keep notes about significant schema changes
+2. **Check the exit code**, not just the log — a partial backup exits non-zero
+3. **Schema Versioning**: Run `npm run schema:dump` after any migration and diff it against the previous one
+4. **Off-site Storage**: Copy backups to cloud storage (Google Drive, Dropbox, etc.)
+5. **Test Restores**: Regularly test backup restoration process
+6. **Before Migrations**: Always backup before running new migrations
+7. **Document Changes**: Keep notes about significant schema changes
+
+### Known gaps
+- `database/backups/` is **not** gitignored — the `# Database backups` line in `.gitignore` is a comment with no rule under it, only a negation for `.gitkeep`. Every backup, including all doctor and sales data, is committed to the repository. That is an accidental off-site copy and a data-exposure question if the repo is ever shared.
+- Backups taken before `DATABASE_URL` was configured have no live schema dump, so `compare-schema.js` cannot show drift for them.
 
 ## Usage Guide
 

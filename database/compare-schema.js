@@ -28,8 +28,6 @@ function compareBackups(backup1Path, backup2Path) {
     const diff = count2 - count1;
     const diffStr = diff > 0 ? `+${diff}` : diff.toString();
 
-    // A count that never moves off 1000 is the old script's row cap, not a
-    // table that stopped growing. Worth saying out loud, since it looks normal.
     let flag = '';
     if (entry1.error || entry2.error) {
       flag = '  ❌ failed to back up';
@@ -53,8 +51,6 @@ function compareBackups(backup1Path, backup2Path) {
     notes.forEach(note => console.log(`   - ${note}`));
   }
 
-  // Schema comparison. Backups only store the PATH of the live dump, so this
-  // diffs the two dump files if both are still on disk.
   const dump1 = backup1.schema?.live?.path;
   const dump2 = backup2.schema?.live?.path;
 
@@ -72,8 +68,6 @@ function compareBackups(backup1Path, backup2Path) {
     const lines1 = fs.readFileSync(dump1, 'utf8').split('\n');
     const lines2 = fs.readFileSync(dump2, 'utf8').split('\n');
 
-    // Line-set diff rather than a positional one: reordering is noise here,
-    // an appearing or disappearing column is not.
     const set1 = new Set(lines1.map(l => l.trimEnd()));
     const set2 = new Set(lines2.map(l => l.trimEnd()));
 

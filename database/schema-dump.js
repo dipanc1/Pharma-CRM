@@ -1,18 +1,3 @@
-/**
- * Introspects the LIVE database and writes what is actually there.
- *
- * This exists because backup.js used to produce `schema_*.sql` by concatenating
- * the migrations folder. That file agreed with the migrations by construction,
- * so it could never reveal a drift between the migrations and the real database
- * -- which is exactly what it kept getting used to check. This connects to
- * Postgres directly and reports the real thing.
- *
- * Needs DATABASE_URL (Supabase -> Settings -> Database -> Connection string).
- * That URL carries the database password and grants full access, so it must
- * stay in .env and must NOT be given a REACT_APP_ prefix -- Create React App
- * inlines every REACT_APP_ variable into the public browser bundle.
- */
-
 const fs = require('fs');
 const path = require('path');
 const { Client } = require('pg');
@@ -29,9 +14,6 @@ const MISSING_URL_HELP = `DATABASE_URL is not set, so the live schema cannot be 
   3. Do NOT prefix it with REACT_APP_ -- that would ship your database
      password to every visitor in the browser bundle.`;
 
-// Columns as Postgres actually has them. pg_attribute + format_type gives the
-// exact declared type (varchar(50), numeric(10,2)) where information_schema
-// would only say "character varying".
 const COLUMNS_SQL = `
   SELECT c.relname                                  AS table_name,
          a.attname                                  AS column_name,
@@ -72,8 +54,6 @@ const INDEXES_SQL = `
    WHERE schemaname = 'public'
    ORDER BY tablename, indexname;`;
 
-// The audit turned up tables with RLS enabled and zero policies (deny-all).
-// Listing policies per table is the only way to see that from outside.
 const POLICIES_SQL = `
   SELECT tablename AS table_name, policyname AS name, permissive,
          roles, cmd, qual, with_check
@@ -108,9 +88,6 @@ function groupBy(rows, key) {
     }, {});
 }
 
-/**
- * Read the live schema. Returns a structured object; does not write anything.
- */
 async function introspect() {
     if (!CONNECTION_STRING) {
         const error = new Error(MISSING_URL_HELP);
@@ -118,8 +95,6 @@ async function introspect() {
         throw error;
     }
 
-    // Supabase requires SSL. Its certificate chain is not in Node's default
-    // trust store, so verification is disabled rather than shipping a CA bundle.
     const client = new Client({
         connectionString: CONNECTION_STRING,
         ssl: { rejectUnauthorized: false }
@@ -164,9 +139,8 @@ function render(schema) {
         '-- LIVE DATABASE SCHEMA',
         `-- Read directly from Postgres: ${schema.generated_at}`,
         '--',
-        '-- This is what the database actually contains. It is a report, not a',
-        '-- migration -- do not paste it into the SQL editor to rebuild from',
-        '-- scratch. Use migrations_combined_*.sql for that.',
+        '-- A report of what the database actually contains, not a migration.',
+        '-- Use migrations_combined_*.sql to rebuild from scratch.',
         ''
     ];
 
@@ -203,7 +177,6 @@ function render(schema) {
         lines.push(`  RLS: ${table.rls_enabled ? 'ENABLED' : 'disabled'}`);
 
         if (table.rls_enabled && policies.length === 0) {
-            // RLS on with no policies denies every request, including the owner's.
             lines.push('  !! RLS is enabled but this table has NO POLICIES.');
             lines.push('  !! Every query against it is denied except via service_role.');
         }
@@ -241,10 +214,6 @@ function render(schema) {
     return lines.join('\n');
 }
 
-/**
- * Introspect the live database and write it to backups/live_schema_<ts>.sql.
- * Returns { file, path, schema } or throws.
- */
 async function dumpLiveSchema() {
     const schema = await introspect();
 

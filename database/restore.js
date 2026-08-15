@@ -75,9 +75,6 @@ function listBackups() {
 async function restoreTable(tableName, entry) {
   const data = entry.data || [];
 
-  // The table failed to back up, so its rows were recorded as an empty array.
-  // Wiping the live table and inserting that would destroy the only remaining
-  // copy of the data. Skip it and leave the live rows alone.
   if (entry.error) {
     console.log(`   ⏭️  SKIPPED ${tableName} — it failed to back up (${entry.error}).`);
     console.log(`      Live rows left untouched; restoring 0 rows over them would lose them.`);
@@ -116,8 +113,6 @@ async function restoreTable(tableName, entry) {
       }
     }
 
-    // The rows are already deleted at this point, so a failed insert is a real
-    // loss and has to be reported as one rather than as a successful restore.
     if (failedBatches.length > 0) {
       console.error(`   ❌ ${tableName}: ${inserted} of ${data.length} rows restored — ${data.length - inserted} LOST.`);
       return { success: false, count: inserted, expected: data.length };
@@ -143,13 +138,11 @@ async function performRestore(backupFile) {
   console.log('📊 Rows in this backup:');
   for (const [tableName, entry] of Object.entries(backup.tables || {})) {
     const flag = entry.error ? `  ❌ FAILED TO BACK UP: ${entry.error}`
-      : entry.count === 1000 ? '  ⚠️  exactly 1000 — likely truncated by the old backup script'
+      : entry.count === 1000 ? '  ⚠️  exactly 1000 — likely truncated'
         : '';
     console.log(`   ${tableName.padEnd(24)} ${String(entry.count).padStart(6)}${flag}`);
   }
 
-  // Backups taken before the pagination fix stop at 1000 rows per table with no
-  // error, so restoring one deletes every row past that point.
   const suspect = Object.entries(backup.tables || {}).filter(([, e]) => e.count === 1000);
   const failed = Object.entries(backup.tables || {}).filter(([, e]) => e.error);
 
