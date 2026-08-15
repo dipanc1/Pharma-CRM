@@ -19,5 +19,4 @@ export { default as InfoField } from './InfoField';
 export { default as Toast } from './Toast';
 export { default as AddStockModal } from './AddStockModal';
 export { default as NoRecordsAddButtonLayout } from './NoRecordsAddButtonLayout';
-export { default as VoiceCommandButton } from './VoiceCommandButton';
-export { default as VoiceConfirmationModal } from './VoiceConfirmationModal';
+export { default as BillReviewModal } from './BillReviewModal';

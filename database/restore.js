@@ -72,7 +72,15 @@ function listBackups() {
   return files;
 }
 
-async function restoreTable(tableName, data) {
+async function restoreTable(tableName, entry) {
+  const data = entry.data || [];
+
+  if (entry.error) {
+    console.log(`   ⏭️  SKIPPED ${tableName} — it failed to back up (${entry.error}).`);
+    console.log(`      Live rows left untouched; restoring 0 rows over them would lose them.`);
+    return { success: false, skipped: true, count: 0 };
+  }
+
   console.log(`   📥 Restoring ${tableName} (${data.length} records)...`);
 
   try {
@@ -88,6 +96,9 @@ async function restoreTable(tableName, data) {
 
     // Insert backup data in batches of 100
     const batchSize = 100;
+    let inserted = 0;
+    const failedBatches = [];
+
     for (let i = 0; i < data.length; i += batchSize) {
       const batch = data.slice(i, i + batchSize);
       const { error: insertError } = await supabase
@@ -95,15 +106,23 @@ async function restoreTable(tableName, data) {
         .insert(batch);
 
       if (insertError) {
+        failedBatches.push(insertError.message);
         console.error(`   ❌ Error inserting batch ${i / batchSize + 1}:`, insertError.message);
+      } else {
+        inserted += batch.length;
       }
     }
 
-    console.log(`   ✅ ${tableName} restored successfully`);
-    return { success: true, count: data.length };
+    if (failedBatches.length > 0) {
+      console.error(`   ❌ ${tableName}: ${inserted} of ${data.length} rows restored — ${data.length - inserted} LOST.`);
+      return { success: false, count: inserted, expected: data.length };
+    }
+
+    console.log(`   ✅ ${tableName} restored successfully (${inserted} rows)`);
+    return { success: true, count: inserted, expected: data.length };
   } catch (error) {
     console.error(`   ❌ Error restoring ${tableName}:`, error.message);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message, count: 0, expected: data.length };
   }
 }
 
@@ -116,12 +135,42 @@ async function performRestore(backupFile) {
   console.log(`📅 Backup created: ${new Date(backup.timestamp).toLocaleString()}`);
   console.log(`📦 Backup version: ${backup.version}\n`);
 
+  console.log('📊 Rows in this backup:');
+  for (const [tableName, entry] of Object.entries(backup.tables || {})) {
+    const flag = entry.error ? `  ❌ FAILED TO BACK UP: ${entry.error}`
+      : entry.count === 1000 ? '  ⚠️  exactly 1000 — likely truncated'
+        : '';
+    console.log(`   ${tableName.padEnd(24)} ${String(entry.count).padStart(6)}${flag}`);
+  }
+
+  const suspect = Object.entries(backup.tables || {}).filter(([, e]) => e.count === 1000);
+  const failed = Object.entries(backup.tables || {}).filter(([, e]) => e.error);
+
+  if (backup.complete === false || failed.length > 0) {
+    console.log(`\n🛑 This backup is marked INCOMPLETE. Tables that failed will be SKIPPED,`);
+    console.log(`   not wiped — but everything else will still be replaced.`);
+  }
+
+  if (suspect.length > 0) {
+    console.log(`\n🛑 ${suspect.map(([t]) => t).join(', ')} sit at exactly 1000 rows.`);
+    console.log(`   That is the old script's truncation limit. If this backup predates the`);
+    console.log(`   fix, restoring it will PERMANENTLY DELETE every row past 1000.`);
+  }
+
   // Confirm restoration
-  const confirm = await question('⚠️  This will DELETE all current data and restore from backup. Continue? (yes/no): ');
-  
+  const confirm = await question('\n⚠️  This will DELETE all current data and restore from backup. Continue? (yes/no): ');
+
   if (confirm.toLowerCase() !== 'yes') {
     console.log('❌ Restore cancelled');
     return;
+  }
+
+  if (backup.complete === false || suspect.length > 0) {
+    const second = await question('   Type RESTORE ANYWAY to confirm you accept the data loss above: ');
+    if (second.trim() !== 'RESTORE ANYWAY') {
+      console.log('❌ Restore cancelled');
+      return;
+    }
   }
 
   console.log('\n🚀 Starting restoration...\n');
@@ -133,13 +182,26 @@ async function performRestore(backupFile) {
     ...backupTableNames.filter(tableName => !RESTORE_TABLES.includes(tableName))
   ];
 
+  const results = {};
+
   for (const tableName of restoreOrder) {
     if (backup.tables[tableName] && backup.tables[tableName].data) {
-      await restoreTable(tableName, backup.tables[tableName].data);
+      results[tableName] = await restoreTable(tableName, backup.tables[tableName]);
     }
   }
 
-  console.log('\n✅ Restoration completed!');
+  const problems = Object.entries(results).filter(([, r]) => !r.success);
+
+  if (problems.length === 0) {
+    console.log('\n✅ Restoration completed!');
+  } else {
+    console.log('\n⚠️  Restoration finished with problems:');
+    problems.forEach(([tableName, r]) => {
+      console.log(r.skipped
+        ? `   ⏭️  ${tableName}: skipped, live data left as-is`
+        : `   ❌ ${tableName}: ${r.count} of ${r.expected} rows restored`);
+    });
+  }
 }
 
 async function main() {

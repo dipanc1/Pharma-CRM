@@ -307,7 +307,8 @@ function InventoryDashboardContainer() {
             generateCategoryStockData(inventoryResults);
 
             // Find low stock products (use current stock, not calculated)
-            const lowStock = products.filter(p => (p.current_stock || 0) <= 10);
+            // Respect the active product/company filters so the alert matches the rest of the dashboard
+            const lowStock = productsToProcess.filter(p => (p.current_stock || 0) <= 10);
             setLowStockProducts(lowStock);
 
         } catch (error) {

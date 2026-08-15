@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
-import { Toast, VoiceCommandButton, VoiceConfirmationModal } from '../../../components';
+import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
-import useVoiceCommand from '../../../hooks/useVoiceCommand';
-import { VOICE_CONTEXTS } from '../../../config/voiceContexts';
 import AddVisit from './AddVisit';
 import { addStockTransaction, updateProductStock, TRANSACTION_TYPES, calculateStockSummary } from '../../../utils/stockUtils';
 import { generateInvoiceNumber } from '../../../utils/invoiceUtils';
@@ -184,7 +182,7 @@ function AddVisitContainer() {
     setSales(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Core save logic shared by both form submit and voice save
+  // Core save logic: contact discount, stock check, visit, sales, ledger, stock transactions
   const saveVisitData = async (visitFormData, visitSales, visitDiscount) => {
     const safeSales = canManageSales ? visitSales : [];
     const visitPayload = {
@@ -377,77 +375,6 @@ function AddVisitContainer() {
     }
   };
 
-  // ─── Voice Command Integration ─────────────────────────────
-  const voiceContext = VOICE_CONTEXTS.addVisit;
-
-  const handleVoiceConfirm = useCallback(async (data) => {
-    // Select doctor by ID
-    if (data.doctor_id) {
-      const matchedDoctor = doctors.find(d => d.id === data.doctor_id);
-      if (matchedDoctor) {
-        setFormData(prev => ({ ...prev, doctor_id: matchedDoctor.id }));
-        setDiscountPercentage(matchedDoctor.discount_percentage != null ? matchedDoctor.discount_percentage.toString() : '');
-        const isChemist = matchedDoctor.contact_type === 'chemist';
-        const display = isChemist
-          ? `${matchedDoctor.name}${matchedDoctor.hospital ? ` - ${matchedDoctor.hospital}` : ''} [Chemist]`
-          : `${matchedDoctor.name}${matchedDoctor.specialization ? ` - ${matchedDoctor.specialization}` : ''}`;
-        setDoctorSearch(display);
-        setShowDoctorDropdown(false);
-      }
-    }
-
-    // Set basic form fields
-    if (data.visit_date) {
-      setFormData(prev => ({ ...prev, visit_date: data.visit_date }));
-    }
-    if (data.status) {
-      setFormData(prev => ({ ...prev, status: data.status }));
-    }
-    if (data.notes) {
-      setFormData(prev => ({ ...prev, notes: data.notes }));
-    }
-
-    // Add sale items — only matched products
-    if (canManageSales && data.sales && Array.isArray(data.sales) && data.sales.length > 0) {
-      const newSales = [];
-      for (const sale of data.sales) {
-        const product = sale.product_id ? products.find(p => p.id === sale.product_id) : null;
-        if (!product) continue;
-        const quantity = parseFloat(sale.quantity) || 0;
-        const unit_price = parseFloat(sale.unit_price) || parseFloat(computeUnitPrice(product, discountPercentage)) || 0;
-        if (quantity <= 0) continue;
-        newSales.push({
-          id: Date.now() + Math.random(),
-          product_id: product.id,
-          quantity,
-          unit_price,
-          total_amount: quantity * unit_price,
-          product_name: product.name,
-        });
-      }
-      if (newSales.length > 0) {
-        setSales(prev => [...prev, ...newSales]);
-      }
-    }
-
-    showSuccess('Voice data applied! You can add more items, edit quantities, then submit.');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canManageSales, doctors, products, showSuccess]);
-
-  const voice = useVoiceCommand({
-    pageContext: voiceContext,
-    existingData: { doctors, products },
-    onConfirm: handleVoiceConfirm,
-  });
-
-  const handleVoiceToggle = () => {
-    if (voice.isListening) {
-      voice.stopListening();
-    } else {
-      voice.startListening();
-    }
-  };
-
   return (
     <>
       <AddVisit
@@ -484,29 +411,6 @@ function AddVisitContainer() {
         type={toast.type}
         isVisible={toast.isVisible}
         onClose={hideToast}
-      />
-      <VoiceCommandButton
-        isListening={voice.isListening}
-        isProcessing={voice.isProcessing}
-        isSupported={voice.isSupported}
-        isConfigured={voice.isConfigured}
-        onClick={handleVoiceToggle}
-      />
-      <VoiceConfirmationModal
-        isOpen={!voice.isIdle}
-        state={voice.state}
-        transcript={voice.transcript}
-        interimTranscript={voice.interimTranscript}
-        parsedData={voice.parsedData}
-        error={voice.error}
-        fieldLabels={voiceContext.fieldLabels}
-        fieldOrder={voiceContext.fieldOrder}
-        onConfirm={voice.confirmData}
-        onConfirmEdited={voice.confirmEditedData}
-        onRetry={voice.retryListening}
-        onCancel={voice.reset}
-        onStopListening={voice.stopListening}
-        confirmLabel="Apply to Form"
       />
     </>
   );

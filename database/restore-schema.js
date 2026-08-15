@@ -20,13 +20,12 @@ function listSchemaBackups() {
   }
 
   const files = fs.readdirSync(BACKUP_DIR)
-    .filter(f => f.startsWith('schema_') && f.endsWith('.sql'))
+    .filter(f => (f.startsWith('migrations_combined_') || f.startsWith('schema_')) && f.endsWith('.sql'))
     .map(f => ({
       name: f,
-      path: path.join(BACKUP_DIR, f),
-      time: fs.statSync(path.join(BACKUP_DIR, f)).mtime
+      path: path.join(BACKUP_DIR, f)
     }))
-    .sort((a, b) => b.time - a.time);
+    .sort((a, b) => b.name.localeCompare(a.name));
 
   return files;
 }
@@ -55,11 +54,11 @@ async function main() {
     return;
   }
 
-  console.log('📁 Available schema backups:\n');
+  console.log('📁 Available rebuild scripts:\n');
   schemas.forEach((schema, index) => {
     console.log(`${index + 1}. ${schema.name}`);
-    console.log(`   Created: ${schema.time.toLocaleString()}\n`);
   });
+  console.log('');
 
   const selection = await question('Select schema number to view (or 0 to cancel): ');
   const index = parseInt(selection) - 1;

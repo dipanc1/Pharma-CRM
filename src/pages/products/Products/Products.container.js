@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Toast } from '../../../components';
 import { handleAddStock, handleEditStock } from '../../../utils/stockUtils';
 import useToast from '../../../hooks/useToast';
 import useCompanies from '../../../hooks/useCompanies';
+import useBillScan from '../../../hooks/useBillScan';
 import Products from './Products';
 
 function ProductsContainer() {
@@ -20,12 +21,49 @@ function ProductsContainer() {
   });
 
   const { toast, showSuccess, showError, hideToast } = useToast();
-  const { companiesOptions } = useCompanies();
+  const { companiesOptions, companies, refreshCompanies } = useCompanies();
+  const fileInputRef = useRef(null);
+
+  const bill = useBillScan({
+    products,
+    companies,
+    onSaved: async () => {
+      await Promise.all([fetchProducts(), refreshCompanies()]);
+    }
+  });
 
   useEffect(() => {
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const result = bill.saveResult;
+    if (!result) return;
+
+    const { savedCount, totalCount, failures, cashFlowSaved, cashFlowExpected } = result;
+
+    if (savedCount === 0) {
+      showError('Nothing was imported. Please try again.');
+    } else if (failures.length > 0) {
+      showError(`Imported ${savedCount} of ${totalCount} items. Failed: ${failures.join(', ')}`);
+    } else if (cashFlowExpected && !cashFlowSaved) {
+      showError(`Stock updated for ${savedCount} items, but the cash outflow was not recorded. Add it manually in Cash Flow.`);
+    } else {
+      showSuccess(`Imported ${savedCount} item${savedCount === 1 ? '' : 's'} from the bill.`);
+    }
+
+    bill.clearSaveResult();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bill.saveResult]);
+
+  const handleBillFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) await bill.scanBill(file);
+  };
+
+  const openBillPicker = () => fileInputRef.current?.click();
 
   const filteredProducts = products.filter(product => {
     const matchesSearch =
@@ -158,6 +196,11 @@ function ProductsContainer() {
         selectedCompany={selectedCompany}
         setSelectedCompany={setSelectedCompany}
         companyOptions={companiesOptions}
+        bill={bill}
+        companies={companies}
+        fileInputRef={fileInputRef}
+        onUploadBill={openBillPicker}
+        onBillFileChange={handleBillFileChange}
       />
       <Toast
         message={toast.message}

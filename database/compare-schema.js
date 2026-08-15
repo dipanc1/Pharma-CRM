@@ -18,41 +18,78 @@ function compareBackups(backup1Path, backup2Path) {
   console.log('-'.repeat(70));
 
   const tables = Object.keys(backup1.tables);
+  const notes = [];
+
   tables.forEach(table => {
-    const count1 = backup1.tables[table]?.count || 0;
-    const count2 = backup2.tables[table]?.count || 0;
+    const entry1 = backup1.tables[table] || {};
+    const entry2 = backup2.tables[table] || {};
+    const count1 = entry1.count || 0;
+    const count2 = entry2.count || 0;
     const diff = count2 - count1;
     const diffStr = diff > 0 ? `+${diff}` : diff.toString();
-    
+
+    let flag = '';
+    if (entry1.error || entry2.error) {
+      flag = '  ❌ failed to back up';
+      notes.push(`${table} failed to back up in at least one of these runs — its 0 is not a real count.`);
+    } else if (count1 === 1000 || count2 === 1000) {
+      flag = '  ⚠️  truncated?';
+      notes.push(`${table} sits at exactly 1000 — the pre-fix row cap. The real table is probably larger.`);
+    }
+
     console.log(
-      table.padEnd(25) + 
-      count1.toString().padEnd(15) + 
-      count2.toString().padEnd(15) + 
-      diffStr
+      table.padEnd(25) +
+      count1.toString().padEnd(15) +
+      count2.toString().padEnd(15) +
+      diffStr.padEnd(12) +
+      flag
     );
   });
 
-  // Compare schema if available
-  if (backup1.schema && backup2.schema) {
-    console.log('\n📋 Schema Comparison:');
-    
-    if (backup1.schema.type === 'fallback' && backup2.schema.type === 'fallback') {
-      const schema1 = backup1.schema.schema;
-      const schema2 = backup2.schema.schema;
+  if (notes.length > 0) {
+    console.log('\n⚠️  Counts you should not trust:');
+    notes.forEach(note => console.log(`   - ${note}`));
+  }
 
-      tables.forEach(table => {
-        const cols1 = schema1[table]?.columns || [];
-        const cols2 = schema2[table]?.columns || [];
-        
-        const added = cols2.filter(c => !cols1.includes(c));
-        const removed = cols1.filter(c => !cols2.includes(c));
+  const resolveDump = (live) => {
+    if (!live?.file && !live?.path) return null;
+    return path.join(BACKUP_DIR, path.basename(live.file || live.path));
+  };
 
-        if (added.length > 0 || removed.length > 0) {
-          console.log(`\n  ${table}:`);
-          if (added.length > 0) console.log(`    ➕ Added columns: ${added.join(', ')}`);
-          if (removed.length > 0) console.log(`    ➖ Removed columns: ${removed.length}  `);
-        }
-      });
+  const dump1 = resolveDump(backup1.schema?.live);
+  const dump2 = resolveDump(backup2.schema?.live);
+
+  console.log('\n📋 Schema Comparison:');
+
+  if (!dump1 || !dump2) {
+    console.log('   Skipped — at least one of these backups has no live schema dump.');
+    console.log('   (Backups taken before DATABASE_URL was configured only stored the');
+    console.log('    combined migrations, which cannot show drift from the real database.)');
+  } else if (!fs.existsSync(dump1) || !fs.existsSync(dump2)) {
+    console.log('   Skipped — a referenced dump file has since been deleted:');
+    if (!fs.existsSync(dump1)) console.log(`     missing ${path.basename(dump1)}`);
+    if (!fs.existsSync(dump2)) console.log(`     missing ${path.basename(dump2)}`);
+  } else {
+    const lines1 = fs.readFileSync(dump1, 'utf8').split('\n');
+    const lines2 = fs.readFileSync(dump2, 'utf8').split('\n');
+
+    const set1 = new Set(lines1.map(l => l.trimEnd()));
+    const set2 = new Set(lines2.map(l => l.trimEnd()));
+
+    const removed = [...set1].filter(l => l.trim() && !set2.has(l));
+    const added = [...set2].filter(l => l.trim() && !set1.has(l));
+
+    if (!removed.length && !added.length) {
+      console.log('   No schema changes between these two backups.');
+    } else {
+      if (removed.length) {
+        console.log(`\n   ➖ Gone since backup 1 (${removed.length}):`);
+        removed.forEach(l => console.log(`     ${l.trim()}`));
+      }
+      if (added.length) {
+        console.log(`\n   ➕ New in backup 2 (${added.length}):`);
+        added.forEach(l => console.log(`     ${l.trim()}`));
+      }
     }
   }
 

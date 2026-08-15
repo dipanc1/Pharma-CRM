@@ -1,11 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
-import { Toast, VoiceCommandButton, VoiceConfirmationModal } from '../../../components';
+import { Toast } from '../../../components';
 import useToast from '../../../hooks/useToast';
 import useCompanies from '../../../hooks/useCompanies';
-import useVoiceCommand from '../../../hooks/useVoiceCommand';
-import { VOICE_CONTEXTS } from '../../../config/voiceContexts';
 import AddProduct from './AddProduct';
 
 function AddProductContainer() {
@@ -97,43 +95,6 @@ function AddProductContainer() {
     }
   ];
 
-  // ─── Voice Command Integration ─────────────────────────────
-  const voiceContext = VOICE_CONTEXTS.addProduct;
-
-  const handleVoiceConfirm = useCallback(async (data) => {
-    const productData = {
-      name: data.name || '',
-      company_name: data.company_name || '',
-      price: parseFloat(data.price) || 0,
-      mrp: parseFloat(data.mrp) || 0,
-      description: data.description || '',
-    };
-
-    if (!productData.name?.trim()) {
-      throw new Error('Product name is required');
-    }
-
-    const { error } = await supabase.from('products').insert([productData]);
-    if (error) throw error;
-
-    showSuccess('Product added successfully via voice!');
-    navigate('/products');
-  }, [showSuccess, navigate]);
-
-  const voice = useVoiceCommand({
-    pageContext: voiceContext,
-    existingData: {},
-    onConfirm: handleVoiceConfirm,
-  });
-
-  const handleVoiceToggle = () => {
-    if (voice.isListening) {
-      voice.stopListening();
-    } else {
-      voice.startListening();
-    }
-  };
-
   return (
     <>
       <AddProduct
@@ -148,28 +109,6 @@ function AddProductContainer() {
         type={toast.type}
         isVisible={toast.isVisible}
         onClose={hideToast}
-      />
-      <VoiceCommandButton
-        isListening={voice.isListening}
-        isProcessing={voice.isProcessing}
-        isSupported={voice.isSupported}
-        isConfigured={voice.isConfigured}
-        onClick={handleVoiceToggle}
-      />
-      <VoiceConfirmationModal
-        isOpen={!voice.isIdle}
-        state={voice.state}
-        transcript={voice.transcript}
-        interimTranscript={voice.interimTranscript}
-        parsedData={voice.parsedData}
-        error={voice.error}
-        fieldLabels={voiceContext.fieldLabels}
-        fieldOrder={voiceContext.fieldOrder}
-        onConfirm={voice.confirmData}
-        onConfirmEdited={voice.confirmEditedData}
-        onRetry={voice.retryListening}
-        onCancel={voice.reset}
-        onStopListening={voice.stopListening}
       />
     </>
   );

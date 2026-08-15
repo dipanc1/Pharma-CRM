@@ -53,6 +53,33 @@ A comprehensive **Pharmaceutical Sales CRM** system that helps sales representat
 - ✅ **Stock Tracking**: Current stock levels with automated calculations
 - ✅ **Search & Filter**: Multi-criteria filtering including company name for quick product location
 
+### 3a. **Bill Scanning** (`/products` → Upload Bill)
+
+Photograph a supplier purchase bill; one upload becomes stock, price updates and a cash outflow. Owner-only, gated by the existing `RoleRoute` on `/products`. No new tables and no image storage.
+
+**Files**: `src/lib/billParser.js` (image → structured data), `src/hooks/useBillScan.js` (state machine + commit), `src/components/common/BillReviewModal.js` (review UI), `src/lib/gemini.js` (shared client).
+
+**Image handling** — the photo is downscaled to a 1600px long edge as JPEG q0.8 before upload. Phone cameras produce 4000px+ images; bill text stays legible well below that and the upload is far quicker.
+
+**Extraction** — Gemini is given a `response_format` schema, so the reply needs no markdown-fence stripping or repair. The schema is standard JSON Schema (lowercase types), which is what `response_format.schema` takes — not the older uppercase OpenAPI `Type` enum. `matched_product_id` is a plain string, empty when unmatched, rather than a nullable field: one less thing for the model to get subtly wrong.
+
+**Product matching is done by the model, not by string distance.** Existing products are passed as ID/Name/Company and it is instructed to return an ID only when confident. Semantic matching matters here — "Zerodol SP" and "Zerodol MR" are one word apart and are different products. An empty match costs the user one dropdown selection; a wrong ID silently corrupts stock, so the prompt biases hard toward empty. Returned IDs are re-checked against the real product list afterwards, in case a hallucinated one slips past the schema.
+
+**Prompt also pins down**: quantity is total sellable units (10 strips × 10 = 100), `rate` is our purchase price and `mrp` the printed retail price, and GST/discount/freight/round-off rows are not line items.
+
+**Review before anything is written.** Matched lines are ready to go. Unmatched lines start with a null action and the footer blocks saving until every one is resolved as create, skip, or mapped onto an existing product — the last of these being the common fix when the OCR misreads a name. Price-update checkboxes are offered only when the bill actually disagrees with what is on file; a blanket overwrite would clobber manually-set prices.
+
+**Commit order** — no transaction or RPC is available, so lines are written one at a time and the cash outflow goes in last, only if at least one line landed. Money recorded therefore never exceeds stock recorded, which is the safer way to fail. A failing line is collected and the loop continues; one bad line should not abandon the other fourteen. The outcome is reported honestly — a partial import says "Imported 12 of 15" and names the failures, and stock-succeeded-but-cashflow-failed is called out explicitly.
+
+**Two schema facts shape the writes**:
+- The live database has **no** stock trigger, so `updateProductStock()` is called explicitly after each transaction insert. An earlier version relied on `trigger_update_stock` from migration 003, which turned out never to have been applied — see Known Issues.
+- `chk_reference_consistency` on `cash_flow` requires `reference_type`/`reference_id` to be both-null or both-set, so both are left unset.
+- `stock_transactions` has no `reference_number` column — only `reference_type`/`reference_id` — so bills are not linked back by number and there is no duplicate-import guard.
+
+The outflow uses values already present in the Cash Flow page's own filter lists (`cash_type: 'out_flow'`, `type: 'sundry'`, `purpose: 'purchase'`), so it appears there with no changes to that page.
+
+**Requires** `REACT_APP_GEMINI_API_KEY`. The key ships in the client bundle, as it did before — worth domain-restricting in the Google Cloud Console.
+
 ### 4. **Sales Recording** (Integrated with Visits)
 - ✅ **Multi-Product Sales**: Record multiple products sold in a single visit
 - ✅ **Quantity Tracking**: Precise quantity recording for each product
@@ -94,7 +121,6 @@ A comprehensive **Pharmaceutical Sales CRM** system that helps sales representat
 - ✅ **Doctor/Chemist Linking**: Associate cash flow entries with specific contacts
 - ✅ **Advanced Analytics**: Visualize cash flow trends with charts and daily trends
 - ✅ **Multi-filter Support**: Filter by cash type, transaction type, purpose, and date range
-- ✅ **Voice Command Integration**: Record cash transactions using voice commands
 - ✅ **Purpose Categorization**: Organize transactions by purpose for better insights
 - ✅ **Pagination & Search**: Navigate large datasets with search capabilities
 
@@ -122,7 +148,6 @@ A comprehensive **Pharmaceutical Sales CRM** system that helps sales representat
 - **Intuitive Navigation**: Logical menu structure with clear visual hierarchy
 - **Data-Driven**: Beautiful charts and visualizations for actionable insights
 - **Consistent Branding**: Unified color scheme and typography throughout
-- **Voice-Enabled**: Draggable voice command button for hands-free data entry
 
 ### User Experience Features
 - **Smart Forms**: Intelligent form design with validation and auto-completion
@@ -130,8 +155,6 @@ A comprehensive **Pharmaceutical Sales CRM** system that helps sales representat
 - **Loading States**: Smooth loading indicators for better user feedback
 - **Error Handling**: Graceful error messages and recovery options
 - **Keyboard Navigation**: Full keyboard accessibility support
-- **Voice Commands**: Draggable, positioned voice command button for easy access
-- **Responsive Voice Modal**: Clear voice confirmation dialog for transaction types
 
 ### Visual Components
 - **Interactive Charts**: Hover effects and clickable elements in charts
@@ -205,12 +228,16 @@ npm start  # Launches on http://localhost:3000
 
 ## 🔄 Backup & Recovery
 
-- `npm run backup` captures table data, schema SQL from local migrations, and migration files.
-- `npm run backup:schema` exports schema-only SQL from the migration set.
+- `npm run backup` captures table data, both schema artifacts, and the migration files.
+- `npm run backup:schema` writes `migrations_combined_*.sql` — the migrations concatenated into a runnable rebuild script.
+- `npm run schema:dump` writes `live_schema_*.sql` — the real schema read from `pg_catalog`. Needs `DATABASE_URL`.
 - `npm run backup:no-schema` creates a data-only JSON backup.
 - `npm run restore` restores from a saved backup with dependency-safe table ordering.
+- `node database/compare-schema.js <a.json> <b.json>` diffs two backups.
 - Full backup/restore uses `REACT_APP_SUPABASE_SERVICE_ROLE_KEY` when available so RLS-protected tables are included.
 - Current backup coverage includes doctors, visits, products, sales, stock_transactions, cash_flow, ledger_entries, cycle_plans, kol_notes, companies, profiles, and doctor_important_dates.
+
+The combined-migrations file and the live dump are **not** interchangeable — one says what the schema should be, the other what it is, and only the second can reveal drift. See **Database Backup & Restore** in `README.md` for the full rationale, the 1000-row truncation that affected all historical backups, and the restore safeguards.
 
 ## 📱 Key User Workflows & Business Logic
 
@@ -325,6 +352,22 @@ Dashboard               - Overview and KPIs
 - **Security**: Row-level security and data encryption
 - **Maintainability**: Clean codebase with comprehensive documentation
 - **Future-Proof**: Modern tech stack with long-term support
+
+## ⚠️ Known Issues
+
+Recorded, not fixed.
+
+**`trigger_update_stock` does not exist in the live database.** Migration 003 defines the `update_product_stock()` function and the trigger, but the live catalog dump shows `stock_transactions` carries no triggers at all, and no such function is installed. The migration was evidently never applied to this project. Nothing in the app may assume the database recomputes `current_stock` on its own — every write path must call `updateProductStock()` explicitly. `handleAddStock` and `handleEditStock` always did; the bill scanner did not, and was fixed.
+
+This is the drift that the old `schema_*.sql` "backups" could never reveal, because they were concatenated migrations and therefore agreed with the migrations by construction. Only `live_schema_*.sql` can show it.
+
+**`TRANSACTION_TYPES.RETURN` (`'return'`) violates the live CHECK constraint,** which admits only `opening`, `purchase`, `sale`, `adjustment`. Nothing inserts it today — it appears solely as a read-side branch in `calculateStockSummary` — so it is dead rather than broken, but any code that tries to write it will be rejected by the database.
+
+**`cycle_plans` and `kol_notes` have RLS enabled with zero policies,** which denies every query except via `service_role`. Confirmed against the live catalog, not inferred from migrations.
+
+**Backups predating the pagination fix are truncated at 1000 rows per table.** Every file currently in `database/backups/` is affected, `stock_transactions` most visibly. See `README.md`.
+
+**`database/backups/` is not gitignored**, so all doctor and sales data is committed to the repository.
 
 ## 🎉 Production Readiness Checklist
 
