@@ -54,9 +54,7 @@ const CashFlow = ({
   doctorSearch,
   setDoctorSearch,
   showDoctorDropdown,
-  setShowDoctorDropdown,
-  voicePrefilledData,
-  onVoicePrefilledConsumed
+  setShowDoctorDropdown
 }) => {
   const [formData, setFormData] = useState({
     transaction_date: new Date().toISOString().split('T')[0],
@@ -74,27 +72,7 @@ const CashFlow = ({
   // Initialize form data when modal opens - only runs once when modal opens
   useEffect(() => {
     if (isModalOpen) {
-      if (voicePrefilledData) {
-        setFormData({
-          transaction_date: voicePrefilledData.transaction_date || new Date().toISOString().split('T')[0],
-          cash_type: voicePrefilledData.cash_type || 'out_flow',
-          name: voicePrefilledData.name || '',
-          type: voicePrefilledData.type || 'sundry',
-          amount: voicePrefilledData.amount ? voicePrefilledData.amount.toString() : '',
-          purpose: voicePrefilledData.purpose || '',
-          notes: voicePrefilledData.notes || '',
-          doctor_id: voicePrefilledData.doctor_id || ''
-        });
-        
-        // Set doctor search if linked contact from voice command
-        if (voicePrefilledData.doctor_name_display) {
-          setDoctorSearch(voicePrefilledData.doctor_name_display);
-        } else {
-          setDoctorSearch('');
-        }
-        
-        if (onVoicePrefilledConsumed) onVoicePrefilledConsumed();
-      } else if (editingRecord) {
+      if (editingRecord) {
         setFormData({
           transaction_date: editingRecord.transaction_date || new Date().toISOString().split('T')[0],
           cash_type: editingRecord.cash_type || 'out_flow',
@@ -773,7 +751,7 @@ const CashFlow = ({
                 )}
                 {formData.doctor_id && (
                   <p className="mt-1 text-xs text-green-600 flex items-center justify-between">
-                    <span>✓ {voicePrefilledData?.doctor_name_display ? `Linked to ${voicePrefilledData.doctor_name_display}` : 'Linked to contact'}</span>
+                    <span>✓ Linked to contact</span>
                     <button
                       type="button"
                       onClick={() => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlusIcon, CubeIcon, PencilIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, CubeIcon, PencilIcon, ArrowPathIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import {
   AddButton,
   Header,
@@ -8,6 +8,7 @@ import {
   ActionButtons,
   Loader,
   AddStockModal,
+  BillReviewModal,
   FilterSelect,
   NoRecordsAddButtonLayout
 } from '../../../components';
@@ -27,7 +28,12 @@ function Products({
   onCloseStockModal,
   selectedCompany,
   setSelectedCompany,
-  companyOptions
+  companyOptions,
+  bill,
+  companies,
+  fileInputRef,
+  onUploadBill,
+  onBillFileChange
 }) {
   const tableHeaders = ['Product Name', 'Company Name', 'Price', 'MRP', 'Current Stock', 'Stock Actions', 'Description', 'Actions'];
 
@@ -38,8 +44,19 @@ function Products({
       {/* Header */}
       <Header title="Products" buttons={[
         { to: "/products/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Product" },
+        { onClick: onUploadBill, icon: <DocumentTextIcon className="h-4 w-4 mr-2" />, title: 'Upload Bill' },
         { onClick: handleReload, icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, title: 'Refresh' }
       ]} />
+
+      {/* Camera on mobile, gallery/file browser on desktop */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={onBillFileChange}
+        className="hidden"
+      />
 
       {/* Search and Filter */}
       <div className="card">
@@ -159,6 +176,24 @@ function Products({
         loading={stockModal.loading}
         mode={stockModal.mode}
         initialQuantity={stockModal.product?.current_stock || 0}
+      />
+
+      <BillReviewModal
+        isOpen={bill.isOpen}
+        state={bill.state}
+        draft={bill.draft}
+        error={bill.error}
+        duplicateOf={bill.duplicateOf}
+        unresolvedCount={bill.unresolvedCount}
+        lineSum={bill.lineSum}
+        isSaving={bill.isSaving}
+        products={products}
+        companies={companies}
+        onHeaderChange={bill.updateHeader}
+        onLineChange={bill.updateLine}
+        onAssignProduct={bill.assignProduct}
+        onSave={bill.saveBill}
+        onClose={bill.reset}
       />
     </div>
   );

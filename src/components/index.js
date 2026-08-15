@@ -20,6 +20,5 @@ export {
     AddStockModal,
     Modal,
     NoRecordsAddButtonLayout,
-    VoiceCommandButton,
-    VoiceConfirmationModal
+    BillReviewModal
 } from './common';

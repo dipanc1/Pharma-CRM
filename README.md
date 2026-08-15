@@ -17,7 +17,7 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - **Important Dates**: Never miss important client occasions with automatic calendar tracking
 - **Mobile Responsive**: Works seamlessly on desktop, tablet, and mobile devices
 - **Data Protection**: Automated backup system with schema versioning
-- **Voice-Enabled**: Quick data entry using draggable voice command button
+- **Bill Scanning**: Photograph a purchase bill to update stock, prices, and cash flow in one step
 
 ## Features
 
@@ -70,7 +70,6 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - **Complete Cash Tracking**: Record inflows and outflows with specific categories
 - **Contact Linking**: Associate cash flow entries with doctors and chemists
 - **Advanced Analytics**: Visual representation of cash flow trends and patterns
-- **Voice Command Support**: Record cash transactions using voice commands
 - **Categorized Transactions**: Organize by cash type, transaction type, and purpose
 - **Multi-Period Reporting**: View cash flow across any date range
 - **Dashboard Integration**: Daily cash flow insights and analytics

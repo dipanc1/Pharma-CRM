@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import CashFlow from './CashFlow';
 import useToast from '../../hooks/useToast';
-import useVoiceCommand from '../../hooks/useVoiceCommand';
-import { VOICE_CONTEXTS } from '../../config/voiceContexts';
-import { Toast, VoiceCommandButton, VoiceConfirmationModal } from '../../components';
+import { Toast } from '../../components';
 import { format, parseISO, startOfMonth } from 'date-fns';
 
 const CashFlowContainer = () => {
@@ -516,71 +514,6 @@ const handleDelete = async (id) => {
     doctors.filter(d => (d.name || '').toLowerCase().includes(doctorSearch.toLowerCase())) :
     doctors;
 
-  // ─── Voice Command Integration ─────────────────────────────
-  const voiceContext = VOICE_CONTEXTS.addCashFlow;
-
-  const handleVoiceConfirm = useCallback(async (data) => {
-    // Validate required fields
-    if (!data.name?.trim()) {
-      throw new Error('Name or description is required');
-    }
-    if (!data.amount || parseFloat(data.amount) <= 0) {
-      throw new Error('A valid amount is required');
-    }
-
-    // Find doctor by ID if provided and get fresh doctor list
-    let doctorId = null;
-    let linkedDoctorName = '';
-    if (data.doctor_id) {
-      // Re-fetch fresh doctors to handle newly added contacts
-      const { data: freshDoctors, error } = await supabase
-        .from('doctors')
-        .select('id, name, contact_type')
-        .eq('id', data.doctor_id);
-        
-      if (error) throw error;
-      
-      if (freshDoctors && freshDoctors.length > 0) {
-        doctorId = freshDoctors[0].id;
-        linkedDoctorName = freshDoctors[0].name;
-      }
-    }
-
-    const processedData = {
-      transaction_date: data.transaction_date || new Date().toISOString().split('T')[0],
-      cash_type: data.cash_type || 'out_flow',
-      name: data.name.trim(),
-      type: data.type || 'sundry',
-      amount: parseFloat(data.amount).toString(),
-      purpose: data.purpose || '',
-      notes: data.notes?.trim() || '',
-      doctor_id: doctorId || '',
-      doctor_name_display: linkedDoctorName
-    };
-
-    // Set prefilled data and open form instead of direct save
-    setVoicePrefilledData(processedData);
-    handleAdd(); // This will open the form modal
-    
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctors, showSuccess]);
-
-  const voice = useVoiceCommand({
-    pageContext: voiceContext,
-    existingData: { doctors },
-    onConfirm: handleVoiceConfirm,
-  });
-
-  const handleVoiceToggle = () => {
-    if (voice.isListening) {
-      voice.stopListening();
-    } else {
-      voice.startListening();
-    }
-  };
-
-  const [voicePrefilledData, setVoicePrefilledData] = useState(null);
-
   return (
     <>
       <CashFlow
@@ -607,36 +540,12 @@ const handleDelete = async (id) => {
         setDoctorSearch={setDoctorSearch}
         showDoctorDropdown={showDoctorDropdown}
         setShowDoctorDropdown={setShowDoctorDropdown}
-        voicePrefilledData={voicePrefilledData}
-        onVoicePrefilledConsumed={() => setVoicePrefilledData(null)}
       />
       <Toast
         message={toast.message}
         type={toast.type}
         isVisible={toast.isVisible}
         onClose={hideToast}
-      />
-      <VoiceCommandButton
-        isListening={voice.isListening}
-        isProcessing={voice.isProcessing}
-        isSupported={voice.isSupported}
-        isConfigured={voice.isConfigured}
-        onClick={handleVoiceToggle}
-      />
-      <VoiceConfirmationModal
-        isOpen={!voice.isIdle}
-        state={voice.state}
-        transcript={voice.transcript}
-        interimTranscript={voice.interimTranscript}
-        parsedData={voice.parsedData}
-        error={voice.error}
-        fieldLabels={voiceContext.fieldLabels}
-        fieldOrder={voiceContext.fieldOrder}
-        onConfirm={voice.confirmData}
-        onConfirmEdited={voice.confirmEditedData}
-        onRetry={voice.retryListening}
-        onCancel={voice.reset}
-        onStopListening={voice.stopListening}
       />
     </>
   );
