@@ -36,8 +36,8 @@ function Sales({
   filteredSales,
   totalRevenue,
   totalItems,
-  totalTransactions,
   totalGrossProfit,
+  totalNetProfit,
   companyData,
   contactData,
   doctorSearch,
@@ -85,7 +85,7 @@ function Sales({
         </div>
         <div className="card">
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Total Margin</p>
+            <p className="text-sm font-medium text-gray-500">Gross Margin</p>
             <p className={`text-3xl font-bold mt-1 ${(totalGrossProfit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               ₹{Math.abs(totalGrossProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
@@ -98,8 +98,10 @@ function Sales({
         </div>
         <div className="card">
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Total Items Sold</p>
-            <p className="text-3xl font-bold text-gray-900">{(totalItems || 0).toLocaleString('en-IN')}</p>
+            <p className="text-sm font-medium text-gray-500">Net Margin</p>
+            <p className={`text-3xl font-bold mt-1 ${(totalNetProfit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {(totalNetProfit || 0) < 0 ? '-' : ''}₹{Math.abs(totalNetProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
             {(startDate && endDate) && (
               <p className="text-xs text-gray-500 mt-1">
                 {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}
@@ -109,8 +111,8 @@ function Sales({
         </div>
         <div className="card">
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Total Transactions</p>
-            <p className="text-3xl font-bold text-gray-900">{(totalTransactions || 0).toLocaleString('en-IN')}</p>
+            <p className="text-sm font-medium text-gray-500">Total Items Sold</p>
+            <p className="text-3xl font-bold text-gray-900">{(totalItems || 0).toLocaleString('en-IN')}</p>
             {(startDate && endDate) && (
               <p className="text-xs text-gray-500 mt-1">
                 {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}

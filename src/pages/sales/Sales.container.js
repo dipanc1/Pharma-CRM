@@ -7,6 +7,7 @@ import { format, startOfMonth } from 'date-fns';
 
 function SalesContainer() {
   const [salesState, setSalesState] = useState([]);
+  const [cashOutflowState, setCashOutflowState] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd')); // Changed to current date
@@ -27,6 +28,11 @@ function SalesContainer() {
     fetchSales();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate, doctorFilter, productFilter]);
+
+  useEffect(() => {
+    fetchCashOutflow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
 
   // Reset to first page when any filter or search changes
   useEffect(() => {
@@ -106,6 +112,39 @@ function SalesContainer() {
     }
   };
 
+  const fetchCashOutflow = async () => {
+    try {
+      const justStart = !!(startDate && !endDate);
+      const justEnd = !!(!startDate && endDate);
+      const invalidRange = !!(startDate && endDate && endDate < startDate);
+
+      if (justStart || justEnd || invalidRange) {
+        setCashOutflowState([]);
+        return;
+      }
+
+      let query = supabase
+        .from('cash_flow')
+        .select('amount, type, purpose')
+        .eq('cash_type', 'out_flow');
+
+      if (startDate && endDate) {
+        query = query
+          .gte('transaction_date', startDate)
+          .lte('transaction_date', endDate);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setCashOutflowState(data || []);
+    } catch (error) {
+      console.error('Error fetching cash outflow:', error);
+      setCashOutflowState([]);
+    }
+  };
+
   const fetchDoctors = async () => {
     try {
       const { data, error } = await supabase
@@ -177,8 +216,6 @@ function SalesContainer() {
         return sum + (isNaN(quantity) ? 0 : quantity);
       }, 0);
       
-      const totalTransactions = filteredSalesAll.length;
-      
       const totalGrossProfit = filteredSalesAll.reduce((sum, s) => {
         try {
           const costPrice = parseFloat(s.products?.price || 0);
@@ -199,17 +236,25 @@ function SalesContainer() {
 
       return { 
         totalRevenue: totalRevenue || 0, 
-        totalItems: totalItems || 0, 
-        totalTransactions, 
-        totalGrossProfit: totalGrossProfit || 0 
+        totalItems: totalItems || 0,
+        totalGrossProfit: totalGrossProfit || 0
       };
     } catch (error) {
       console.error('Error calculating totals:', error);
-      return { totalRevenue: 0, totalItems: 0, totalTransactions: 0, totalGrossProfit: 0 };
+      return { totalRevenue: 0, totalItems: 0, totalGrossProfit: 0 };
     }
   }, [filteredSalesAll]);
 
-  // Enhanced company data with error handling
+  const totalOutflowExpenses = useMemo(() => {
+    return (cashOutflowState || []).reduce((sum, record) => {
+      if (record?.type === 'sundry' && record?.purpose === 'purchase') return sum;
+      const amount = parseFloat(record?.amount || 0);
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
+  }, [cashOutflowState]);
+
+  const totalNetProfit = totals.totalGrossProfit - totalOutflowExpenses;
+
   const companyData = useMemo(() => {
     try {
       const byCompany = filteredSalesAll.reduce((acc, s) => {
@@ -240,7 +285,6 @@ function SalesContainer() {
     }
   }, [filteredSalesAll]);
 
-  // Enhanced contact data with error handling
   const contactData = useMemo(() => {
     try {
       const byContact = filteredSalesAll.reduce((acc, s) => {
@@ -342,8 +386,8 @@ function SalesContainer() {
         filteredSales={filteredSales}
         totalRevenue={totals.totalRevenue}
         totalItems={totals.totalItems}
-        totalTransactions={totals.totalTransactions}
         totalGrossProfit={totals.totalGrossProfit}
+        totalNetProfit={totalNetProfit}
         companyData={companyData}
         contactData={contactData}
         doctorSearch={doctorSearch}

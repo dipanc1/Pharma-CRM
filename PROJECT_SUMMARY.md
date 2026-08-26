@@ -107,6 +107,9 @@ The outflow uses values already present in the Cash Flow page's own filter lists
 - ✅ **Company Analytics**: Sales breakdown by pharmaceutical company (pie charts)
 - ✅ **Doctor Performance**: Bar charts showing top-performing doctor relationships
 - ✅ **Transaction Details**: Complete sales history with search and sort capabilities
+- ✅ **Margin Tiles**: Gross Margin (selling price − product cost, per unit sold) and Net Margin
+
+**Net Margin calculation.** Net Margin = Gross Margin − cash outflow over the same date range, where outflow rows with `type = 'sundry'` **and** `purpose = 'purchase'` are excluded. Those sundry purchases are stock buys already accounted for in the product cost that Gross Margin subtracts — counting them again would double-charge them. Every other `out_flow` row in `cash_flow` (expenses, gifts, payments, travel, advances, loans, person-type purchases) is a real cost against margin and is deducted. The outflow is filtered by `transaction_date` against the page's start/end dates only — the doctor and product filters do not narrow it, since cash flow records are not tied to individual sales.
 
 ### 8. **Inventory Management** (`/inventory`)
 - ✅ **Real-time Dashboard**: Live inventory tracking with visual analytics
