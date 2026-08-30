@@ -5,6 +5,17 @@ import Ledger from './Ledger';
 import { format } from 'date-fns';
 import { calculateRunningBalance } from '../../utils/invoiceUtils';
 
+const TB_SELECTIONS_KEY = 'ledger_tb_saved_selections';
+
+const loadSavedSelections = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(TB_SELECTIONS_KEY));
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
+};
+
 const LedgerContainer = () => {
   const [loading, setLoading] = useState(true);
   const [allEntries, setAllEntries] = useState([]);
@@ -35,6 +46,7 @@ const LedgerContainer = () => {
   const [entriesWithBalance, setEntriesWithBalance] = useState([]);
   const [tbSelectedContacts, setTbSelectedContacts] = useState([]);
   const [tbMinBalance, setTbMinBalance] = useState('');
+  const [savedSelections, setSavedSelections] = useState(loadSavedSelections);
   const pageSize = 25;
   const { showError, showSuccess } = useToast();
 
@@ -232,6 +244,50 @@ const LedgerContainer = () => {
     return filtered;
   }, [trialBalance, tbSelectedContacts, tbMinBalance]);
 
+  const tbTotals = useMemo(() => {
+    const debit = filteredTrialBalance.reduce((s, tb) => s + tb.total_debit, 0);
+    const credit = filteredTrialBalance.reduce((s, tb) => s + tb.total_credit, 0);
+    return { debit, credit, net: debit - credit };
+  }, [filteredTrialBalance]);
+
+  const persistSelections = (selections) => {
+    setSavedSelections(selections);
+    try {
+      localStorage.setItem(TB_SELECTIONS_KEY, JSON.stringify(selections));
+    } catch (e) {
+      console.error('Failed to persist selections:', e);
+    }
+  };
+
+  const handleSaveSelection = (name) => {
+    const trimmed = (name || '').trim();
+    if (!trimmed) {
+      showError('Enter a name for the selection');
+      return false;
+    }
+    if (tbSelectedContacts.length === 0) {
+      showError('Select at least one contact to save');
+      return false;
+    }
+    const updated = [
+      ...savedSelections.filter(s => s.name !== trimmed),
+      { name: trimmed, contactIds: tbSelectedContacts }
+    ];
+    persistSelections(updated);
+    showSuccess(`Selection "${trimmed}" saved`);
+    return true;
+  };
+
+  const handleLoadSelection = (name) => {
+    const selection = savedSelections.find(s => s.name === name);
+    if (selection) setTbSelectedContacts(selection.contactIds);
+  };
+
+  const handleDeleteSelection = (name) => {
+    persistSelections(savedSelections.filter(s => s.name !== name));
+    showSuccess(`Selection "${name}" deleted`);
+  };
+
   const handleExportCSV = () => {
     try {
       const headers = ['Date', 'Invoice #', 'Contact', 'Type', 'Source', 'Description', 'Debit', 'Credit', 'Balance'];
@@ -308,10 +364,15 @@ const LedgerContainer = () => {
       entries={displayEntries}
       trialBalance={filteredTrialBalance}
       trialBalanceTotal={trialBalance.length}
+      tbTotals={tbTotals}
       tbSelectedContacts={tbSelectedContacts}
       setTbSelectedContacts={setTbSelectedContacts}
       tbMinBalance={tbMinBalance}
       setTbMinBalance={setTbMinBalance}
+      savedSelections={savedSelections}
+      onSaveSelection={handleSaveSelection}
+      onLoadSelection={handleLoadSelection}
+      onDeleteSelection={handleDeleteSelection}
       doctorFilter={doctorFilter}
       setDoctorFilter={setDoctorFilter}
       sourceType={sourceType}

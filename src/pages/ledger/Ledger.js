@@ -8,7 +8,9 @@ import {
   FunnelIcon,
   ChartBarIcon,
   ListBulletIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  BookmarkIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 
 const ContactMultiSelect = ({ doctors, selected, onChange }) => {
@@ -110,10 +112,15 @@ const Ledger = ({
   entries,
   trialBalance,
   trialBalanceTotal,
+  tbTotals,
   tbSelectedContacts,
   setTbSelectedContacts,
   tbMinBalance,
   setTbMinBalance,
+  savedSelections,
+  onSaveSelection,
+  onLoadSelection,
+  onDeleteSelection,
   doctorFilter,
   setDoctorFilter,
   sourceType,
@@ -137,6 +144,8 @@ const Ledger = ({
   view,
   setView
 }) => {
+  const [selectionName, setSelectionName] = useState('');
+  const [loadedSelection, setLoadedSelection] = useState('');
   const entryHeaders = ['Date', 'Contact', 'Source Type', 'Invoice #', 'Description', 'Debit', 'Credit', 'Balance'];
   const tbHeaders = ['Contact', 'Details', 'Total Debit', 'Total Credit', 'Current Balance'];
 
@@ -158,6 +167,26 @@ const Ledger = ({
     { value: '5000', label: '≥ ₹5,000' },
     { value: '10000', label: '≥ ₹10,000' }
   ];
+
+  const totals = view === 'trial' ? tbTotals : periodTotals;
+
+  const handleSaveClick = () => {
+    if (onSaveSelection(selectionName)) {
+      setLoadedSelection(selectionName.trim());
+      setSelectionName('');
+    }
+  };
+
+  const handleLoadChange = (e) => {
+    const name = e.target.value;
+    setLoadedSelection(name);
+    if (name) onLoadSelection(name);
+  };
+
+  const handleDeleteClick = () => {
+    onDeleteSelection(loadedSelection);
+    setLoadedSelection('');
+  };
 
   return loading ? (
     <Loader />
@@ -226,7 +255,7 @@ const Ledger = ({
             <div>
               <p className="text-sm font-medium text-gray-600">Total Debit</p>
               <p className="text-2xl font-bold text-red-600 mt-1">
-                {formatCurrency(periodTotals.debit)}
+                {formatCurrency(totals.debit)}
               </p>
             </div>
             <div className="p-3 bg-red-100 rounded-full">
@@ -242,7 +271,7 @@ const Ledger = ({
             <div>
               <p className="text-sm font-medium text-gray-600">Total Credit</p>
               <p className="text-2xl font-bold text-green-600 mt-1">
-                {formatCurrency(periodTotals.credit)}
+                {formatCurrency(totals.credit)}
               </p>
             </div>
             <div className="p-3 bg-green-100 rounded-full">
@@ -258,18 +287,18 @@ const Ledger = ({
             <div>
               <p className="text-sm font-medium text-gray-600">Net Balance</p>
               <p className={`text-2xl font-bold mt-1 ${
-                periodTotals.net > 0 ? 'text-red-600' : periodTotals.net < 0 ? 'text-green-600' : 'text-gray-900'
+                totals.net > 0 ? 'text-red-600' : totals.net < 0 ? 'text-green-600' : 'text-gray-900'
               }`}>
-                {formatCurrency(Math.abs(periodTotals.net))}
-                {periodTotals.net > 0 && <span className="text-sm ml-1">(Dr)</span>}
-                {periodTotals.net < 0 && <span className="text-sm ml-1">(Cr)</span>}
+                {formatCurrency(Math.abs(totals.net))}
+                {totals.net > 0 && <span className="text-sm ml-1">(Dr)</span>}
+                {totals.net < 0 && <span className="text-sm ml-1">(Cr)</span>}
               </p>
             </div>
             <div className={`p-3 rounded-full ${
-              periodTotals.net > 0 ? 'bg-red-100' : periodTotals.net < 0 ? 'bg-green-100' : 'bg-gray-100'
+              totals.net > 0 ? 'bg-red-100' : totals.net < 0 ? 'bg-green-100' : 'bg-gray-100'
             }`}>
               <svg className={`w-6 h-6 ${
-                periodTotals.net > 0 ? 'text-red-600' : periodTotals.net < 0 ? 'text-green-600' : 'text-gray-600'
+                totals.net > 0 ? 'text-red-600' : totals.net < 0 ? 'text-green-600' : 'text-gray-600'
               }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
@@ -382,6 +411,63 @@ const Ledger = ({
                   value={tbMinBalance}
                   onChange={(e) => setTbMinBalance(e.target.value)}
                 />
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="tb_saved_selection" className="block text-sm font-medium text-gray-700 mb-2">
+                Saved Selections
+              </label>
+              <div className="flex items-center gap-2">
+                <select
+                  id="tb_saved_selection"
+                  className="input-field flex-1"
+                  value={loadedSelection}
+                  onChange={handleLoadChange}
+                >
+                  <option value="">Load a saved selection...</option>
+                  {savedSelections.map(s => (
+                    <option key={s.name} value={s.name}>
+                      {s.name} ({s.contactIds.length} contact{s.contactIds.length !== 1 ? 's' : ''})
+                    </option>
+                  ))}
+                </select>
+                {loadedSelection && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteClick}
+                    title={`Delete "${loadedSelection}"`}
+                    className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
+                  >
+                    <TrashIcon className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div>
+              <label htmlFor="tb_selection_name" className="block text-sm font-medium text-gray-700 mb-2">
+                Save Current Selection
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  id="tb_selection_name"
+                  placeholder="e.g. Key doctors"
+                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={selectionName}
+                  onChange={(e) => setSelectionName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveClick()}
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveClick}
+                  disabled={tbSelectedContacts.length === 0}
+                  className="flex items-center px-3 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <BookmarkIcon className="h-4 w-4 mr-1" />
+                  Save
+                </button>
               </div>
             </div>
           </div>
