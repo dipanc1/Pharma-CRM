@@ -5,22 +5,33 @@ import Ledger from './Ledger';
 import { format } from 'date-fns';
 import { calculateRunningBalance } from '../../utils/invoiceUtils';
 
+const TB_SELECTIONS_KEY = 'ledger_tb_saved_selections';
+
+const loadSavedSelections = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(TB_SELECTIONS_KEY));
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
+};
+
 const LedgerContainer = () => {
   const [loading, setLoading] = useState(true);
   const [allEntries, setAllEntries] = useState([]);
   const [doctorFilter, setDoctorFilter] = useState('');
-  // Calculate financial year (April 1 to March 31)
+  // Financial year runs April 1 to March 31
   const today = new Date();
   const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth(); // 0-indexed
+  const currentMonth = today.getMonth();
   let financialYearStartDate, financialYearEndDate;
   
-  if (currentMonth < 3) { // Jan (0), Feb (1), Mar (2)
-    financialYearStartDate = new Date(currentYear - 1, 3, 1); // Apr 1 of prev year
-    financialYearEndDate = new Date(currentYear, 2, 31); // Mar 31 of current year
-  } else { // Apr (3) onwards
-    financialYearStartDate = new Date(currentYear, 3, 1); // Apr 1 of current year
-    financialYearEndDate = new Date(currentYear + 1, 2, 31); // Mar 31 of next year
+  if (currentMonth < 3) {
+    financialYearStartDate = new Date(currentYear - 1, 3, 1);
+    financialYearEndDate = new Date(currentYear, 2, 31);
+  } else {
+    financialYearStartDate = new Date(currentYear, 3, 1);
+    financialYearEndDate = new Date(currentYear + 1, 2, 31);
   }
   
   const initialStartDate = format(financialYearStartDate, 'yyyy-MM-dd');
@@ -31,8 +42,11 @@ const LedgerContainer = () => {
   const [sourceType, setSourceType] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
-  const [view, setView] = useState('entries'); // Added
+  const [view, setView] = useState('entries');
   const [entriesWithBalance, setEntriesWithBalance] = useState([]);
+  const [tbSelectedContacts, setTbSelectedContacts] = useState([]);
+  const [tbMinBalance, setTbMinBalance] = useState('');
+  const [savedSelections, setSavedSelections] = useState(loadSavedSelections);
   const pageSize = 25;
   const { showError, showSuccess } = useToast();
 
@@ -41,11 +55,7 @@ const LedgerContainer = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-fetch allEntries when the doctor filter or the view changes. When a
-  // doctor is selected we scope the fetch to that doctor (the common case for
-  // a CRM with many ledger rows). When viewing the trial balance or no doctor
-  // is selected, we must fetch all entries — running balance and trial balance
-  // are computed client-side.
+  // Running balance and trial balance are computed client-side from allEntries.
   useEffect(() => {
     fetchAllEntries();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,9 +87,8 @@ const LedgerContainer = () => {
           doctors:doctor_id (id, name, contact_type, hospital, specialization)
         `);
 
-      // Scope to the selected doctor unless we need the full set for the
-      // trial-balance view. Trial balance aggregates across all contacts.
-      if (doctorFilter && view !== 'trialBalance') {
+      // Trial balance aggregates across all contacts, so skip doctor scoping there
+      if (doctorFilter && view !== 'trial') {
         query = query.eq('doctor_id', doctorFilter);
       }
 
@@ -95,7 +104,6 @@ const LedgerContainer = () => {
     try {
       setLoading(true);
       
-      // Early return if allEntries not loaded yet
       if (allEntries.length === 0) {
         setEntriesWithBalance([]);
         return;
@@ -125,14 +133,12 @@ const LedgerContainer = () => {
       }
 
       try {
-        // Calculate running balance for each doctor that appears in filtered data
         const entriesWithRunningBalance = [];
         const doctorIds = [...new Set(data.map(entry => entry.doctor_id))];
         
         for (const doctorId of doctorIds) {
           const doctorEntries = calculateRunningBalance(allEntries, doctorId);
           
-          // Filter to only show entries that match our current filter criteria
           const filteredDoctorEntries = doctorEntries.filter(entry => 
             data.some(d => d.id === entry.id)
           );
@@ -140,7 +146,6 @@ const LedgerContainer = () => {
           entriesWithRunningBalance.push(...filteredDoctorEntries);
         }
 
-        // Sort the final result by date descending
         entriesWithRunningBalance.sort((a, b) => {
           const dateA = new Date(a.entry_date);
           const dateB = new Date(b.entry_date);
@@ -153,7 +158,6 @@ const LedgerContainer = () => {
         setEntriesWithBalance(entriesWithRunningBalance);
       } catch (balanceError) {
         console.error('Error calculating running balance:', balanceError);
-        // Fallback: show entries without running balance
         setEntriesWithBalance(data.map(entry => ({ ...entry, running_balance: 0 })));
       }
     } catch (e) {
@@ -227,6 +231,63 @@ const LedgerContainer = () => {
       .sort((a, b) => Math.abs(b.current_balance) - Math.abs(a.current_balance));
   }, [allEntries]);
 
+  const filteredTrialBalance = useMemo(() => {
+    let filtered = trialBalance;
+    if (tbSelectedContacts.length > 0) {
+      const selected = new Set(tbSelectedContacts);
+      filtered = filtered.filter(tb => selected.has(tb.doctor_id));
+    }
+    const min = parseFloat(tbMinBalance);
+    if (!isNaN(min) && min > 0) {
+      filtered = filtered.filter(tb => Math.abs(tb.current_balance) >= min);
+    }
+    return filtered;
+  }, [trialBalance, tbSelectedContacts, tbMinBalance]);
+
+  const tbTotals = useMemo(() => {
+    const debit = filteredTrialBalance.reduce((s, tb) => s + tb.total_debit, 0);
+    const credit = filteredTrialBalance.reduce((s, tb) => s + tb.total_credit, 0);
+    return { debit, credit, net: debit - credit };
+  }, [filteredTrialBalance]);
+
+  const persistSelections = (selections) => {
+    setSavedSelections(selections);
+    try {
+      localStorage.setItem(TB_SELECTIONS_KEY, JSON.stringify(selections));
+    } catch (e) {
+      console.error('Failed to persist selections:', e);
+    }
+  };
+
+  const handleSaveSelection = (name) => {
+    const trimmed = (name || '').trim();
+    if (!trimmed) {
+      showError('Enter a name for the selection');
+      return false;
+    }
+    if (tbSelectedContacts.length === 0) {
+      showError('Select at least one contact to save');
+      return false;
+    }
+    const updated = [
+      ...savedSelections.filter(s => s.name !== trimmed),
+      { name: trimmed, contactIds: tbSelectedContacts }
+    ];
+    persistSelections(updated);
+    showSuccess(`Selection "${trimmed}" saved`);
+    return true;
+  };
+
+  const handleLoadSelection = (name) => {
+    const selection = savedSelections.find(s => s.name === name);
+    if (selection) setTbSelectedContacts(selection.contactIds);
+  };
+
+  const handleDeleteSelection = (name) => {
+    persistSelections(savedSelections.filter(s => s.name !== name));
+    showSuccess(`Selection "${name}" deleted`);
+  };
+
   const handleExportCSV = () => {
     try {
       const headers = ['Date', 'Invoice #', 'Contact', 'Type', 'Source', 'Description', 'Debit', 'Credit', 'Balance'];
@@ -259,7 +320,7 @@ const LedgerContainer = () => {
   const handleExportTrialBalance = () => {
     try {
       const headers = ['Contact', 'Type', 'Hospital/Specialization', 'Total Debit', 'Total Credit', 'Current Balance', 'Status'];
-      const rows = trialBalance.map(tb => [
+      const rows = filteredTrialBalance.map(tb => [
         tb.name,
         tb.contact_type === 'chemist' ? 'Chemist' : 'Doctor',
         tb.contact_type === 'chemist' ? tb.hospital : tb.specialization,
@@ -289,16 +350,29 @@ const LedgerContainer = () => {
     setStartDate('');
     setEndDate('');
     setSearchTerm('');
+    setTbSelectedContacts([]);
+    setTbMinBalance('');
     setPage(1);
   };
 
-  const hasFilters = doctorFilter || sourceType || startDate || endDate || searchTerm;
+  const hasFilters = doctorFilter || sourceType || startDate || endDate || searchTerm ||
+    tbSelectedContacts.length > 0 || tbMinBalance;
 
   return (
     <Ledger
       loading={loading}
       entries={displayEntries}
-      trialBalance={trialBalance}
+      trialBalance={filteredTrialBalance}
+      trialBalanceTotal={trialBalance.length}
+      tbTotals={tbTotals}
+      tbSelectedContacts={tbSelectedContacts}
+      setTbSelectedContacts={setTbSelectedContacts}
+      tbMinBalance={tbMinBalance}
+      setTbMinBalance={setTbMinBalance}
+      savedSelections={savedSelections}
+      onSaveSelection={handleSaveSelection}
+      onLoadSelection={handleLoadSelection}
+      onDeleteSelection={handleDeleteSelection}
       doctorFilter={doctorFilter}
       setDoctorFilter={setDoctorFilter}
       sourceType={sourceType}

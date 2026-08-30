@@ -131,6 +131,7 @@ The outflow uses values already present in the Cash Flow page's own filter lists
 - ✅ **Accounting Ledger**: Complete double-entry accounting for all transactions
 - ✅ **Running Balance**: Automatic calculation of running balances per doctor/contact
 - ✅ **Trial Balance View**: Aggregate view of all contacts showing debit/credit summaries
+- ✅ **Trial Balance Filters**: Multi-select specific contacts and filter by minimum balance (₹5k/₹10k presets or custom amount)
 - ✅ **Invoice Integration**: Link ledger entries to specific invoices for reference
 - ✅ **Multi-filter Queries**: Filter by doctor, date range, and transaction source
 - ✅ **Dual Export**: Export individual ledger entries or complete trial balance as CSV
