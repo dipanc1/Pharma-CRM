@@ -78,6 +78,7 @@ Visit the live application: **[https://pharma-crm.netlify.app/](https://pharma-c
 - **Double-Entry Accounting**: Complete accounting ledger for all transactions
 - **Running Balance**: Automatic balance calculations per doctor/contact
 - **Trial Balance**: Summary view of all contacts with debit/credit positions
+- **Trial Balance Filters**: Select specific contacts and filter by minimum balance (₹5k/₹10k presets or custom amount)
 - **Invoice Tracking**: Link ledger entries to specific invoices
 - **Source Categorization**: Track transaction sources (sales, cash flow, adjustments)
 - **CSV Export**: Export ledger entries and trial balance reports

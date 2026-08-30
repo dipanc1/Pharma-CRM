@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Header, Table, Loader, FilterSelect, SearchInput, Pagination } from '../../components';
 import { format } from 'date-fns';
 import { 
@@ -7,13 +7,113 @@ import {
   XMarkIcon,
   FunnelIcon,
   ChartBarIcon,
-  ListBulletIcon
+  ListBulletIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
+
+const ContactMultiSelect = ({ doctors, selected, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredDoctors = useMemo(() => {
+    if (!search) return doctors;
+    const s = search.toLowerCase();
+    return doctors.filter(d => (d.name || '').toLowerCase().includes(s));
+  }, [doctors, search]);
+
+  const toggleContact = (id) => {
+    onChange(
+      selected.includes(id)
+        ? selected.filter(x => x !== id)
+        : [...selected, id]
+    );
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Contacts
+      </label>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="input-field flex items-center justify-between text-left"
+      >
+        <span className={selected.length === 0 ? 'text-gray-500' : 'text-gray-900'}>
+          {selected.length === 0
+            ? 'All contacts'
+            : `${selected.length} contact${selected.length !== 1 ? 's' : ''} selected`}
+        </span>
+        <ChevronDownIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg">
+          <div className="p-2 border-b border-gray-200">
+            <input
+              type="text"
+              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Search contacts..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus
+            />
+          </div>
+          {selected.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onChange([])}
+              className="w-full px-3 py-1.5 text-left text-xs font-medium text-primary-600 hover:bg-gray-50 border-b border-gray-200"
+            >
+              Clear selection (show all)
+            </button>
+          )}
+          <div className="max-h-56 overflow-y-auto">
+            {filteredDoctors.length > 0 ? filteredDoctors.map(d => (
+              <label
+                key={d.id}
+                className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300 text-primary-600 focus:ring-blue-500"
+                  checked={selected.includes(d.id)}
+                  onChange={() => toggleContact(d.id)}
+                />
+                <span className="flex-1 truncate">{d.name}</span>
+                <span className={`inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-full ${
+                  d.contact_type === 'chemist' ? 'bg-teal-100 text-teal-800' : 'bg-indigo-100 text-indigo-800'
+                }`}>
+                  {d.contact_type === 'chemist' ? 'Chemist' : 'Doctor'}
+                </span>
+              </label>
+            )) : (
+              <p className="px-3 py-2 text-sm text-gray-500">No contacts found</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Ledger = ({
   loading,
   entries,
   trialBalance,
+  trialBalanceTotal,
+  tbSelectedContacts,
+  setTbSelectedContacts,
+  tbMinBalance,
+  setTbMinBalance,
   doctorFilter,
   setDoctorFilter,
   sourceType,
@@ -53,6 +153,12 @@ const Ledger = ({
     return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const minBalancePresets = [
+    { value: '', label: 'All' },
+    { value: '5000', label: '≥ ₹5,000' },
+    { value: '10000', label: '≥ ₹10,000' }
+  ];
+
   return loading ? (
     <Loader />
   ) : (
@@ -76,9 +182,7 @@ const Ledger = ({
         ]}
       />
 
-      {/* View Toggle & Summary Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* View Toggle */}
         <div className="card lg:col-span-3">
           <div className="flex items-center justify-between">
             <div className="flex gap-2">
@@ -117,7 +221,6 @@ const Ledger = ({
           </div>
         </div>
 
-        {/* Summary Cards */}
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
@@ -175,7 +278,6 @@ const Ledger = ({
         </div>
       </div>
 
-      {/* Filters Card (only for entries view) */}
       {view === 'entries' && (
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
@@ -237,7 +339,55 @@ const Ledger = ({
         </div>
       )}
 
-      {/* Ledger Entries View */}
+      {view === 'trial' && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-4">
+            <FunnelIcon className="h-5 w-5 text-gray-600" />
+            <h3 className="text-lg font-medium text-gray-900">Filters</h3>
+            <span className="ml-auto text-sm text-gray-500">
+              Showing {trialBalance.length} of {trialBalanceTotal} contact{trialBalanceTotal !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ContactMultiSelect
+              doctors={doctors}
+              selected={tbSelectedContacts}
+              onChange={setTbSelectedContacts}
+            />
+            <div>
+              <label htmlFor="tb_min_balance" className="block text-sm font-medium text-gray-700 mb-2">
+                Minimum Balance
+              </label>
+              <div className="flex items-center gap-2">
+                {minBalancePresets.map(p => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => setTbMinBalance(p.value)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      tbMinBalance === p.value
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+                <input
+                  type="number"
+                  id="tb_min_balance"
+                  min="0"
+                  placeholder="Custom amount"
+                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={tbMinBalance}
+                  onChange={(e) => setTbMinBalance(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {view === 'entries' && (
         <div className="card">
           <div className="flex items-center justify-between mb-4">
@@ -327,7 +477,6 @@ const Ledger = ({
         </div>
       )}
 
-      {/* Trial Balance View */}
       {view === 'trial' && (
         <div className="card">
           <div className="flex items-center justify-between mb-4">
@@ -339,8 +488,7 @@ const Ledger = ({
               {trialBalance.length} contact{trialBalance.length !== 1 ? 's' : ''}
             </span>
           </div>
-          {trialBalance.length > 0 ? (
-            <div className="overflow-x-auto">
+          {trialBalance.length > 0 ? (            <div className="overflow-x-auto">
               <Table headers={tbHeaders}>
                 {trialBalance.map(tb => {
                   const isChemist = tb.contact_type === 'chemist';
@@ -389,7 +537,9 @@ const Ledger = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
               <p className="mt-2 text-sm text-gray-500">
-                No trial balance data available yet.
+                {tbSelectedContacts.length > 0 || tbMinBalance
+                  ? 'No contacts match your trial balance filters.'
+                  : 'No trial balance data available yet.'}
               </p>
             </div>
           )}
