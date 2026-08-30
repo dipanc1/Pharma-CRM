@@ -12,7 +12,6 @@ import {
   FilterSelect,
   NoRecordsAddButtonLayout
 } from '../../../components';
-import { handleReload } from '../../../helper';
 
 function Products({
   products,
@@ -44,8 +43,7 @@ function Products({
       {/* Header */}
       <Header title="Products" buttons={[
         { to: "/products/add", icon: <PlusIcon className="h-4 w-4 mr-2" />, title: "Add Product" },
-        { onClick: onUploadBill, icon: <DocumentTextIcon className="h-4 w-4 mr-2" />, title: 'Upload Bill' },
-        { onClick: handleReload, icon: <ArrowPathIcon className="h-4 w-4 mr-2" />, title: 'Refresh' }
+        { onClick: onUploadBill, icon: <DocumentTextIcon className="h-4 w-4 mr-2" />, title: 'Upload Bill' }
       ]} />
 
       <input
