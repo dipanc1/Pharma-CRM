@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlusIcon, CubeIcon, PencilIcon, ArrowPathIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, CubeIcon, PencilIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import {
   AddButton,
   Header,
