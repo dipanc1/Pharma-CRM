@@ -413,6 +413,32 @@ const Ledger = ({
                 />
               </div>
             </div>
+            <div>
+              <label htmlFor="tb_start_date" className="block text-sm font-medium text-gray-700 mb-2">
+                Start Date
+              </label>
+              <input
+                type="date"
+                id="tb_start_date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                max={endDate || undefined}
+              />
+            </div>
+            <div>
+              <label htmlFor="tb_end_date" className="block text-sm font-medium text-gray-700 mb-2">
+                End Date
+              </label>
+              <input
+                type="date"
+                id="tb_end_date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || undefined}
+              />
+            </div>
           </div>
           <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -568,7 +594,11 @@ const Ledger = ({
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium text-gray-900">
               Trial Balance
-              <span className="ml-2 text-sm font-normal text-gray-500">(All-time totals)</span>
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                {startDate || endDate
+                  ? `(${startDate ? format(new Date(startDate), 'MMM dd, yyyy') : 'Start'} — ${endDate ? format(new Date(endDate), 'MMM dd, yyyy') : 'Today'})`
+                  : '(All-time totals)'}
+              </span>
             </h3>
             <span className="text-sm text-gray-600">
               {trialBalance.length} contact{trialBalance.length !== 1 ? 's' : ''}

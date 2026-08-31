@@ -207,6 +207,9 @@ const LedgerContainer = () => {
   const trialBalance = useMemo(() => {
     const balanceMap = {};
     allEntries.forEach(entry => {
+      const entryDate = (entry.entry_date || '').slice(0, 10);
+      if (startDate && entryDate < startDate) return;
+      if (endDate && entryDate > endDate) return;
       const doctorId = entry.doctor_id;
       if (!balanceMap[doctorId]) {
         balanceMap[doctorId] = {
@@ -229,7 +232,7 @@ const LedgerContainer = () => {
       }))
       .filter(tb => tb.total_debit !== 0 || tb.total_credit !== 0)
       .sort((a, b) => Math.abs(b.current_balance) - Math.abs(a.current_balance));
-  }, [allEntries]);
+  }, [allEntries, startDate, endDate]);
 
   const filteredTrialBalance = useMemo(() => {
     let filtered = trialBalance;
