@@ -248,10 +248,24 @@ const DashboardContainer = () => {
             twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
             twelveMonthsAgo.setDate(1);
 
-            const { data: monthlySalesRaw } = await supabase
-                .from('sales')
-                .select('total_amount, visits!inner(visit_date)')
-                .gte('visits.visit_date', format(twelveMonthsAgo, 'yyyy-MM-dd'));
+            const monthlySalesRaw = [];
+            const monthlySalesStartDate = format(twelveMonthsAgo, 'yyyy-MM-dd');
+            const monthlySalesEndDate = format(new Date(), 'yyyy-MM-dd');
+            const pageSize = 1000;
+
+            for (let offset = 0; ; offset += pageSize) {
+                const { data: salesPage, error: monthlySalesError } = await supabase
+                    .from('sales')
+                    .select('total_amount, visits!inner(visit_date)')
+                    .gte('visits.visit_date', monthlySalesStartDate)
+                    .lte('visits.visit_date', monthlySalesEndDate)
+                    .range(offset, offset + pageSize - 1);
+
+                if (monthlySalesError) throw monthlySalesError;
+
+                monthlySalesRaw.push(...(salesPage || []));
+                if (!salesPage || salesPage.length < pageSize) break;
+            }
 
             const monthlyBuckets = {};
             monthlySalesRaw?.forEach(sale => {
